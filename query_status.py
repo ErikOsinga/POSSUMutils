@@ -31,7 +31,7 @@ stages = {'released' : 'validated_field_overlay',
           'planned'  : 'field_overlay'
 }
 
-def get_overlay_polygons(stage):
+def get_overlay_polygons(stage, band=1):
     """
     Find all polygons of a certain class, see above, e.g. 
     
@@ -43,7 +43,12 @@ def get_overlay_polygons(stage):
     overlay_name = stages[stage]
 
     # URL of the webpage
-    url = "https://www.mso.anu.edu.au/~cvaneck/possum/aladin_survey_band1.html"
+    if band == 1:
+        url = "https://www.mso.anu.edu.au/~cvaneck/possum/aladin_survey_band1.html"
+    elif band == 2:
+        url = "https://www.mso.anu.edu.au/~cvaneck/possum/aladin_survey_band2.html"
+    else:
+        raise ValueError(f"Band has to be 1 or 2, input is {band}")
 
     # Send an HTTP GET request to the webpage
     response = requests.get(url)
@@ -74,9 +79,11 @@ def get_overlay_polygons(stage):
 
     return None
 
-def check_coordinates_in_overlay(ra, dec, overlay_name):
+def check_coordinates_in_overlay(ra, dec, overlay_name, band=1, overlay_polygons=None):
     # Get the list of polygons corresponding to the specified overlay
-    overlay_polygons = get_overlay_polygons(overlay_name)
+    # polygons can be given as input as well to speed up multiple code runs
+    if not overlay_polygons:
+        overlay_polygons = get_overlay_polygons(overlay_name, band)
 
     if overlay_polygons:
         # Check if the given RA, DEC falls inside any of the polygons
@@ -98,6 +105,8 @@ def get_coordinates_from_simbad(target_name):
         return None
     
 if __name__ == '__main__':
+    # Which observing band (1 = 800-1088 MHz, 2 = 1296-1440 MHz)
+    band = 1
 
     # Which status to query
     stage = 'released'
@@ -109,16 +118,16 @@ if __name__ == '__main__':
     dec_input = -41.9
 
     # Example usage with target name, query SIMBAD
-    target = 'Virgo Cluster'
+    target = 'Abell 85'
     ra_input, dec_input = get_coordinates_from_simbad(target)
 
     # Compute whether target is in the requested field type
-    result = check_coordinates_in_overlay(ra_input, dec_input, stage)
+    result = check_coordinates_in_overlay(ra_input, dec_input, stage, band)
 
     if target:
         print(f"Results of searching for target {target}:")
     if result:
-        print(f"The coordinates (RA={ra_input:.3f}, DEC={dec_input:.3f}) fall inside {stage} fields.")
+        print(f"The coordinates (RA={ra_input:.3f}, DEC={dec_input:.3f}) fall inside band {band} {stage} fields.")
     else:
-        print(f"The coordinates (RA={ra_input:.3f}, DEC={dec_input:.3f}) do not fall inside {stage} fields.")
+        print(f"The coordinates (RA={ra_input:.3f}, DEC={dec_input:.3f}) do not fall inside band {band} {stage} fields.")
         

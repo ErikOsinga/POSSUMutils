@@ -33,12 +33,12 @@ def get_alternative_names(target_name):
     return mainID, otherIDs
 
 # Function to check the status for each cluster in the catalog
-def check_clusters_in_possum(catalog_file, stage, verbose=False):
+def check_clusters_in_possum(catalog_file, stage, band, verbose=False):
     # Read cluster names from the catalogue
     cluster_names, ra, dec = read_cluster_names_from_file(catalog_file)
 
     # Compute overlay polygons once for this status instead of for every source
-    overlay_polygons = get_overlay_polygons(stage)
+    overlay_polygons = get_overlay_polygons(stage, band)
 
     # Iterate through cluster names and check their status
     inPOSSUM = []
@@ -46,7 +46,7 @@ def check_clusters_in_possum(catalog_file, stage, verbose=False):
         ra_input, dec_input = ra[i], dec[i]
 
         # Check if the coordinates fall inside the specified stage
-        result = check_coordinates_in_overlay(ra_input, dec_input, stage, overlay_polygons)
+        result = check_coordinates_in_overlay(ra_input, dec_input, stage, band, overlay_polygons)
 
         if result:
             if verbose: print(f"The coordinates of '{cluster_name}' fall inside {stage} fields.")
@@ -61,11 +61,11 @@ def check_clusters_in_possum(catalog_file, stage, verbose=False):
 if __name__ == '__main__':
     catalog_file = '/home/osingae/Documents/postdoc/downloads/PSZ2_catalogue.dat.fits'
     observation_stage = 'released'  # Replace with the desired stage ('released', 'observed', 'processed', 'planned')
+    band = 1 # which observing band
 
-    inPOSSUM = check_clusters_in_possum(catalog_file, observation_stage)
+    inPOSSUM = check_clusters_in_possum(catalog_file, observation_stage, band)
 
-    print(f"Found {len(inPOSSUM)} clusters inside fields with status {observation_stage}")
-
+    print(f"Found {len(inPOSSUM)} clusters inside band {band} fields with status {observation_stage}")
 
     mainnames, allnames = [], []
     for c in inPOSSUM:
