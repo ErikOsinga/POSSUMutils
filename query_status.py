@@ -31,6 +31,24 @@ stages = {'released' : 'validated_field_overlay',
           'planned'  : 'field_overlay'
 }
 
+def adjust_coordinates_for_wraparound(coordinate_pairs, adjust_positive=True):
+    """When a polygon is defined near the 0 RA boundary, return adjusted RA coords
+    e.g. a polygon defined in RA by [(357, DEC), (2, DEC)] will be returned either as
+    
+    adjust_positive=True  -- [(357,DEC), (362,DEC)]
+    adjust_positive=False -- [(-3,DEC), (2,DEC)]
+    
+    such that points laying near the RA=0 boundary will be correctly identified as laying in a polygon
+    """
+    ra_values = [coord[0] for coord in coordinate_pairs]
+    if max(ra_values) - min(ra_values) > 180: 
+        if adjust_positive:
+            adjusted_pairs = [(ra + 360 if ra < 180 else ra, dec) for ra, dec in coordinate_pairs]
+        else:
+            adjusted_pairs = [(ra - 360 if ra > 180 else ra, dec) for ra, dec in coordinate_pairs]
+        return adjusted_pairs
+    return coordinate_pairs
+
 def get_overlay_polygons(stage, band=1):
     """
     Find all polygons of a certain class, see above, e.g. 
@@ -73,7 +91,18 @@ def get_overlay_polygons(stage, band=1):
                 coordinate_pairs = [(float(numbers[i]), float(numbers[i + 1])) for i in range(0, len(numbers), 2)]
 
                 if coordinate_pairs is not None:
-                    overlay_polygons.append(Polygon(coordinate_pairs))
+                    adjusted_pairs = adjust_coordinates_for_wraparound(coordinate_pairs
+                                                                       , adjust_positive=True)
+                    if adjusted_pairs == coordinate_pairs:
+                        # Simple case
+                        overlay_polygons.append(Polygon(coordinate_pairs))
+                    if adjusted_pairs != coordinate_pairs:
+                        # Append two polygons, one with positive RA values only
+                        # and one with negative RA values
+                        overlay_polygons.append(Polygon(adjusted_pairs))
+                        adjusted_pairs = adjust_coordinates_for_wraparound(coordinate_pairs
+                                                                           , adjust_positive=False)
+                        overlay_polygons.append(Polygon(adjusted_pairs))
 
         return overlay_polygons
 
@@ -82,6 +111,11 @@ def get_overlay_polygons(stage, band=1):
 def check_coordinates_in_overlay(ra, dec, overlay_name, band=1, overlay_polygons=None):
     # Get the list of polygons corresponding to the specified overlay
     # polygons can be given as input as well to speed up multiple code runs
+
+    if ra < 0:
+        print(f"WARNING: RA={ra:.2f} degrees, changing to lie within [0-360] degrees.")
+        ra += 360
+
     if not overlay_polygons:
         overlay_polygons = get_overlay_polygons(overlay_name, band)
 
@@ -119,7 +153,9 @@ if __name__ == '__main__':
 
     # Example usage with target name, query SIMBAD
     target = 'Abell 85'
+    target = 'Abell 1651'
     ra_input, dec_input = get_coordinates_from_simbad(target)
+    ra_input, dec_input = -1, -4
 
     # Compute whether target is in the requested field type
     result = check_coordinates_in_overlay(ra_input, dec_input, stage, band)
