@@ -155,8 +155,7 @@ if __name__ == '__main__':
     target = 'Abell 85'
     target = 'Abell 1651'
     ra_input, dec_input = get_coordinates_from_simbad(target)
-    ra_input, dec_input = -1, -4
-
+    
     # Compute whether target is in the requested field type
     result = check_coordinates_in_overlay(ra_input, dec_input, stage, band)
 
