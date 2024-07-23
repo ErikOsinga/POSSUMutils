@@ -85,6 +85,7 @@ if __name__ == "__main__":
         print(merged_df)
         
         # Find the first tilenumber with the status "ReadyToProcess"
+        # if local status == Completed then even if remote is ReadyToProcess it wont go
         ready_to_process = merged_df[merged_df['status'] == 'ReadyToProcess']
         if not ready_to_process.empty:
             i = 0
