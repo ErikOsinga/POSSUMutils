@@ -80,6 +80,7 @@ def launch_pipeline(tilenumber, band):
         command = ["python", "launch_3Dpipeline_band1.py", str(tilenumber)]
     elif band == "1367MHz":
         command = ["python", "launch_3Dpipeline_band2.py", str(tilenumber)]
+        command = ""
         print("Temporarily disabled launching band 2 because need to write that run script")
     else:
         raise ValueError(f"Unknown band: {band}")
@@ -126,6 +127,7 @@ def update_status(tile_number, band, Google_API_token, status):
 # Update the launch_band1_3Dpipeline function to pass the correct arguments
 def launch_band1_3Dpipeline():
     band = "943MHz"
+    # on p1
     Google_API_token = "/home/erik/.ssh/psm_gspread_token.json"
     
     # Check google sheet for band 1 tiles that have been ingested into CADC 
