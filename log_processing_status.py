@@ -2,18 +2,31 @@ import argparse
 import glob
 import os
 import csv
+import gspread
+import numpy as np
+import astropy.table as at
 
 """
 Usage: python log_processing_status.py tilenumber band
 
-Log the processing status to 
+Log the processing status to Camerons POSSUM status monitor
+
+https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0
+
+and
+
 /arc/projects/CIRADA/polarimetry/pipeline_runs/pipeline_status.csv
 
-Either record
-"Completed" - pipeline completed succesfully
-"Failed"    - pipeline started but failed
-"NotStarted"- pipeline not started for some reason
+In the above file, either record 
+    "Completed" - pipeline completed succesfully (still needs to be validated)
+    "Failed"    - pipeline started but failed
+    "NotStarted"- pipeline not started for some reason
 
+    
+In the Google sheet, either record
+    "WaitingForValidation" - 3D pipeline completed succesfully. Waiting for human validation
+    "Failed"               - pipeline started but failed
+    "NotStarted"           - pipeline not started for some reason
 """
 
 def check_pipeline_complete(log_file_path):
@@ -59,6 +72,43 @@ def update_status_csv(tilenumber, status, band, csv_file_path, all_tiles):
             tilenumber, band = key.split("_")  # Extract the tilenumber and band from the key
             writer.writerow([tilenumber, value[0], value[1]])
 
+def update_status_spreadsheet(tile_number, band, Google_API_token, status):
+    """
+    Update the status of the specified tile in the Google Sheet.
+    
+    Args:
+    tile_number (str): The tile number to update.
+    band (str): The band of the tile.
+    Google_API_token (str): The path to the Google API token JSON file.
+    status (str): The status to set in the '3d_pipeline' column.
+    """
+    # Authenticate and grab the spreadsheet
+    gc = gspread.service_account(filename=Google_API_token)
+    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0')
+
+    # Select the worksheet for the given band number
+    band_number = '1' if band == '943MHz' else '2'
+    tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_number}')
+    tile_data = tile_sheet.get_all_values()
+    column_names = tile_data[0]
+    tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
+
+    # Find the row index for the specified tile number
+    tile_index = None
+    for idx, row in enumerate(tile_table):
+        if row['tile_id'] == tile_number:
+            tile_index = idx + 2  # +2 because gspread index is 1-based and we skip the header row
+            break
+    
+    if tile_index is not None:
+        # Update the status in the '3d_pipeline' column
+        col_letter = gspread.utils.rowcol_to_a1(1, column_names.index('3d_pipeline') + 1)[0]
+        tile_sheet.update(f'{col_letter}{tile_index}', status)
+        print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
+    else:
+        print(f"Tile {tile_number} not found in the sheet.")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Check pipeline status and update CSV file")
     parser.add_argument("tilenumber", type=int, help="The tile number to check")
@@ -88,9 +138,15 @@ if __name__ == "__main__":
         log_file_path = log_files[0]
         status = check_pipeline_complete(log_file_path)
 
-    # Update the status CSV file
+    print(f"Tilenumber {tilenumber} status: {status}, band: {band}")
+
+    # Update the simple CANFAR status CSV file
     csv_file_path = "/arc/projects/CIRADA/polarimetry/pipeline_runs/pipeline_status.csv"
     update_status_csv(tilenumber, status, band, csv_file_path, all_tiles)
 
-    print(f"Tilenumber {tilenumber} status: {status}, band: {band}")
-
+    # Update the POSSUM status monitor google sheet
+    Google_API_token = "/arc/home/ErikOsinga/.ssh/psm_gspread_token.json"
+    # Make sure it's clear that the status is only fully complete if 3D pipeline outputs have been ingested
+    if status == "Completed":
+        status = "WaitingForValidation"
+    update_status_spreadsheet(tilenumber, band, Google_API_token, status)
