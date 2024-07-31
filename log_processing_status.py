@@ -82,6 +82,9 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
     Google_API_token (str): The path to the Google API token JSON file.
     status (str): The status to set in the '3d_pipeline' column.
     """
+    # Make sure its not int
+    tile_number = str(tile_number)
+    
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
     ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0')
@@ -103,7 +106,8 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
     if tile_index is not None:
         # Update the status in the '3d_pipeline' column
         col_letter = gspread.utils.rowcol_to_a1(1, column_names.index('3d_pipeline') + 1)[0]
-        tile_sheet.update(f'{col_letter}{tile_index}', status)
+        # as of >v6.0.0 the .update function requires a list of lists
+        tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
         print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
     else:
         print(f"Tile {tile_number} not found in the sheet.")
