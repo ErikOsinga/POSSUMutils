@@ -127,8 +127,8 @@ if __name__ == "__main__":
 
     all_tiles = [(str(tile), "943MHz") for tile in all_tile_dirs_943] + [(str(tile), "1367MHz") for tile in all_tile_dirs_1367]
 
-    # Find the log file for the given tilenumber
-    log_files = glob.glob(f"/arc/projects/CIRADA/polarimetry/pipeline_runs/{band}/tile{tilenumber}/*log")
+    # Find the POSSUM pipeline log file for the given tilenumber
+    log_files = glob.glob(f"/arc/projects/CIRADA/polarimetry/pipeline_runs/{band}/tile{tilenumber}/*pipeline_config_{tilenumber}.log")
 
     if len(log_files) > 1:
         raise ValueError("Multiple log files found. Please remove failed run log files.")
