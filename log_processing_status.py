@@ -145,6 +145,8 @@ if __name__ == "__main__":
             log_file.write("WARNING: Multiple log files found. Taking the last log file.\n")
             log_file.write(f"{log_file_path} \n")
 
+        status = check_pipeline_complete(log_file_path)
+
     elif len(log_files) < 1:
         status = "NotStarted"
     else:
