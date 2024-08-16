@@ -132,10 +132,19 @@ if __name__ == "__main__":
     all_tiles = [(str(tile), "943MHz") for tile in all_tile_dirs_943] + [(str(tile), "1367MHz") for tile in all_tile_dirs_1367]
 
     # Find the POSSUM pipeline log file for the given tilenumber
-    log_files = glob.glob(f"/arc/projects/CIRADA/polarimetry/pipeline_runs/{band}/tile{tilenumber}/*pipeline_config_{tilenumber}.log")
+    log_files = sorted(glob.glob(f"/arc/projects/CIRADA/polarimetry/pipeline_runs/{band}/tile{tilenumber}/*pipeline_config_{tilenumber}.log"))
 
     if len(log_files) > 1:
-        raise ValueError("Multiple log files found. Please remove failed run log files.")
+        log_file_path = log_files[-1]
+
+        print("WARNING: Multiple log files found. Please remove failed run log files.")
+        print("Taking the last log file")
+
+        # Write the warning to file
+        with open(f"/arc/projects/CIRADA/polarimetry/pipeline_runs/{band}/tile{tilenumber}/log_processing_status.log", "a") as log_file:
+            log_file.write("WARNING: Multiple log files found. Taking the last log file.\n")
+            log_file.write(f"{log_file_path} \n")
+
     elif len(log_files) < 1:
         status = "NotStarted"
     else:
