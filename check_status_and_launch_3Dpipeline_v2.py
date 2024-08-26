@@ -159,11 +159,12 @@ def launch_band1_3Dpipeline():
             tilenumber = list(tiles_on_both)[0]
             print(f"\nLaunching headless job for 3D pipeline with tile {tilenumber}")
 
+            # Launch the pipeline
+            launch_pipeline(tilenumber, band)
+            
             # Update the status to "Running"
             update_status(tilenumber, band, Google_API_token, "Running")
             
-            # Launch the pipeline
-            launch_pipeline(tilenumber, band)
         else:
             print("No tiles are available on both CADC and CANFAR.")
     else:
