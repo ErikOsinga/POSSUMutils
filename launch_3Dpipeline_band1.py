@@ -37,7 +37,7 @@ if __name__ == "__main__":
     run_name = f"tile{tilenumber}"  # Run name has to match the working directory on CANFAR
 
     # optionally :latest for always the latest version
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v0.13.0"
+    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
     # good default values
     cores = 16
     ram = 112  # Check allowed values at canfar.net/science-portal
