@@ -4,9 +4,16 @@ import astropy.table as at
 import numpy as np
 
 """
-Updates the POSSUM tile status (google sheet) to a specific value input by user
+Updates the POSSUM tile ! 3d pipeline ! status (google sheet) to a specific value input by user
 
 Should be executed on p1
+
+e.g. 
+
+python update_status_sheet.py 5808 943MHz None
+
+To remove the 3d_pipeline status of 5808
+
 
 @author: Erik Osinga
 """
@@ -69,4 +76,4 @@ if __name__ == "__main__":
     if status == 'None' or status == 'none':
         status = ''
 
-    update_status(tilenumber, band, Google_API_token, "Running")
+    update_status(tilenumber, band, Google_API_token, status)
