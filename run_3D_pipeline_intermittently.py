@@ -21,6 +21,12 @@ def get_open_sessions():
 
 def run_script_intermittently(script_path, interval, max_runs=None):
     run_count = 0
+
+    ### TODO execute POSSUM_run_remote and create_symlinks.py every week. 
+    ### and also update_CADC_tile_status.py every week
+    ### and check whether in a new google sheet 3D products have been validated
+    ### if so, we should ingest
+
     while max_runs is None or run_count < max_runs:
         try:
             # Get information about currently open sessions
@@ -57,7 +63,7 @@ def run_script_intermittently(script_path, interval, max_runs=None):
 
 if __name__ == "__main__":
     # Path to the script to be run intermittently
-    script_path = "check_status_and_launch_3Dpipeline.py"
+    script_path = "check_status_and_launch_3Dpipeline_v2.py"
     
     # Interval between each run in seconds
     interval = 600  # 10 minutes
