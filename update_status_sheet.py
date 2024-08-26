@@ -59,7 +59,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Update status sheet 'manually'")
     parser.add_argument("tilenumber", type=int, help="The tile number to process")
     parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
-    parser.add_argument("status", type='str', required=True)
+    parser.add_argument("status", type='str')
 
     args = parser.parse_args()
     tilenumber = args.tilenumber
