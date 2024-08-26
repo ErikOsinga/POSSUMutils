@@ -82,6 +82,8 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
     Google_API_token (str): The path to the Google API token JSON file.
     status (str): The status to set in the '3d_pipeline' column.
     """
+    print("Updating POSSUM status sheet")
+
     # Make sure its not int
     tile_number = str(tile_number)
     
@@ -109,6 +111,63 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
         # as of >v6.0.0 the .update function requires a list of lists
         tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
         print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
+    else:
+        print(f"Tile {tile_number} not found in the sheet.")
+
+def update_validation_spreadsheet(tile_number, band, Google_API_token, status):
+    """
+    Update the status of the specified tile in the VALIDATION Google Sheet.
+    
+    Args:
+    tile_number (str): The tile number to update.
+    band (str): The band of the tile.
+    Google_API_token (str): The path to the Google API token JSON file.
+    status (str): The status to set in the '3d_pipeline' column.
+    """
+    print("Updating POSSUM pipeline validation sheet")
+
+    # Make sure its not int
+    tile_number = str(tile_number)
+    
+    # Authenticate and grab the spreadsheet
+    gc = gspread.service_account(filename=Google_API_token)
+    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k')
+
+    # Select the worksheet for the given band number
+    band_number = '1' if band == '943MHz' else '2'
+    tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_number}')
+    tile_data = tile_sheet.get_all_values()
+    column_names = tile_data[0]
+    tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
+
+    # Find the row index for the specified tile number
+    tile_index = None
+    for idx, row in enumerate(tile_table):
+        if row['tile_id'] == tile_number:
+            tile_index = idx + 2  # +2 because gspread index is 1-based and we skip the header row
+            break
+    
+    if tile_index is not None:
+        # Update the status in the '3d_pipeline' column
+        col_letter = gspread.utils.rowcol_to_a1(1, column_names.index('3d_pipeline') + 1)[0]
+        # as of >v6.0.0 the .update function requires a list of lists
+        tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
+        print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
+
+        # Find the validation file path
+        psm_val = glob.glob(f"/arc/projects/CIRADA/polarimetry/pipeline_runs/{band}/tile{tilenumber}/*validation.html")
+        if len(psm_val) == 1:
+            psm_val = os.path.basename(psm_val[0])
+            validation_link = f"https://ws-uv.canfar.net/arc/files/projects/CIRADA/polarimetry/pipeline_runs/{band}/tile{tilenumber}/{psm_val}"
+        elif len(psm_val) > 1:
+            validation_link = "MultipleHTMLFiles"
+        else:
+            validation_link = "HTMLFileNotFound"
+        # Update the '3d_val_link' column
+        col_link_letter = gspread.utils.rowcol_to_a1(1, column_names.index('3d_val_link') + 1)[0]
+        tile_sheet.update(range_name=f'{col_link_letter}{tile_index}', values=[[validation_link]])
+        print(f"Updated tile {tilenumber} validation link to {validation_link}")
+
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 
@@ -165,3 +224,7 @@ if __name__ == "__main__":
     if status == "Completed":
         status = "WaitingForValidation"
     update_status_spreadsheet(tilenumber, band, Google_API_token, status)
+
+
+    Google_API_token = "/arc/home/ErikOsinga/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
+    update_validation_spreadsheet(tilenumber, band, Google_API_token, status)
