@@ -1,6 +1,4 @@
-import time
 from vos import Client
-import subprocess
 import gspread
 import astropy.table as at
 import numpy as np
