@@ -14,8 +14,8 @@ band       -- str -- either "943MHz" or "1367MHz" for band 1 or band 2 data
 
 import argparse
 import os
-import subprocess
 from prefect import flow, task
+from possum2caom2.composable import run as possum_run
 
 @task
 def replace_working_directory_and_save(file_path, tile_workdir):
@@ -40,9 +40,9 @@ def replace_working_directory_and_save(file_path, tile_workdir):
 @task
 def launch_ingestscript(tile_workdir):
     """change workdir and launch ingest script"""
-
-    # Start possum_run in correct workdir
-    subprocess.Popen("possum_run",cwd=tile_workdir)
+    possum_run()
+    # # Start possum_run in correct workdir
+    # process = subprocess.Popen("possum_run",cwd=tile_workdir)
 
 @flow
 def do_ingest(tilenumber, band):
