@@ -1,10 +1,6 @@
-import os
-import argparse
-import pandas as pd
 from vos import Client
 import subprocess
 import gspread
-import astroquery.cadc as cadc
 import astropy.table as at
 import numpy as np
 from time import sleep
