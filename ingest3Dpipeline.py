@@ -40,9 +40,11 @@ def replace_working_directory_and_save(file_path, tile_workdir):
 @task
 def launch_ingestscript(tile_workdir):
     """change workdir and launch ingest script"""
+
+    # Start possum_run in correct workdir
+    os.chdir(tile_workdir)
     possum_run()
-    # # Start possum_run in correct workdir
-    # process = subprocess.Popen("possum_run",cwd=tile_workdir)
+    return
 
 @flow
 def do_ingest(tilenumber, band):
