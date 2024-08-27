@@ -158,7 +158,7 @@ def update_status(tile_number, band, Google_API_token, status):
 def ingest_3Dpipeline(band_number=1):
     band = "943MHz"
     # on p1, API token for POSSUM Pipeline Validation sheet
-    Google_API_token = "/arc/home/ErikOsinga/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
+    Google_API_token = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
 
     # Check google Validation sheet for band 1 tiles that have been processed AND validated
     tile_numbers = get_tiles_for_ingest(band_number=band_number, Google_API_token=Google_API_token)
