@@ -197,60 +197,10 @@ def ingest_3Dpipeline(band_number=1):
     else:
         print("Found no tiles ready to be processed.")
 
-def run_ingest_intermittently(band_number, interval, max_runs=None):
-    """
-    Every "interval" seconds, check whether we have 10 headless sessions pending.
-    
-    If less, check if an ingest job can be launched, and if so, launch it.
-    """
-
-    run_count = 0
-
-    while max_runs is None or run_count < max_runs:
-        try:
-            # Get information about currently open sessions
-            df_sessions = get_open_sessions()
-            print("Open sessions:")
-            print(df_sessions)
-
-            # Count the number of headless sessions with status 'Pending'
-            n_headless_pending = df_sessions[(df_sessions['type'] == 'headless') & (df_sessions['status'] == 'Pending')].shape[0]
-            print(f"Number of headless sessions with status 'Pending': {n_headless_pending}")
-
-            # Count the number of headless sessions with status 'Running'
-            n_headless_running = df_sessions[(df_sessions['type'] == 'headless') & (df_sessions['status'] == 'Running')].shape[0]
-            print(f"Number of headless sessions with status 'Running': {n_headless_running}")
-
-            # If the number of pending headless sessions is less than e.g. 10, run the script
-            if n_headless_pending < max_pending:
-                ingest_3Dpipeline(band_number=band_number)
-            else:
-                print("Too many pending headless sessions. Skipping this run.")
-
-        except subprocess.CalledProcessError as e:
-            print(f"Error occurred while running the script: {e}")
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
-        
-        run_count += 1
-        if max_runs is not None and run_count >= max_runs:
-            break
-        
-        print(f"Sleeping for {interval} seconds...")
-        time.sleep(interval)
-
 if __name__ == "__main__":
     # Band number 1 (943MHz) or 2 ("1367MHz")
     band_number = 1
 
-    # Interval between each run in seconds
-    interval = 600  # 10 minutes
 
-    # Maximum number of runs for this script, set to None for infinite
-    max_runs = None
-
-    # Maximum number of headless jobs pendings, will not submit a session if theres more
-    max_pending = 10
-
-    run_ingest_intermittently(band_number=band_number, interval=interval
-                              , max_runs=max_runs, max_pending=max_pending)
+    ## Assumes this script is called by run_3D_pipeline_intermittently.py
+    ingest_3Dpipeline(band_number=band_number)
