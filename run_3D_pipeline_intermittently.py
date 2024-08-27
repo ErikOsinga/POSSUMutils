@@ -19,7 +19,7 @@ def get_open_sessions():
 
     return df_sessions
 
-def run_script_intermittently(script_path, interval, max_runs=None):
+def run_script_intermittently(script_paths, interval, max_runs=None):
     run_count = 0
 
     ### TODO execute POSSUM_run_remote and create_symlinks.py every week. 
@@ -44,8 +44,9 @@ def run_script_intermittently(script_path, interval, max_runs=None):
 
             # If the number of pending headless sessions is less than e.g. 10, run the script
             if n_headless_pending < max_pending:
-                print(f"Running script: {script_path}")
-                subprocess.run(["python", script_path], check=True)
+                for script_path in script_paths:
+                    print(f"Running script: {script_path}")
+                    subprocess.run(["python", script_path], check=True)
             else:
                 print("Too many pending headless sessions. Skipping this run.")
 
@@ -63,7 +64,8 @@ def run_script_intermittently(script_path, interval, max_runs=None):
 
 if __name__ == "__main__":
     # Path to the script to be run intermittently
-    script_path = "check_status_and_launch_3Dpipeline_v2.py"
+    script_paths = ["check_status_and_launch_3Dpipeline_v2.py"
+                    ,"check_ingest_3Dpipeline.py"]
     
     # Interval between each run in seconds
     interval = 600  # 10 minutes
@@ -74,5 +76,5 @@ if __name__ == "__main__":
     # Maximum number of headless jobs pendings, will not submit a session if theres more
     max_pending = 10
 
-    run_script_intermittently(script_path, interval, max_runs)
+    run_script_intermittently(script_paths, interval, max_runs)
 
