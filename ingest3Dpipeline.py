@@ -236,7 +236,7 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 
-@flow
+@flow(log_prints=True)
 def do_ingest(tilenumber, band):
     """Does the ingest script
     
