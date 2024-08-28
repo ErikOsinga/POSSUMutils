@@ -22,6 +22,7 @@ import numpy as np
 import astropy.table as at
 import astroquery.cadc as cadc
 import datetime
+from time import sleep
 # important to grab _run() because run() is wrapped in sys.exit()
 from possum2caom2.composable import _run as possum_run
 
@@ -257,6 +258,10 @@ def do_ingest(tilenumber, band):
 
     # Check the ingest report file
     success = check_report(tile_workdir)
+
+    # Wait 5 minutes, I think CADC takes a bit to update
+    sleep(300) ## not sure the exact time that we should wait...
+
     # Check the CADC also if indeed all files are there
     CADCsuccess, date = check_CADC(tilenumber, band)
 
@@ -273,10 +278,11 @@ def do_ingest(tilenumber, band):
     Google_API_token = "/arc/home/ErikOsinga/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
     update_validation_spreadsheet(tilenumber, band, Google_API_token, status)
 
-    # If succesful, also record the date of ingestion in POSSUM status spreadsheet
-    # Update the POSSUM status monitor google sheet (see also log_processing_status.py)
-    Google_API_token = "/arc/home/ErikOsinga/.ssh/psm_gspread_token.json"
-    update_status_spreadsheet(tilenumber, band, Google_API_token, date)
+    if status == "Ingested":
+        # If succesful, also record the date of ingestion in POSSUM status spreadsheet
+        # Update the POSSUM status monitor google sheet (see also log_processing_status.py)
+        Google_API_token = "/arc/home/ErikOsinga/.ssh/psm_gspread_token.json"
+        update_status_spreadsheet(tilenumber, band, Google_API_token, date)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Do a 3D pipeline ingest on CANFAR")
