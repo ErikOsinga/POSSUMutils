@@ -26,13 +26,11 @@ import datetime
 from possum2caom2.composable import _run as possum_run
 
 
-# 17 products for the 3D pipeline
+# 14 (grouped) products for the 3D pipeline
 all_3dproducts = [ 
-   'FDF_im_dirty_3d_pipeline',
- 'FDF_real_dirty_3d_pipeline',
-  'FDF_tot_dirty_3d_pipeline',
-        'FDF_im_dirty_p3d_v1',
       'FDF_real_dirty_p3d_v1',
+        'FDF_im_dirty_p3d_v1',
+       'FDF_tot_dirty_p3d_v1',
            'RMSF_FWHM_p3d_v1',
             'RMSF_tot_p3d_v1',
          'amp_peak_pi_p3d_v1',
@@ -42,7 +40,6 @@ all_3dproducts = [
      'phi_peak_pi_fit_p3d_v1',
      'pol_angle_0_fit_p3d_v1',
           'snr_pi_fit_p3d_v1',
-       'FDF_tot_dirty_p3d_v1',
              'RMSF_im_p3d_v1',
            'RMSF_real_p3d_v1'
 ]
@@ -260,10 +257,9 @@ def do_ingest(tilenumber, band):
 
     # Check the ingest report file
     success = check_report(tile_workdir)
-
+    # Check the CADC also if indeed all files are there
     CADCsuccess, date = check_CADC(tilenumber, band)
 
-    # Check the CADC also if indeed all files are there
     status = "IngestFailed"
     if success:
         if CADCsuccess:
@@ -290,5 +286,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     tilenumber = args.tilenumber
     band = args.band
+
+    # needs to be str for comparison
+    tilenumber = str(tilenumber)
 
     do_ingest(tilenumber, band)
