@@ -22,7 +22,8 @@ import numpy as np
 import astropy.table as at
 import astroquery.cadc as cadc
 import datetime
-from possum2caom2.composable import run as possum_run
+# important to grab _run() because run() is wrapped in sys.exit()
+from possum2caom2.composable import _run as possum_run
 
 
 # 17 products for the 3D pipeline
@@ -72,8 +73,8 @@ def launch_ingestscript(tile_workdir):
 
     # Start possum_run in correct workdir
     os.chdir(tile_workdir)
-    possum_run()
-    return
+    result = possum_run()
+    return result
 
 @task
 def check_report(tile_workdir):
@@ -250,7 +251,12 @@ def do_ingest(tilenumber, band):
     replace_working_directory_and_save(config_template, tile_workdir)
 
     # Launch 'possum_run'
-    launch_ingestscript(tile_workdir)
+    result = launch_ingestscript(tile_workdir)
+
+    if result == 0:
+        print("Ingest script completed without errors")
+    else:
+        print("Ingest script completed with errors")
 
     # Check the ingest report file
     success = check_report(tile_workdir)
