@@ -101,7 +101,7 @@ def check_report(tile_workdir):
         return False
 
 @task
-def update_validation_spreadsheet(tile_number, band, Google_API_token, status):
+def update_validation_spreadsheet(tile_number, band, Google_API_token, status, test):
     """
     Update the status of the specified tile in the VALIDATION Google Sheet.
     (see also log_processing_status.py)
@@ -111,6 +111,7 @@ def update_validation_spreadsheet(tile_number, band, Google_API_token, status):
     band (str): The band of the tile.
     Google_API_token (str): The path to the Google API token JSON file.
     status (str): The status to set in the '3d_pipeline' column.
+    test (bool):  if we want to test what happened to something with 'IngestFailed' status
     """
     print("Updating POSSUM pipeline validation sheet")
 
@@ -137,9 +138,12 @@ def update_validation_spreadsheet(tile_number, band, Google_API_token, status):
             break
     
     if tile_index is not None:
-        # Status should be "IngestRunning" otherwise something went wrong
-        if row['3d_pipeline'] != "IngestRunning":
-            raise ValueError(f"Found status {row['3d_pipeline']} while it should be 'IngestRunning'")
+        if not test:
+            # Status should be "IngestRunning" otherwise something went wrong
+            if row['3d_pipeline'] != "IngestRunning":
+                raise ValueError(f"Found status {row['3d_pipeline']} while it should be 'IngestRunning'")
+        else:
+            print(f"Testing enabled. Current status of tile {tile_number} is {row['3d_pipeline']}")
 
         # Update the status in the '3d_pipeline' column
         col_letter = gspread.utils.rowcol_to_a1(1, column_names.index('3d_pipeline') + 1)[0]
@@ -179,12 +183,17 @@ def check_CADC(tilenumber, band):
     # get all products that have the correct frequency
     result_tile_band = result_tile[result_tile["freq"] == freq]
 
+    print(f"Found products:")
+    print(result_tile_band['productID'])
+
     # For 3D pipeline, there should be 17 products (and 3 inputs)
     for product in all_3dproducts:
         if product not in result_tile_band['productID']:
-            print(f"Missing product {product}")
+            print(f"CADC is missing product {product}")
             return False, None
         
+    print(f"CADC contains all products.")
+
     dt=[datetime.datetime.fromisoformat(x) for x in result_tile_band['lastModified']]
     last_modified=max(dt)
     date = last_modified.date().isoformat()
@@ -235,7 +244,7 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
         print(f"Tile {tile_number} not found in the sheet.")
 
 @flow(log_prints=True)
-def do_ingest(tilenumber, band):
+def do_ingest(tilenumber, band, test=False):
     """Does the ingest script
     
     1. Create config.yml based on template
@@ -248,8 +257,12 @@ def do_ingest(tilenumber, band):
     # Create config file and put it in the correct directory
     replace_working_directory_and_save(config_template, tile_workdir)
 
-    # Launch 'possum_run'
-    result = launch_ingestscript(tile_workdir)
+    if test:
+        # dont run ingest script (for testing when already ingested)
+        result = 0
+    else:
+        # Launch 'possum_run'
+        result = launch_ingestscript(tile_workdir)
 
     if result == 0:
         print("Ingest script completed without errors")
@@ -260,7 +273,7 @@ def do_ingest(tilenumber, band):
     success = check_report(tile_workdir)
 
     # Wait 5 minutes, I think CADC takes a bit to update
-    sleep(300) ## not sure the exact time that we should wait...
+    if not test: sleep(300) ## not sure the exact time that we should wait...
 
     # Check the CADC also if indeed all files are there
     CADCsuccess, date = check_CADC(tilenumber, band)
@@ -276,7 +289,7 @@ def do_ingest(tilenumber, band):
 
     # Record the status in the POSSUM Validation spreadsheet
     Google_API_token = "/arc/home/ErikOsinga/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
-    update_validation_spreadsheet(tilenumber, band, Google_API_token, status)
+    update_validation_spreadsheet(tilenumber, band, Google_API_token, status, test=test)
 
     if status == "Ingested":
         # If succesful, also record the date of ingestion in POSSUM status spreadsheet
@@ -288,12 +301,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Do a 3D pipeline ingest on CANFAR")
     parser.add_argument("tilenumber", type=int, help="The tile number to ingest")
     parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
+    parser.add_argument("-test", action="store_true", help="Test already ingested tile? (Default False)")
 
     args = parser.parse_args()
     tilenumber = args.tilenumber
     band = args.band
+    test = args.test
+    # test = True
 
     # needs to be str for comparison
     tilenumber = str(tilenumber)
 
-    do_ingest(tilenumber, band)
+    do_ingest(tilenumber, band, test=test)
