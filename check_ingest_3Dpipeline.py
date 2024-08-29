@@ -42,6 +42,7 @@ def get_tiles_for_ingest(band_number, Google_API_token):
     Get a list of 3D pipeline tile numbers that should be ready to be ingested.
     
     i.e.  '3d_pipeline_val' column is equal to "Good", meaning that it has been validated by a human.
+    and   '3d_pipeline_ingest' column is empty, meaning that it has not yet been tried to ingest.
     
     Args:
     band_number (int): The band number (1 or 2) to check.
@@ -62,7 +63,7 @@ def get_tiles_for_ingest(band_number, Google_API_token):
     tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
 
     # Find the tiles that satisfy the conditions
-    tiles_to_run = [row['tile_id'] for row in tile_table if row['3d_pipeline_val'] == 'Good']
+    tiles_to_run = [row['tile_id'] for row in tile_table if ( (row['3d_pipeline_val'] == 'Good') and (row['3d_pipeline_ingest'] == '') )]
 
     return tiles_to_run
 
