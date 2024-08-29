@@ -163,6 +163,8 @@ def check_CADC(tilenumber, band):
     """
     ## cadc-get-cert on CANFAR
     CADC_cert_file = "/arc/home/ErikOsinga/.ssl/cadcproxy.pem"
+    ## if I want to test on p1
+    # CADC_cert_file = '/home/erik/.ssl/cadcproxy.pem'
     CADC_session = cadc.Cadc()
     CADC_session.login(certificate_file=CADC_cert_file)
 
