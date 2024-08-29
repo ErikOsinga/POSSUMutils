@@ -15,8 +15,6 @@ band       -- str -- either "943MHz" or "1367MHz" for band 1 or band 2 data
 import argparse
 import os
 from prefect import flow, task
-import glob
-import os
 import gspread
 import numpy as np
 import astropy.table as at
@@ -24,7 +22,7 @@ import astroquery.cadc as cadc
 import datetime
 from time import sleep
 # important to grab _run() because run() is wrapped in sys.exit()
-from possum2caom2.composable import _run as possum_run
+from possum2caom2.composable import _run as possum_run # type: ignore
 
 
 # 14 (grouped) products for the 3D pipeline
@@ -187,7 +185,7 @@ def check_CADC(tilenumber, band):
     # get all products that have the correct frequency
     result_tile_band = result_tile[result_tile["freq"] == freq]
 
-    print(f"Found products:")
+    print("Found products:")
     print(result_tile_band['productID'])
 
     # For 3D pipeline, there should be 17 products (and 3 inputs)
@@ -196,7 +194,7 @@ def check_CADC(tilenumber, band):
             print(f"CADC is missing product {product}")
             return False, None
         
-    print(f"CADC contains all products.")
+    print("CADC contains all products.")
 
     dt=[datetime.datetime.fromisoformat(x) for x in result_tile_band['lastModified']]
     last_modified=max(dt)
@@ -280,7 +278,8 @@ def do_ingest(tilenumber, band, test=False):
     success = check_report(tile_workdir)
 
     # Wait 33 minutes, I think CADC takes a bit of time to update
-    if not test: sleep(int(33*60)) ## not sure the exact time that we should wait...
+    if not test:
+        sleep(int(33*60)) ## not sure the exact time that we should wait...
 
     # Check the CADC also if indeed all files are there
     CADCsuccess, date = check_CADC(tilenumber, band)
