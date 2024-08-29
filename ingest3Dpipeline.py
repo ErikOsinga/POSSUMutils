@@ -275,8 +275,8 @@ def do_ingest(tilenumber, band, test=False):
     # Check the ingest report file
     success = check_report(tile_workdir)
 
-    # Wait 5 minutes, I think CADC takes a bit to update
-    if not test: sleep(300) ## not sure the exact time that we should wait...
+    # Wait 33 minutes, I think CADC takes a bit of time to update
+    if not test: sleep(int(33*60)) ## not sure the exact time that we should wait...
 
     # Check the CADC also if indeed all files are there
     CADCsuccess, date = check_CADC(tilenumber, band)
