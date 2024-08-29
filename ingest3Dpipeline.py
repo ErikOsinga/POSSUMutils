@@ -110,7 +110,7 @@ def update_validation_spreadsheet(tile_number, band, Google_API_token, status, t
     tile_number (str): The tile number to update.
     band (str): The band of the tile.
     Google_API_token (str): The path to the Google API token JSON file.
-    status (str): The status to set in the '3d_pipeline' column.
+    status (str): The status to set in the '3d_pipeline_ingest' column.
     test (bool):  if we want to test what happened to something with 'IngestFailed' status
     """
     print("Updating POSSUM pipeline validation sheet")
@@ -140,16 +140,16 @@ def update_validation_spreadsheet(tile_number, band, Google_API_token, status, t
     if tile_index is not None:
         if not test:
             # Status should be "IngestRunning" otherwise something went wrong
-            if row['3d_pipeline'] != "IngestRunning":
-                raise ValueError(f"Found status {row['3d_pipeline']} while it should be 'IngestRunning'")
+            if row['3d_pipeline_ingest'] != "IngestRunning":
+                raise ValueError(f"Found status {row['3d_pipeline_ingest']} while it should be 'IngestRunning'")
         else:
-            print(f"Testing enabled. Current status of tile {tile_number} is {row['3d_pipeline']}")
+            print(f"Testing enabled. Current status of tile {tile_number} is {row['3d_pipeline_ingest']}")
 
-        # Update the status in the '3d_pipeline' column
-        col_letter = gspread.utils.rowcol_to_a1(1, column_names.index('3d_pipeline') + 1)[0]
+        # Update the status in the '3d_pipeline_ingest' column
+        col_letter = gspread.utils.rowcol_to_a1(1, column_names.index('3d_pipeline_ingest') + 1)[0]
         # as of >v6.0.0 the .update function requires a list of lists
         tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
-        print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
+        print(f"Updated tile {tile_number} status to {status} in '3d_pipeline_ingest' column.")
 
     else:
         raise ValueError(f"Tile {tile_number} not found in the sheet.")
@@ -210,6 +210,9 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
     band (str): The band of the tile.
     Google_API_token (str): The path to the Google API token JSON file.
     status (str): The status to set in the '3d_pipeline' column.
+
+    ## Note the STATUS spreadsheet only has the '3d_pipeline' column. 
+    ## the VALIDATION spreadsheet has more details.
     """
     print("Updating POSSUM status sheet")
 
