@@ -16,8 +16,8 @@ be ingested.
 Should be executed on p1
 
 
-If the "3d_pipeline" column is marked as "Good", we can launch an ingest job. 
-    In that case, the status will be changed to IngestRunning
+If the "3d_pipeline_val" column is marked as "Good", we can launch an ingest job. 
+    In that case, the status of 3d_pipeline_ingest will be changed to IngestRunning
 
 
 @author: Erik Osinga
@@ -41,7 +41,7 @@ def get_tiles_for_ingest(band_number, Google_API_token):
     """
     Get a list of 3D pipeline tile numbers that should be ready to be ingested.
     
-    i.e.  '3d_pipeline' column is equal to "Good", meaning that it has been validated by a human.
+    i.e.  '3d_pipeline_val' column is equal to "Good", meaning that it has been validated by a human.
     
     Args:
     band_number (int): The band number (1 or 2) to check.
@@ -62,7 +62,7 @@ def get_tiles_for_ingest(band_number, Google_API_token):
     tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
 
     # Find the tiles that satisfy the conditions
-    tiles_to_run = [row['tile_id'] for row in tile_table if row['3d_pipeline'] == 'Good']
+    tiles_to_run = [row['tile_id'] for row in tile_table if row['3d_pipeline_val'] == 'Good']
 
     return tiles_to_run
 
@@ -146,15 +146,19 @@ def update_status(tile_number, band, Google_API_token, status):
     
     if tile_index is not None:
         # Update the status in the '3d_pipeline' column
-        col_letter = gspread.utils.rowcol_to_a1(1, column_names.index('3d_pipeline') + 1)[0]
+        col_letter = gspread.utils.rowcol_to_a1(1, column_names.index('3d_pipeline_ingest') + 1)[0]
         # as of >v6.0.0 .update requires a list of lists
         tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
-        print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
+        print(f"Updated tile {tile_number} status to {status} in '3d_pipeline_ingest' column.")
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 
 def ingest_3Dpipeline(band_number=1):
-    band = "943MHz"
+    if band_number == 1:
+        band = "943MHz"
+    elif band_number == 2:
+        band = "1367MHz"
+
     # on p1, API token for POSSUM Pipeline Validation sheet
     Google_API_token = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
 
@@ -187,7 +191,7 @@ def ingest_3Dpipeline(band_number=1):
             # Launch the pipeline
             launch_ingest(tilenumber, band)
             
-            # Update the status to "IngestRunning"
+            # Update the status of 3d_pipeline_ingest to "IngestRunning"
             update_status(tilenumber, band, Google_API_token, "IngestRunning")
             
         else:
