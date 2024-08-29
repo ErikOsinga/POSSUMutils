@@ -97,7 +97,9 @@ def check_report(tile_workdir):
         print("Ingest was successful.")
         return True
     else:
-        print("Something has gone wrong with the ingest.")
+        print("Something has gone wrong with the ingest according to _report.txt")
+        print(f"Expected 24 inputs and found {inputs}")
+        print(f"Expected 24 successes and found {successes}")
         return False
 
 @task
@@ -301,6 +303,10 @@ def do_ingest(tilenumber, band, test=False):
         # Update the POSSUM status monitor google sheet (see also log_processing_status.py)
         Google_API_token = "/arc/home/ErikOsinga/.ssh/psm_gspread_token.json"
         update_status_spreadsheet(tilenumber, band, Google_API_token, date)
+
+    else:
+        # Make sure to raise an error such that the flow run is marked as failed
+        raise ValueError("Ingestion failed somehow.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Do a 3D pipeline ingest on CANFAR")
