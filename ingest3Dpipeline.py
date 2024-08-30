@@ -165,6 +165,8 @@ def check_CADC(tilenumber, band):
     CADC_cert_file = "/arc/home/ErikOsinga/.ssl/cadcproxy.pem"
     ## if I want to test on p1
     # CADC_cert_file = '/home/erik/.ssl/cadcproxy.pem'
+    # use the same service link as the ingest script to have updated records
+    os.environ['CADCTAP_SERVICE_URI'] = 'ivo://cadc.nrc.ca/ams/cirada'
     CADC_session = cadc.Cadc()
     CADC_session.login(certificate_file=CADC_cert_file)
 
