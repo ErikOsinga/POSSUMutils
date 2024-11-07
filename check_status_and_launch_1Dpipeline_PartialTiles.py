@@ -65,7 +65,7 @@ def get_tiles_for_pipeline_run(band_number, Google_API_token, whichpart='centers
     # Find the tiles that satisfy the conditions
     if whichpart == 'centers':
         fields_to_run = [row['name'] for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
-        tiles_to_run = [row['tile_id'] for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
+        tiles_to_run = [row['associated_tile'] for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
     elif whichpart == 'edges':
         raise NotImplementedError("TODO")
 
