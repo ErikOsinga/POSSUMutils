@@ -1,6 +1,12 @@
 import argparse
 from skaha.session import Session
+from skaha.models import ContainerRegistry
 
+# Shouldnt put these on github...
+# see https://shinybrar.github.io/skaha/
+# registry = ContainerRegistry(username="ErikOsinga", secret="CLI")
+
+# session = Session(registry=registry)
 session = Session()
 
 def launch_session(run_name, field_ID, tilenumber, image, cores, ram):
@@ -21,6 +27,7 @@ def launch_session(run_name, field_ID, tilenumber, image, cores, ram):
         cmd="bash",
         args=args,
         replicas=1,
+        env={},
     )
 
     print("Check sessions at https://ws-uv.canfar.net/skaha/v0/session")
@@ -40,7 +47,8 @@ if __name__ == "__main__":
     run_name = f"{field_ID}_{tilenumber}"
 
     # optionally :latest for always the latest version
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
+    # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
+    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.11.0"
     # good default values
     cores = 16
     ram = 40  # Check allowed values at canfar.net/science-portal
