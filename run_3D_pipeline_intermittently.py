@@ -24,12 +24,8 @@ def run_script_intermittently(script_paths, interval, max_runs=None):
 
     ### a chron job executes POSSUM_run_remote and create_symlinks.py every week on CANFAR.
     ### see p1: /home/erik/CIRADA/polarimetry/ASKAP/pipeline_runs/cronlogs/gocronjob.sh
-
     ### TODO: add update_CADC_tile_status.py to the cron job that runs every week
     ### such that downloaded and ingested tiles are updated in the spreadsheet. 
-
-    ### TODO: check whether in a new google sheet 3D products have been validated
-    ### if so, we should ingest
 
     while max_runs is None or run_count < max_runs:
         try:
