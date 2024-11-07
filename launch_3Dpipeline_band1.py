@@ -21,6 +21,7 @@ def launch_session(run_name, tilenumber, image, cores, ram):
         cmd="bash",
         args=args,
         replicas=1,
+        env={},
     )
 
     print("Check sessions at https://ws-uv.canfar.net/skaha/v0/session")
@@ -37,7 +38,8 @@ if __name__ == "__main__":
     run_name = f"tile{tilenumber}"  # Run name has to match the working directory on CANFAR
 
     # optionally :latest for always the latest version
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
+    # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
+    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.11.0"
     # good default values
     cores = 16
     ram = 112  # Check allowed values at canfar.net/science-portal
