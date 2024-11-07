@@ -45,4 +45,4 @@ if __name__ == "__main__":
     cores = 16
     ram = 40  # Check allowed values at canfar.net/science-portal
 
-    launch_session(run_name, tilenumber, image, cores, ram)
+    launch_session(run_name, field_ID, tilenumber, image, cores, ram)
