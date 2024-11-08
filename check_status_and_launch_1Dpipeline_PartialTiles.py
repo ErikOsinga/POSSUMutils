@@ -66,10 +66,11 @@ def get_tiles_for_pipeline_run(band_number, Google_API_token, whichpart='centers
     if whichpart == 'centers':
         fields_to_run = [row['name'].strip("EMU_").strip("WALLABY_") for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
         tiles_to_run = [row['associated_tile'] for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
+        SBids_to_run = [row['sbid'] for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
     elif whichpart == 'edges':
         raise NotImplementedError("TODO")
 
-    return fields_to_run, tiles_to_run
+    return fields_to_run, tiles_to_run, SBids_to_run
 
 def get_canfar_sourcelists(band_number):
     client = Client()
@@ -106,19 +107,20 @@ def field_from_sourcelist_string(srclist_str):
         print(f"Warning, could not find field_ID for sourcelist {srclist_str}")
     return field_ID
 
-def launch_pipeline(field_ID, tilenumber, band):
+def launch_pipeline(field_ID, tilenumber, SBid, band):
     """
     # Launch the appropriate 3D pipeline script based on the band
 
     field_ID   -- str/int -- 7 char fieldID, e.g. 1412-28
     tilenumber -- str/int -- 4 or 5 digit tilenumber, e.g. 8972
+    SBid       -- str/int -- 5 (?) digit SBid, e.g. 50413
     band       -- str     -- '943MHz' or '1367MHz' for Band 1 or Band 2
 
     """
     if band == "943MHz":
-        command = ["python", "launch_1Dpipeline_PartialTiles_band1.py", str(field_ID), str(tilenumber)]
+        command = ["python", "launch_1Dpipeline_PartialTiles_band1.py", str(field_ID), str(tilenumber), str(SBid)]
     elif band == "1367MHz":
-        command = ["python", "launch_1Dpipeline_PartialTiles_band2.py", str(field_ID), str(tilenumber)]
+        command = ["python", "launch_1Dpipeline_PartialTiles_band2.py", str(field_ID), str(tilenumber), str(SBid)]
         command = ""
         raise NotImplementedError("TODO: Temporarily disabled launching band 2 because need to write that run script")
     else:
@@ -188,14 +190,14 @@ def launch_band1_1Dpipeline():
     
     # Check google sheet for band 1 tiles that have been ingested into CADC 
     # (and thus available on CANFAR) but not yet processed with 3D pipeline
-    field_IDs, tile_numbers = get_tiles_for_pipeline_run(band_number=1, Google_API_token=Google_API_token)
+    field_IDs, tile_numbers, SBids = get_tiles_for_pipeline_run(band_number=1, Google_API_token=Google_API_token)
     # list of full sourcelist filenames
     canfar_sourcelists = get_canfar_sourcelists(band_number=1)
     # list of only the field IDs e.g. "1428-12"
     sourcelist_fieldIDs = [field_from_sourcelist_string(srl) for srl in canfar_sourcelists]
     sleep(1)
 
-    assert len(field_IDs) == len(tile_numbers) # need these two numbers to define what to run
+    assert len(field_IDs) == len(tile_numbers) == len(SBids) # need these three numbers to define what to run
 
     if len(field_IDs) > 0:
         print(f"Found {len(field_IDs)} partial tiles in Band 1 ready to be processed with 1D pipeline")
@@ -216,14 +218,15 @@ def launch_band1_1Dpipeline():
             for i in range(len(field_IDs)):
                 field_ID = field_IDs[i]
                 tilenumber = tile_numbers[i]
+                SBid = SBids[i]
                 if field_ID not in fields_on_both:
                     print(f"Skipping {field_ID} as it doesnt have a sourcelist on CANFAR")
                     continue
                 else:
-                    print(f"\nLaunching headless job for 1D pipeline for field {field_ID} and tile {tilenumber}")
+                    print(f"\nLaunching headless job for 1D pipeline for field {field_ID} and tile {tilenumber} and SBid {SBid}")
 
                     # Launch the pipeline
-                    launch_pipeline(field_ID, tilenumber, band)
+                    launch_pipeline(field_ID, tilenumber, SBid, band)
                     
                     # Update the status to "Running"
                     update_status(field_ID, tilenumber, band, Google_API_token, "Running")
