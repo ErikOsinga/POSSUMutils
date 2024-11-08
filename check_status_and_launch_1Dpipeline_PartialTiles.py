@@ -227,6 +227,8 @@ def launch_band1_1Dpipeline():
                     
                     # Update the status to "Running"
                     update_status(field_ID, tilenumber, band, Google_API_token, "Running")
+
+                    break
             
         else:
             print("No tiles are available on both CADC and CANFAR.")
