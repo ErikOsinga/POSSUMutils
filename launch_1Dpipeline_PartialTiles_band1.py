@@ -54,6 +54,6 @@ if __name__ == "__main__":
     image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.11.0"
     # good default values
     cores = 4
-    ram = 4  # Check allowed values at canfar.net/science-portal
+    ram = 40  # Check allowed values at canfar.net/science-portal
 
     launch_session(run_name, field_ID, tilenumber, SBnumber, image, cores, ram)
