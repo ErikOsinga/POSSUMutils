@@ -1,6 +1,6 @@
 import argparse
 from skaha.session import Session
-from skaha.models import ContainerRegistry
+# from skaha.models import ContainerRegistry
 
 # Shouldnt put these on github...
 # see https://shinybrar.github.io/skaha/
@@ -54,6 +54,6 @@ if __name__ == "__main__":
     image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.11.0"
     # good default values
     cores = 4
-    ram = 40  # Check allowed values at canfar.net/science-portal
+    ram = 20  # Check allowed values at canfar.net/science-portal
 
     launch_session(run_name, field_ID, tilenumber, SBnumber, image, cores, ram)
