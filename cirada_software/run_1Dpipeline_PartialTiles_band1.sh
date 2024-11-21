@@ -35,5 +35,5 @@ echo "TODO"
 # python /arc/projects/CIRADA/polarimetry/software/log_processing_status.py $2 943MHz
 # TODO: for the Partial Tile pipeline, check the following status as well:
 # If all edges and centers have been done for a certain field
-# then delete the partial tiles from CANFAR (otherwise too much storage)
+# then create summary plot and delete the partial tiles from CANFAR (otherwise too much storage)
 #
