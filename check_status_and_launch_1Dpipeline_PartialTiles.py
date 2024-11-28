@@ -32,7 +32,7 @@ Cameron is in charge of generating the source lists per partial tile and separat
 @author: Erik Osinga
 """
 
-def get_tiles_for_pipeline_run(band_number, Google_API_token, whichpart='centers'):
+def get_tiles_for_pipeline_run(band_number, Google_API_token):
     """
     Get a list of tile numbers that should be ready to be processed by the 1D pipeline 
     
@@ -46,31 +46,26 @@ def get_tiles_for_pipeline_run(band_number, Google_API_token, whichpart='centers
     list: A list of tile numbers that satisfy the conditions.
     """
 
-    correct_options = ['centers']#, 'edges']
-    # TODO: include 'edges' as option for whichpart 
-    if whichpart not in correct_options:
-        raise ValueError(f"{whichpart=} but valid options are {correct_options}")
-
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
     # "POSSUM Pipeline Validation" sheet (maintained by Erik)
     ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k')
 
     # Select the worksheet for the given band number
-    tile_sheet = ps.worksheet(f'Partial Tile Pipeline - {whichpart} - Band {band_number}')
+    tile_sheet = ps.worksheet(f'Partial Tile Pipeline - regions - Band {band_number}')
     tile_data = tile_sheet.get_all_values()
     column_names = tile_data[0]
     tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
 
-    # Find the tiles that satisfy the conditions
-    if whichpart == 'centers':
-        fields_to_run = [row['name'].strip("EMU_").strip("WALLABY_") for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
-        tiles_to_run = [row['associated_tile'] for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
-        SBids_to_run = [row['sbid'] for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
-    elif whichpart == 'edges':
-        raise NotImplementedError("TODO")
+    # Find the tiles that satisfy the conditions (i.e. has an SBID and not yet a '1d_pipeline' status)
+    fields_to_run = [row['field_name'].strip("EMU_").strip("WALLABY_") for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
+    tile1_to_run = [row['tile1'] for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
+    tile2_to_run = [row['tile2'] for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
+    tile3_to_run = [row['tile3'] for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
+    tile4_to_run = [row['tile4'] for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
+    SBids_to_run = [row['sbid'] for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
 
-    return fields_to_run, tiles_to_run, SBids_to_run
+    return fields_to_run, tile1_to_run, tile2_to_run, tile3_to_run, tile4_to_run, SBids_to_run
 
 def get_canfar_sourcelists(band_number):
     client = Client()
@@ -107,20 +102,20 @@ def field_from_sourcelist_string(srclist_str):
         print(f"Warning, could not find field_ID for sourcelist {srclist_str}")
     return field_ID
 
-def launch_pipeline(field_ID, tilenumber, SBid, band):
+def launch_pipeline(field_ID, tilenumbers, SBid, band):
     """
     # Launch the appropriate 3D pipeline script based on the band
 
-    field_ID   -- str/int -- 7 char fieldID, e.g. 1412-28
-    tilenumber -- str/int -- 4 or 5 digit tilenumber, e.g. 8972
-    SBid       -- str/int -- 5 (?) digit SBid, e.g. 50413
-    band       -- str     -- '943MHz' or '1367MHz' for Band 1 or Band 2
+    field_ID    -- str/int         -- 7 char fieldID, e.g. 1412-28
+    tilenumbers -- list of str/int -- list of up to 4 tile numbers: a tile number is a 4 or 5 digit tilenumber, e.g. 8972, if no number it's an empty string '' 
+    SBid        -- str/int         -- 5 (?) digit SBid, e.g. 50413
+    band        -- str             -- '943MHz' or '1367MHz' for Band 1 or Band 2
 
     """
     if band == "943MHz":
-        command = ["python", "launch_1Dpipeline_PartialTiles_band1.py", str(field_ID), str(tilenumber), str(SBid)]
+        command = ["python", "launch_1Dpipeline_PartialTiles_band1.py", str(field_ID), str(tilenumbers), str(SBid)]
     elif band == "1367MHz":
-        command = ["python", "launch_1Dpipeline_PartialTiles_band2.py", str(field_ID), str(tilenumber), str(SBid)]
+        command = ["python", "launch_1Dpipeline_PartialTiles_band2.py", str(field_ID), str(tilenumbers), str(SBid)]
         command = ""
         raise NotImplementedError("TODO: Temporarily disabled launching band 2 because need to write that run script")
     else:
@@ -190,25 +185,26 @@ def launch_band1_1Dpipeline():
     
     # Check google sheet for band 1 tiles that have been ingested into CADC 
     # (and thus available on CANFAR) but not yet processed with 3D pipeline
-    field_IDs, tile_numbers, SBids = get_tiles_for_pipeline_run(band_number=1, Google_API_token=Google_API_token)
+    field_IDs, tile1, tile2, tile3, tile4, SBids = get_tiles_for_pipeline_run(band_number=1, Google_API_token=Google_API_token)
+    assert len(tile1) == len(tile2) == len(tile3) == len(tile4), "Need to have 4 tile columns in google sheet. Even if row can be empty."
     # list of full sourcelist filenames
     canfar_sourcelists = get_canfar_sourcelists(band_number=1)
     # list of only the field IDs e.g. "1428-12"
     sourcelist_fieldIDs = [field_from_sourcelist_string(srl) for srl in canfar_sourcelists]
-    sleep(1)
+    sleep(1) # google sheet shenanigans
 
-    assert len(field_IDs) == len(tile_numbers) == len(SBids) # need these three numbers to define what to run
+    assert len(field_IDs) == len(tile1) == len(SBids) # need fieldID, up to 4 tileIDs and SBID to define what to run
 
     if len(field_IDs) > 0:
         print(f"Found {len(field_IDs)} partial tiles in Band 1 ready to be processed with 1D pipeline")
         print(f"On CANFAR, found {len(sourcelist_fieldIDs)} sourcelists for Band 1")
 
-        if len(field_IDs) > len(sourcelist_fieldIDs):
-            tiles_ready_but_not_canfar = set(field_IDs) - set(sourcelist_fieldIDs)
-            print(f"Field IDs ready according to the sheet but sourcelist not on CANFAR: {tiles_ready_but_not_canfar}")
-        else:
-            tiles_canfar_not_ready = set(sourcelist_fieldIDs) - set(field_IDs)
-            print(f"Field ID sourcelists on CANFAR but not ready to run: {tiles_canfar_not_ready}")
+        # if len(field_IDs) > len(sourcelist_fieldIDs):
+        tiles_ready_but_not_canfar = set(field_IDs) - set(sourcelist_fieldIDs)
+        print(f"Field IDs ready according to the sheet but sourcelist not on CANFAR: {tiles_ready_but_not_canfar}")
+        # else:
+        tiles_canfar_not_ready = set(sourcelist_fieldIDs) - set(field_IDs)
+        print(f"Field ID sourcelists on CANFAR but not ready to run: {tiles_canfar_not_ready}")
 
         fields_on_both = set(field_IDs) & set(sourcelist_fieldIDs)
         # print(f"Fields ready on both CADC and CANFAR: {tiles_on_both}")
@@ -217,19 +213,23 @@ def launch_band1_1Dpipeline():
             # Launch the first field_ID that has a sourcelist (assumes this script will be called many times)
             for i in range(len(field_IDs)):
                 field_ID = field_IDs[i]
-                tilenumber = tile_numbers[i]
+                t1 = tile1[i]
+                t2 = tile2[i]
+                t3 = tile3[i]
+                t4 = tile4[i]
+                tilenumbers = [t1, t2, t3, t4] # up to four tilenumbers, or less with '' (empty strings)
                 SBid = SBids[i]
                 if field_ID not in fields_on_both:
                     print(f"Skipping {field_ID} as it doesnt have a sourcelist on CANFAR")
                     continue
                 else:
-                    print(f"\nLaunching headless job for 1D pipeline for field {field_ID} and tile {tilenumber} and SBid {SBid}")
+                    print(f"\nLaunching headless job for 1D pipeline for field {field_ID} observed in SBid {SBid} covering partial tiles {tilenumbers} ")
 
                     # Launch the pipeline
-                    launch_pipeline(field_ID, tilenumber, SBid, band)
+                    launch_pipeline(field_ID, tilenumbers, SBid, band)
                     
                     # Update the status to "Running"
-                    update_status(field_ID, tilenumber, band, Google_API_token, "Running")
+                    update_status(field_ID, tilenumbers, band, Google_API_token, "Running")
 
                     break
             

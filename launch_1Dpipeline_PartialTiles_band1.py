@@ -1,4 +1,6 @@
 import argparse
+import ast
+import datetime
 from skaha.session import Session
 # from skaha.models import ContainerRegistry
 
@@ -9,11 +11,18 @@ from skaha.session import Session
 # session = Session(registry=registry)
 session = Session()
 
-def launch_session(run_name, field_ID, tilenumber, SBnumber, image, cores, ram):
+def arg_as_list(s):
+    v = ast.literal_eval(s)
+    if type(v) is not list:
+        raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (s))
+    return v
+
+def launch_session(run_name, field_ID, tilenumbers, SBnumber, image, cores, ram):
     """Launch 1D pipeline Partial Tile run"""
+    t1, t2, t3, t4 = tilenumbers
 
     # Template bash script to run
-    args = f"/arc/projects/CIRADA/polarimetry/software/run_1Dpipeline_PartialTiles_band1.sh {run_name} {field_ID} {tilenumber} {SBnumber}"
+    args = f"/arc/projects/CIRADA/polarimetry/software/run_1Dpipeline_PartialTiles_band1.sh {run_name} {field_ID} {SBnumber} {t1} {t2} {t3} {t4}"
 
     print("Launching session")
     print(f"Command: bash {args}")
@@ -38,22 +47,23 @@ def launch_session(run_name, field_ID, tilenumber, SBnumber, image, cores, ram):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Launch a 1D pipeline Partial Tiles run")
     parser.add_argument("field_ID", type=str, help="The field ID to process")
-    parser.add_argument("tilenumber", type=int, help="The tile number to process")
+    parser.add_argument("tilenumbers", type=arg_as_list, help="A list of 4 tile numbers to process. Empty strings for less tilenumbers. e.g. ['8843','8971','',''] ")
     parser.add_argument("SBnumber", type=int, help="The SB number to process")
 
     args = parser.parse_args()
     field_ID = args.field_ID
-    tilenumber = args.tilenumber
+    tilenumbers = args.tilenumbers
     SBnumber = args.SBnumber
     
-    # max 15 characters for run name
-    run_name = f"{field_ID}_{tilenumber}"
+    timestr = (datetime.now().strftime("%d/%m/%Y %H:%M:%S"))[11:]
+    # max 15 characters for run name. SBID+timenow: e.g. 50413-11:39:21
+    run_name = f"{SBnumber}-{timestr}"
 
-    # optionally :latest for always the latest version
+    # optionally :latest for always the latest version. CANFAR has a bug with that though.
     # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
     image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.11.0"
     # good default values
     cores = 4
     ram = 20  # Check allowed values at canfar.net/science-portal
 
-    launch_session(run_name, field_ID, tilenumber, SBnumber, image, cores, ram)
+    launch_session(run_name, field_ID, tilenumbers, SBnumber, image, cores, ram)
