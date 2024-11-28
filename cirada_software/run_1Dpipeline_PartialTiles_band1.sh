@@ -19,7 +19,7 @@ for element in "${tile_array[@]}"; do
 done
 # Step 4: Join the elements with '+'
 tilelist_dir=$(IFS='+'; echo "${tile_numbers[*]}")
-# Output the result, e.g. 8843+8971
+# Output the result, e.g. 8843+8971 # also known as TILESTR
 echo "Found tiles $tilelist_dir"
 workdir=/arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/943MHz/$2/$3/$tilelist_dir/
 echo "Will create directory $workdir$"
@@ -32,8 +32,8 @@ rm /arc/projects/CIRADA/polarimetry/ASKAP/PartialTiles/sourcelists/selavy-image.
 ## config file name e.g. config_943MHz_1412-28_50413_8843_8971_<>_<>.ini where <> is empty 
 ## made in $workdir
 echo "Creating config file"
-python /arc/projects/CIRADA/polarimetry/software/POSSUMutils/create_config_partialtiles.py /arc/projects/CIRADA/polarimetry/ASKAP/PartialTiles/config_templates/config_PartialTiles_1d_centers_band1.ini config_943MHz_$2_$3_$tilelist_dir.ini $workdir $2 $3 $tilelist
-# arguments: template file, output_filename, workdir, fieldstr, SB_number, tile_numbers
+python /arc/projects/CIRADA/polarimetry/software/POSSUMutils/create_config_partialtiles.py /arc/projects/CIRADA/polarimetry/software/POSSUM_Polarimetry_Pipeline/pipeline/canfar_config_templates/config_template_PartialTiles_1d_band1.ini config_943MHz_$2_$3_$tilelist_dir.ini $workdir $2 $3 "$tilelist_dir"
+# arguments: template file, output_filename, workdir, fieldstr, SB_number, tilelist_dir
 
 echo "Opening SSH tunnel to prefect server host (p1)"
 # open connection

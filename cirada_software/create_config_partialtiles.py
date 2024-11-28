@@ -22,7 +22,7 @@ def arg_as_list(s):
         raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (s))
     return v
 
-def modify_config_file(template_filename, field_ID, tile_number, working_dir,
+def modify_config_file(template_filename, field_ID, tilestr, working_dir,
                        output_filename, SB_num):
     with open(template_filename,'r') as f:
         template=np.array(f.readlines())
@@ -31,11 +31,8 @@ def modify_config_file(template_filename, field_ID, tile_number, working_dir,
     if not os.path.exists((working_dir)):
         print(f"Creating directory {working_dir} for config file")
         os.mkdir(working_dir)
-    
-    template=np.char.replace(template,'[TILE1]',str(tile_number),count=1)
-    template=np.char.replace(template,'[TILE2]',str(tile_number),count=1)
-    template=np.char.replace(template,'[TILE3]',str(tile_number),count=1)
-    template=np.char.replace(template,'[TILE4]',str(tile_number),count=1)
+
+    template=np.char.replace(template,'[TILESTR]',str(tilestr),count=1)
     template=np.char.replace(template,'[field_ID]',str(field_ID),count=1)
     template=np.char.replace(template,'[SB_num]',str(SB_num),count=1)
 
@@ -83,14 +80,14 @@ if __name__ == "__main__":
         help="SB number. e.g. 50413",
     )
     parser.add_argument(
-        "tile_numbers",
+        "tilestr",
         metavar="tiles",
-        type=arg_as_list,
-        help="Tile numbers. List of up to 4 numbers or empty strings. e.g. ['8843','8971','',''] ",
+        type=str,
+        help="Up to Tile numbers as string variable separated by '+'  e.g.: '8843+8971' ",
     )    
 
     args = parser.parse_args()
 
     # Create config file from template 
-    modify_config_file(args.template_file, args.field_ID, args.tile_numbers, args.working_dir,
+    modify_config_file(args.template_file, args.field_ID, args.tilestr, args.working_dir,
                        args.output_filename, args.SB_num)
