@@ -154,6 +154,10 @@ if __name__ == '__main__':
     # Example usage with target name, query SIMBAD
     target = 'Abell 85'
     target = 'Abell 1651'
+    target = 'Abell 3627'
+    target = 'Dorado Group'
+    target = 'Abell 3526'
+    target = 'Abell S 636'
     ra_input, dec_input = get_coordinates_from_simbad(target)
     
     # Compute whether target is in the requested field type
