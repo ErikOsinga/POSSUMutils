@@ -13,7 +13,11 @@ the particular flow run might show what happens?
 
 """
 
-from skaha.session import Session
+from datetime import date
+today = date.today()
+print("Download script called. Today's date:", today)
+
+from skaha.session import Session  # noqa: E402
 session = Session()
 
 def launch_download():
@@ -23,6 +27,7 @@ def launch_download():
     run_name = "download"
     
     # optionally :latest for always the latest version
+    # TODO: there's a bug in CANFAR where the latest tag doesnt work
     image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
     # good default values for download script
     cores = 2
