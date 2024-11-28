@@ -1,21 +1,39 @@
-echo "Preparing pipeline run name $1 field_ID $2 tile number $3 SB$4"
+# parse the arguments of up to 4 tiles into a list with possibly empty strings
+tilelist= "['$4','$5','$6','$7']"
+echo $tilelist
+echo "Preparing pipeline run name $1 field_ID $2 SB $3 tiles $tilelist"
 
-### TODO: write clean script in case of repeat run
+
+#### parse that list into the directory we want to create. e.g. ['8843','8971','',''], becomes 8843+8971
+
+# Step 1: Remove square brackets and single quotes
+tilelist_clean=$(echo "$tilelist" | tr -d "[]'")
+# Step 2: Split the string into an array using comma as the delimiter
+IFS=',' read -ra tile_array <<< "$tilelist_clean"
+# Step 3: Collect non-empty elements
+tile_numbers=()
+for element in "${tile_array[@]}"; do
+    if [ -n "$element" ]; then
+        tile_numbers+=("$element")
+    fi
+done
+# Step 4: Join the elements with '+'
+tilelist_dir=$(IFS='+'; echo "${tile_numbers[*]}")
+# Output the result, e.g. 8843+8971
+echo "Found tiles $tilelist_dir"
+workdir=/arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/943MHz/$2/$3/$tilelist_dir/
+echo "Will create directory $workdir$"
+
+### TODO: write clean script in case of repeat run. Add to create_config.py?
 echo "REMOVING POSSIBLE XML FILE FROM PREVIOUS RUN"
 rm /arc/projects/CIRADA/polarimetry/ASKAP/PartialTiles/sourcelists/selavy-image.i.EMU_$2.SB$4.cont.taylor.0.restored.conv.components.15sig.$3.tile$3.xml
 
-## FOR BAND 1
-echo "Creating working directory"
-echo "/arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/943MHz/$2/$3"
-mkdir -p "/arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/943MHz/$2/$3"
-
+## FOR BAND 1: Create config file and working directory
+## config file name e.g. config_943MHz_1412-28_50413_8843_8971_<>_<>.ini where <> is empty 
+## made in $workdir
 echo "Creating config file"
-echo "Band 1, tile centers"
-#cp /arc/projects/CIRADA/polarimetry/ASKAP/PartialTiles/tests/config_test_partial_1d_band1_core_BKP.ini /arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/$2/$3/config_$2_$3.ini
-
-python /arc/projects/CIRADA/polarimetry/ASKAP/PartialTiles/config_templates/create_config.py /arc/projects/CIRADA/polarimetry/ASKAP/PartialTiles/config_templates/config_PartialTiles_1d_centers_band1.ini config_$2_$3.ini /arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/943MHz/$2/$3 $2 $3 $4
-# arguments: template file, output_filename, workdir, fieldstr, tile_number, SB_number
-
+python /arc/projects/CIRADA/polarimetry/software/POSSUMutils/create_config_partialtiles.py /arc/projects/CIRADA/polarimetry/ASKAP/PartialTiles/config_templates/config_PartialTiles_1d_centers_band1.ini config_943MHz_$2_$3_$tilelist_dir.ini $workdir $2 $3 $tilelist
+# arguments: template file, output_filename, workdir, fieldstr, SB_number, tile_numbers
 
 echo "Opening SSH tunnel to prefect server host (p1)"
 # open connection
@@ -27,8 +45,7 @@ echo "adding RMtools[dev] to pythonpath to work with dev branch of RMtools"
 export PYTHONPATH="/arc/projects/CIRADA/polarimetry/software/RMtoolsdev/:$PYTHONPATH"
 
 echo "Starting pipeline run $1 field_ID $2 tile number $3"
-### TODO update config_filename with band1/band2?
-psrecord "python /arc/projects/CIRADA/polarimetry/software/POSSUM_Polarimetry_Pipeline/pipeline/pipeline_prefect.py /arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/943MHz/$2/$3/config_$2_$3.ini" --include-children --log /arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/943MHz/$2/$3/psrecord_$2_$3.txt --plot /arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/943MHz/$2/$3/psrecord_tile$2_$3.png --interval 1
+psrecord "python /arc/projects/CIRADA/polarimetry/software/POSSUM_Polarimetry_Pipeline/pipeline/pipeline_prefect.py $workdir/config_$2_$3_$tilelist_dir.ini" --include-children --log $workdir/psrecord_$2_$3_$tilelist_dir.txt --plot $workdir/psrecord_$2_$3_$tilelist_dir.png --interval 1
 
 echo "Logging pipeline status"
 echo "TODO"
