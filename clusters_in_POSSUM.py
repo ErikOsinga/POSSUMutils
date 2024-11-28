@@ -108,7 +108,7 @@ def match_names_in_catalog(observed_subset, second_catalog):
 # Example usage
 if __name__ == '__main__':
     whichcat = 'erass' # 'PSZ2' or 'erass'
-    observation_stage = 'released'  # Replace with the desired stage ('released', 'observed', 'processed', 'planned')
+    observation_stage = 'planned'  # Replace with the desired stage ('released', 'observed', 'processed', 'planned')
     band = 1 # which observing band
 
 
@@ -117,7 +117,8 @@ if __name__ == '__main__':
     if whichcat == 'PSZ2':
         catalog_file = '/home/osingae/Documents/postdoc/downloads/PSZ2_catalogue.dat.fits'
     elif whichcat == 'erass':
-        catalog_file = '/home/osingae/Documents/postdoc/projects/SURP/data/erass1cl_primary_v3.2.fits'
+        catalog_file = '/home/osingae/Documents/postdoc/projects/SURP/Affan/before_project/data/erass1cl_primary_v3.2.fits'
+        # catalog_file = '/home/osingae/Documents/postdoc/projects/SURP/data/erass1cl_primary_v3.2.fits'
     else:
         raise ValueError(f"Not yet implemented {whichcat}")
 
