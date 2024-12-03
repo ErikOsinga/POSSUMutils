@@ -24,15 +24,11 @@ echo "Found tiles $tilelist_dir"
 workdir=/arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/943MHz/$2/$3/$tilelist_dir/
 echo "Will create directory $workdir$"
 
-### TODO: write clean script in case of repeat run. Add to create_config.py?
-echo "REMOVING POSSIBLE XML FILE FROM PREVIOUS RUN"
-rm /arc/projects/CIRADA/polarimetry/ASKAP/PartialTiles/sourcelists/selavy-image.i.EMU_$2.SB$4.cont.taylor.0.restored.conv.components.15sig.$3.tile$3.xml
-
 ## FOR BAND 1: Create config file and working directory
-## config file name e.g. config_943MHz_1412-28_50413_8843_8971_<>_<>.ini where <> is empty 
+## config file name e.g. config_943MHz_1412-28_50413_8843+8971.ini where <> is empty 
 ## made in $workdir
 echo "Creating config file"
-python /arc/projects/CIRADA/polarimetry/software/POSSUMutils/create_config_partialtiles.py /arc/projects/CIRADA/polarimetry/software/POSSUM_Polarimetry_Pipeline/pipeline/canfar_config_templates/config_template_PartialTiles_1d_band1.ini config_943MHz_$2_$3_$tilelist_dir.ini $workdir $2 $3 "$tilelist_dir"
+python /arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/create_config_partialtiles.py /arc/projects/CIRADA/polarimetry/software/POSSUM_Polarimetry_Pipeline/pipeline/canfar_config_templates/config_template_PartialTiles_1d_band1.ini config_943MHz_$2_$3_$tilelist_dir.ini $workdir $2 $3 "$tilelist_dir"
 # arguments: template file, output_filename, workdir, fieldstr, SB_number, tilelist_dir
 
 echo "Opening SSH tunnel to prefect server host (p1)"
