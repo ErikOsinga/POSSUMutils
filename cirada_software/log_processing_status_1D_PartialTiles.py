@@ -129,7 +129,6 @@ if __name__ == "__main__":
         type=arg_as_list,
         help="A list of 4 tile numbers to process. Empty strings for less tilenumbers. e.g. ['8843','8971','',''] "
     )
-
     parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
 
     args = parser.parse_args()
