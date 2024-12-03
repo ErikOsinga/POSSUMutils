@@ -44,9 +44,8 @@ echo "Starting pipeline run $1 field_ID $2 SBID $3 tiles $tilelist_dir"
 psrecord "python /arc/projects/CIRADA/polarimetry/software/POSSUM_Polarimetry_Pipeline/pipeline/pipeline_prefect.py $workdir/config_943MHz_$2_$3_$tilelist_dir.ini" --include-children --log $workdir/psrecord_$2_$3_$tilelist_dir.txt --plot $workdir/psrecord_$2_$3_$tilelist_dir.png --interval 1
 
 echo "Logging pipeline status"
-echo "TODO"
-# python /arc/projects/CIRADA/polarimetry/software/log_processing_status.py $2 943MHz
+# field, sbid, tilenumbers ("8764+8953"), band
+python /arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/log_processing_status_1D_PartialTiles.py $2 $3 $tilelist_dir 943MHz
 # TODO: for the Partial Tile pipeline, check the following status as well:
 # If all edges and centers have been done for a certain field
 # then create summary plot and delete the partial tiles from CANFAR (otherwise too much storage)
-#
