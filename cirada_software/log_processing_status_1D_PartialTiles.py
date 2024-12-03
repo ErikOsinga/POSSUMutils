@@ -43,7 +43,7 @@ def update_validation_spreadsheet(field_ID, tile_numbers, band, Google_API_token
     tile_number (str): The tile number to update.
     band (str): The band of the tile.
     Google_API_token (str): The path to the Google API token JSON file.
-    status (str): The status to set in the '3d_pipeline' column.
+    status (str): The status to set in the '1d_pipeline' column.
     """
     print("Updating POSSUM pipeline validation sheet")
 
@@ -75,8 +75,8 @@ def update_validation_spreadsheet(field_ID, tile_numbers, band, Google_API_token
             break
     
     if tile_index is not None:
-        # Update the status in the '3d_pipeline' column
-        col_letter = gspread.utils.rowcol_to_a1(1, column_names.index('3d_pipeline') + 1)[0]
+        # Update the status in the '1d_pipeline' column
+        col_letter = gspread.utils.rowcol_to_a1(1, column_names.index('1d_pipeline') + 1)[0]
         # as of >v6.0.0 the .update function requires a list of lists
         tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
         print(f"Updated row with tiles {tile_numbers} status to {status} in '1d_pipeline' column.")
