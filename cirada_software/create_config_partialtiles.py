@@ -44,8 +44,7 @@ if __name__ == "__main__":
     import argparse
 
     descStr = """
-    Generates a POSSUM pipeline config file and working directory from a given 
-    template, working directory, and tile number.
+    Generates a POSSUM pipeline config file and working directory from a given template.
     """
 
     # Parse the command line options
