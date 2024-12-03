@@ -145,7 +145,7 @@ if __name__ == "__main__":
     # e.g. /arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/943MHz/1412-28/50413/8715/
 
     # Find the POSSUM pipeline log file for the given tilenumber
-    log_files = sorted(glob.glob(f"{basedir}/*pipeline_config_{tilestr}.log"))
+    log_files = sorted(glob.glob(f"{basedir}/*pipeline_config*_{tilestr}.log"))
 
     if len(log_files) > 1:
         log_file_path = log_files[-1]
