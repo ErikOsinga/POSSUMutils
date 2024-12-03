@@ -41,7 +41,7 @@ echo "adding RMtools[dev] to pythonpath to work with dev branch of RMtools"
 export PYTHONPATH="/arc/projects/CIRADA/polarimetry/software/RMtoolsdev/:$PYTHONPATH"
 
 echo "Starting pipeline run $1 field_ID $2 SBID $3 tiles $tilelist_dir"
-psrecord "python /arc/projects/CIRADA/polarimetry/software/POSSUM_Polarimetry_Pipeline/pipeline/pipeline_prefect.py $workdir/config_$2_$3_$tilelist_dir.ini" --include-children --log $workdir/psrecord_$2_$3_$tilelist_dir.txt --plot $workdir/psrecord_$2_$3_$tilelist_dir.png --interval 1
+psrecord "python /arc/projects/CIRADA/polarimetry/software/POSSUM_Polarimetry_Pipeline/pipeline/pipeline_prefect.py $workdir/config_943MHz_$2_$3_$tilelist_dir.ini" --include-children --log $workdir/psrecord_$2_$3_$tilelist_dir.txt --plot $workdir/psrecord_$2_$3_$tilelist_dir.png --interval 1
 
 echo "Logging pipeline status"
 echo "TODO"
