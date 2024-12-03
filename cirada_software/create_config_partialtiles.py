@@ -30,7 +30,7 @@ def modify_config_file(template_filename, field_ID, tilestr, working_dir,
     #Create working directory (to write config file)
     if not os.path.exists((working_dir)):
         print(f"Creating directory {working_dir} for config file")
-        os.mkdir(working_dir)
+        os.makedirs(working_dir)
 
     template=np.char.replace(template,'[TILESTR]',str(tilestr),count=1)
     template=np.char.replace(template,'[field_ID]',str(field_ID),count=1)
