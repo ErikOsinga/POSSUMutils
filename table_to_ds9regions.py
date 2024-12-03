@@ -75,6 +75,13 @@ def write_ds9_regionfile(cat, outfile, racol='RA', deccol='DEC', majcol=None, mi
         print(f"Error writing to file '{outfile}': {e}")
 
 if __name__ == "__main__":
+    """
+    e.g.
+    
+    python ~/Documents/postdoc/POSSUM/POSSUMutils/table_to_ds9regions.py /home/osingae/Documents/postdoc/CASDA/test_pipeline/test_1dpipeline_2024_11/test_partialtiles/test_edges/selavy-image.i.EMU_1412-28.SB50413.cont.taylor.0.restored.conv.components.15sig.tiles8843.xml /home/osingae/Documents/postdoc/CASDA/test_pipeline/test_1dpipeline_2024_11/test_partialtiles/test_edges/selavy-image.i.EMU_1412-28.SB50413.cont.taylor.0.restored.conv.components.15sig.tiles8843.reg --racol col_ra_deg_cont --deccol col_dec_deg_cont
+
+    """
+
     # argparse: Parse command-line arguments
     parser = argparse.ArgumentParser(description='Generate a DS9 region file from a FITS catalogue.')
     parser.add_argument('cat', help='Input (FITS) catalogue file.')
