@@ -55,10 +55,9 @@ if __name__ == "__main__":
     tilenumbers = args.tilenumbers
     SBnumber = args.SBnumber
     
-    timestr = (datetime.now().strftime("%d/%m/%Y %H:%M:%S"))[11:]
-    # max 15 characters for run name. SBID+timenow: e.g. 50413-11:39:21
+    timestr = ((datetime.now().strftime("%d/%m/%Y %H:%M:%S"))[11:]).replace(':','-') # ":" is not allowed character
+    # max 15 characters for run name. SBID+timenow: e.g. 50413-11-39-21
     run_name = f"{SBnumber}-{timestr}"
-    run_name = "test"
 
     # optionally :latest for always the latest version. CANFAR has a bug with that though.
     # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
