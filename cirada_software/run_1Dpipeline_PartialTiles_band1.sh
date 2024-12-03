@@ -1,5 +1,5 @@
 # parse the arguments of up to 4 tiles into a list with possibly empty strings
-tilelist= "['$4','$5','$6','$7']"
+tilelist="['$4','$5','$6','$7']"
 echo $tilelist
 echo "Preparing pipeline run name $1 field_ID $2 SB $3 tiles $tilelist"
 
