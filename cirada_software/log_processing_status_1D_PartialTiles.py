@@ -166,7 +166,7 @@ if __name__ == "__main__":
         log_file_path = log_files[0]
         status = check_pipeline_complete(log_file_path)
 
-    print(f"Tilenumbera {tilestr} status: {status}, band: {band}")
+    print(f"Tilenumbers {tilestr} status: {status}, band: {band}")
 
     # Update the POSSUM Validation spreadsheet
     Google_API_token = "/arc/home/ErikOsinga/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
