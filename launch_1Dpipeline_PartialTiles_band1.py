@@ -1,6 +1,6 @@
 import argparse
 import ast
-import datetime
+from datetime import datetime
 from skaha.session import Session
 # from skaha.models import ContainerRegistry
 
