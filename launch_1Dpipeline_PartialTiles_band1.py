@@ -64,6 +64,9 @@ if __name__ == "__main__":
     image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.11.0" # v1.12.1 has astropy issue https://github.com/astropy/astropy/issues/17497
     # good default values
     cores = 4
-    ram = 26  # Check allowed values at canfar.net/science-portal
+    # Allocate different RAM based on how many tiles, lets say ~ 10 GB per tile needed
+    number_of_tiles = len([t for t in tilenumbers if t != ''])
+    ram = 10*number_of_tiles
+    # Check allowed values at canfar.net/science-portal, 10, 20, 30, 40 GB should be allowed
 
     launch_session(run_name, field_ID, tilenumbers, SBnumber, image, cores, ram)
