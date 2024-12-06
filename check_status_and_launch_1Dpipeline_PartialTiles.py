@@ -284,7 +284,7 @@ def launch_band1_1Dpipeline():
             launch_pipeline_summary(field, sbid, band)
 
             # Update the status of the '1d_pipeline_validation' column to "Running" regardless of tile number
-            update_status(field, None, band, Google_API_token, "Running", status_column='1d_pipeline_validation')
+            update_status(field, None, sbid, band, Google_API_token, "Running", status_column='1d_pipeline_validation')
 
     if len(field_IDs) > 0:
         print(f"Found {len(field_IDs)} partial tiles in Band 1 ready to be processed with 1D pipeline")
