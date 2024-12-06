@@ -11,7 +11,7 @@ if int(astroquery.__version__[-1]) < 7:
     ## DONT PUT YOUR PASSWORD ON GITHUB
     casda = Casda("erik.osinga@utoronto.ca","password")
 else:
-    # After astroquery 0.4.7
+    # After astroquery 0.4.7. How to login headlessly???
     casda = Casda()
     casda.login(username='erik.osinga@utoronto.ca')
 
