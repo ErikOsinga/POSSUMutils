@@ -32,6 +32,36 @@ Cameron is in charge of generating the source lists per partial tile and separat
 @author: Erik Osinga
 """
 
+def get_results_per_field_sbid(tile_table, verbose=False):
+    """
+    Group google validation sheet by field name and sbid
+    
+    Returns a dict of type {('fieldname','sbid'):boolean}
+    
+    If all Partial tiles for a fieldname have been completed boolean=True, otherwise false.
+    """
+    # Group the table by 'field_name' and 'sbid'
+    grouped_table = tile_table.group_by(['field_name', 'sbid'])
+
+    # Check conditions for each group
+    results = {}
+    for group in grouped_table.groups:
+        field_name = group['field_name'][0]  # Get the field name for the group
+        sbid = group['sbid'][0]  # Get the sbid for the group
+        # Check if all '1d_pipeline_validation' are empty and '1d_pipeline' is "Completed"
+        all_conditions_met = (
+            all(group['1d_pipeline_validation'] == '') and 
+            all(group['1d_pipeline'] == 'Completed')
+        )
+        results[(field_name, sbid)] = all_conditions_met
+
+    if verbose:
+        for (field, sbid), conditions_met in results.items():
+            status = "all conditions met" if conditions_met else "conditions not met"
+            print(f"Field name '{field}', SBID '{sbid}' has 1d_pipeline_validation and 1d_pipeline {status}.")
+
+    return results
+
 def get_tiles_for_pipeline_run(band_number, Google_API_token):
     """
     Get a list of tile numbers that should be ready to be processed by the 1D pipeline 
@@ -65,7 +95,12 @@ def get_tiles_for_pipeline_run(band_number, Google_API_token):
     tile4_to_run = [row['tile4'] for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
     SBids_to_run = [row['sbid'] for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
 
-    return fields_to_run, tile1_to_run, tile2_to_run, tile3_to_run, tile4_to_run, SBids_to_run
+    # Also find fields that have all partial tiles completed, but validation plot not yet made
+    results_grouped = get_results_per_field_sbid(tile_table)
+    # return only a list of (fieldnames,sbid) pairs for which we can start a validation job
+    can_make_validation = [key for (key,value) in results_grouped.items() if value]
+
+    return fields_to_run, tile1_to_run, tile2_to_run, tile3_to_run, tile4_to_run, SBids_to_run, can_make_validation
 
 def get_canfar_sourcelists(band_number):
     client = Client()
@@ -104,7 +139,7 @@ def field_from_sourcelist_string(srclist_str):
 
 def launch_pipeline(field_ID, tilenumbers, SBid, band):
     """
-    # Launch the appropriate 3D pipeline script based on the band
+    # Launch the appropriate 1D pipeline script based on the band
 
     field_ID    -- str/int         -- 7 char fieldID, e.g. 1412-28
     tilenumbers -- list of str/int -- list of up to 4 tile numbers: a tile number is a 4 or 5 digit tilenumber, e.g. 8972, if no number it's an empty string '' 
@@ -124,21 +159,42 @@ def launch_pipeline(field_ID, tilenumbers, SBid, band):
     print(f"Running command: {' '.join(command)}")
     subprocess.run(command, check=True)
 
-def update_status(field_ID, tile_numbers, band, Google_API_token, status):
+def launch_pipeline_summary(field_ID, SBid, band):
     """
-    Update the status of the specified partial tile in the Google Sheet.
+    # Launch the appropriate 1D pipeline summary script based on the band
 
-    A Partial Tile is uniquely defined by field_ID + tile_number
+    field_ID    -- str/int         -- 7 char fieldID, e.g. 1412-28
+    SBid        -- str/int         -- 5 (?) digit SBid, e.g. 50413
+    band        -- str             -- '943MHz' or '1367MHz' for Band 1 or Band 2
+
+    """
+    if band == "943MHz":
+        command = ["python", "launch_1Dpipeline_PartialTiles_band1_summary.py", str(field_ID), str(SBid)]
+    elif band == "1367MHz":
+        command = ["python", "launch_1Dpipeline_PartialTiles_band2_summary.py", str(field_ID), str(SBid)]
+        command = ""
+        raise NotImplementedError("TODO: Temporarily disabled launching band 2 because need to write that run script")
+    else:
+        raise ValueError(f"Unknown band: {band}")
+
+    print(f"Running command: {' '.join(command)}")
+    subprocess.run(command, check=True)    
+
+def update_status(field_ID, tile_numbers, SBid, band, Google_API_token, status, status_column='1d_pipeline'):
+    """
+    Update the status of the specified partial tile or all rows for a given field_name and sbid in the Google Sheet.
+
+    A Partial Tile is uniquely defined by field_ID + sbid + tile_number.
+    If tile_numbers is None, update all rows that match the field_ID and sbid.
     
     Args:
-    field_ID (str): The field_ID to update, e.g. "1412-28"
-    tilenumbers -- list of str/int -- list of up to 4 tile numbers: a tile number is a 4 or 5 digit tilenumber, e.g. 8972, if no number it's an empty string '' 
+    field_ID (str): The field_ID to update, e.g. "1412-28".
+    tile_numbers (list[str|int]|None): List of up to 4 tile numbers, or None to update all matching rows.
     band (str): The band of the tile.
     Google_API_token (str): The path to the Google API token JSON file.
-    status (str): The status to set in the '1d_pipeline' column.
+    status (str): The status to set in the specified column.
+    status_column (str): The column to update in the sheet. Defaults to '1d_pipeline'.
     """
-    t1, t2, t3, t4 = tile_numbers
-
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
     # POSSUM Pipeline Validation sheet, maintained by Erik
@@ -151,27 +207,49 @@ def update_status(field_ID, tile_numbers, band, Google_API_token, status):
     column_names = tile_data[0]
     tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
 
-    fieldname = "EMU_" if band == '943MHz' else 'WALLABY_' # TODO: verify WALLABY_ fieldname
-    # Find the row index for the specified tile number
-    tile_index = None
-    for idx, row in enumerate(tile_table):
-        if ( row['tile1'] == t1
-            and row['tile2'] == t2
-            and row['tile3'] == t3
-            and row['tile4'] == t4
-            and row['field_name'] == f"{fieldname}{field_ID}"
-        ):
-            tile_index = idx + 2  # +2 because gspread index is 1-based and we skip the header row
-            break
-    
-    if tile_index is not None:
-        # Update the status in the '1d_pipeline' column
-        col_letter = gspread.utils.rowcol_to_a1(1, column_names.index('1d_pipeline') + 1)[0]
-        # as of >v6.0.0 .update requires a list of lists
-        tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
-        print(f"Updated row with tiles {tile_numbers} status to {status} in '1d_pipeline' column.")
+    # Build field name prefix
+    fieldname = "EMU_" if band == '943MHz' else 'WALLABY_'  # TODO: verify WALLABY_ fieldname
+    full_field_name = f"{fieldname}{field_ID}"
+
+    # Update all rows belonging to field and sbid
+    if tile_numbers is None:
+        # Update all rows that match field_name and sbid
+        rows_to_update = [
+            idx + 2  # +2 because gspread index is 1-based and skips the header row
+            for idx, row in enumerate(tile_table)
+            if row['field_name'] == full_field_name and row['sbid'] == SBid
+        ]
+        if rows_to_update:
+            col_letter = gspread.utils.rowcol_to_a1(1, column_names.index(status_column) + 1)[0]
+            for row_index in rows_to_update:
+                sleep(1) # 60 writes per minute only
+                tile_sheet.update(range_name=f'{col_letter}{row_index}', values=[[status]])
+            print(f"Updated all {len(rows_to_update)} rows for field {full_field_name} and SBID {SBid} to status '{status}' in '{status_column}' column.")
+        else:
+            print(f"No rows found for field {full_field_name} and SBID {SBid}.")
+    # Update one specific row
     else:
-        print(f"Field {fieldname}{field_ID} with tiles {tile_numbers} not found in the sheet.")
+        # Extract individual tile numbers
+        t1, t2, t3, t4 = tile_numbers
+        # Find the row index for the specified tile numbers
+        tile_index = None
+        for idx, row in enumerate(tile_table):
+            if (row['tile1'] == t1
+                and row['tile2'] == t2
+                and row['tile3'] == t3
+                and row['tile4'] == t4
+                and row['field_name'] == full_field_name
+                and row['sbid'] == SBid):
+                tile_index = idx + 2  # +2 because gspread index is 1-based and we skip the header row
+                break
+        if tile_index is not None:
+            # Update the status in the specified column
+            col_letter = gspread.utils.rowcol_to_a1(1, column_names.index(status_column) + 1)[0]
+            tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
+            print(f"Updated row with tiles {tile_numbers} to status '{status}' in '{status_column}' column.")
+        else:
+            print(f"Field {full_field_name} with tiles {tile_numbers} not found in the sheet.")
+
 
 def launch_band1_1Dpipeline():
     """
@@ -184,7 +262,7 @@ def launch_band1_1Dpipeline():
     
     # Check google sheet for band 1 tiles that have been ingested into CADC 
     # (and thus available on CANFAR) but not yet processed with 3D pipeline
-    field_IDs, tile1, tile2, tile3, tile4, SBids = get_tiles_for_pipeline_run(band_number=1, Google_API_token=Google_API_token)
+    field_IDs, tile1, tile2, tile3, tile4, SBids, fields_to_validate = get_tiles_for_pipeline_run(band_number=1, Google_API_token=Google_API_token)
     assert len(tile1) == len(tile2) == len(tile3) == len(tile4), "Need to have 4 tile columns in google sheet. Even if row can be empty."
     # list of full sourcelist filenames
     canfar_sourcelists = get_canfar_sourcelists(band_number=1)
@@ -193,6 +271,20 @@ def launch_band1_1Dpipeline():
     sleep(1) # google sheet shenanigans
 
     assert len(field_IDs) == len(tile1) == len(SBids) # need fieldID, up to 4 tileIDs and SBID to define what to run
+
+    # First launch ALL 1D pipeline summary plot jobs if any fields are fully finished
+    if len(fields_to_validate) > 0:
+        print(f"Found {len(fields_to_validate)} fields that are fully finshed: {fields_to_validate}\n")
+
+        for (field, sbid) in fields_to_validate:
+            print(f"Launching job to create summary plot for field {field} with sbid {sbid}")
+            if band == "943MHz":
+                field = field.strip("EMU_")
+
+            launch_pipeline_summary(field, sbid, band)
+
+            # Update the status of the '1d_pipeline_validation' column to "Running" regardless of tile number
+            update_status(field, None, band, Google_API_token, "Running", status_column='1d_pipeline_validation')
 
     if len(field_IDs) > 0:
         print(f"Found {len(field_IDs)} partial tiles in Band 1 ready to be processed with 1D pipeline")
@@ -228,7 +320,7 @@ def launch_band1_1Dpipeline():
                     launch_pipeline(field_ID, tilenumbers, SBid, band)
                     
                     # Update the status to "Running"
-                    update_status(field_ID, tilenumbers, band, Google_API_token, "Running")
+                    update_status(field_ID, tilenumbers, SBid, band, Google_API_token, "Running", status_column="1d_pipeline")
 
                     break
             
