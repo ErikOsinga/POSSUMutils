@@ -61,7 +61,7 @@ if __name__ == "__main__":
     image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.11.0" # v1.12.1 has astropy issue https://github.com/astropy/astropy/issues/17497
     # good default values
     cores = 4
-    ram = 20
+    ram = 80 # have to check
     # Check allowed values at canfar.net/science-portal, 10, 20, 30, 40 GB should be allowed
 
     launch_session(run_name, field_ID, SBnumber, image, cores, ram)
