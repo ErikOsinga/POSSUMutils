@@ -22,7 +22,7 @@ tilelist_dir=$(IFS='+'; echo "${tile_numbers[*]}")
 # Output the result, e.g. 8843+8971 # also known as TILESTR
 echo "Found tiles $tilelist_dir"
 workdir=/arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/943MHz/$2/$3/$tilelist_dir/
-echo "Will create directory $workdir$"
+echo "Will create directory $workdir"
 
 ## FOR BAND 1: Create config file and working directory
 ## config file name e.g. config_943MHz_1412-28_50413_8843+8971.ini where <> is empty 
