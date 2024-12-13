@@ -46,7 +46,7 @@ def launch_session(run_name, field_ID, tilenumbers, SBnumber, image, cores, ram)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Launch a 1D pipeline Partial Tiles run")
-    parser.add_argument("field_ID", type=str, help="The field ID to process")
+    parser.add_argument("field_ID", type=str, help="The field ID to process, e.g. 1412-28")
     parser.add_argument("tilenumbers", type=arg_as_list, help="A list of 4 tile numbers to process. Empty strings for less tilenumbers. e.g. ['8843','8971','',''] ")
     parser.add_argument("SBnumber", type=int, help="The SB number to process")
 
