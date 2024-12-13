@@ -266,7 +266,8 @@ def launch_band1_1Dpipeline():
     assert len(tile1) == len(tile2) == len(tile3) == len(tile4), "Need to have 4 tile columns in google sheet. Even if row can be empty."
     # list of full sourcelist filenames
     # canfar_sourcelists = get_canfar_sourcelists(band_number=1) # Disabled due to issue https://github.com/opencadc/vostools/issues/228
-    canfar_sourcelists = ['selavy-image.i.EMU_0314-46.SB59159.cont.taylor.0.restored.conv.components.15sig.xml']
+    canfar_sourcelists = ['selavy-image.i.EMU_0314-46.SB59159.cont.taylor.0.restored.conv.components.15sig.xml',
+                          'selavy-image.i.EMU_0052-37.SB46971.cont.taylor.0.restored.conv.components.15sig.xml']
     # list of only the field IDs e.g. "1428-12"
     sourcelist_fieldIDs = [field_from_sourcelist_string(srl) for srl in canfar_sourcelists]
     sleep(1) # google sheet shenanigans
