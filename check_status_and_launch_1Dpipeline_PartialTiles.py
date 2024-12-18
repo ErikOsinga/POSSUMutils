@@ -107,7 +107,15 @@ def get_canfar_sourcelists(band_number):
     # force=True to not use cache
     # assumes directory structure doesnt change and symlinks are created
     if band_number == 1:
-        canfar_sourcelists = client.listdir("vos://cadc.nrc.ca~arc/projects/CIRADA/polarimetry/ASKAP/PartialTiles/sourcelists/",force=True)
+        # canfar_sourcelists = client.listdir("vos://cadc.nrc.ca~arc/projects/CIRADA/polarimetry/ASKAP/PartialTiles/sourcelists/",force=True)
+        # disabled above command due to issue with client.listdir for many files https://github.com/opencadc/vostools/issues/228
+        
+        cmd = "vls vos://cadc.nrc.ca~arc/projects/CIRADA/polarimetry/ASKAP/PartialTiles/sourcelists/"
+        result = subprocess.run(cmd, shell=True, text=True, capture_output=True)
+        if result.returncode == 0:
+            output = result.stdout
+            canfar_sourcelists = output.splitlines()
+
     elif band_number == 2:
         # TODO
         raise NotImplementedError("TODO")
@@ -265,11 +273,9 @@ def launch_band1_1Dpipeline():
     field_IDs, tile1, tile2, tile3, tile4, SBids, fields_to_validate = get_tiles_for_pipeline_run(band_number=1, Google_API_token=Google_API_token)
     assert len(tile1) == len(tile2) == len(tile3) == len(tile4), "Need to have 4 tile columns in google sheet. Even if row can be empty."
     # list of full sourcelist filenames
-    # canfar_sourcelists = get_canfar_sourcelists(band_number=1) # Disabled due to issue https://github.com/opencadc/vostools/issues/228
-    # maybe can use following vls command instead?
-    cmd = "vls vos://cadc.nrc.ca~arc/projects/CIRADA/polarimetry/ASKAP/PartialTiles/sourcelists/"
-    canfar_sourcelists = ['selavy-image.i.EMU_0314-46.SB59159.cont.taylor.0.restored.conv.components.15sig.xml',
-                          'selavy-image.i.EMU_0052-37.SB46971.cont.taylor.0.restored.conv.components.15sig.xml']
+    canfar_sourcelists = get_canfar_sourcelists(band_number=1) 
+    # canfar_sourcelists = ['selavy-image.i.EMU_0314-46.SB59159.cont.taylor.0.restored.conv.components.15sig.xml',
+    #                       'selavy-image.i.EMU_0052-37.SB46971.cont.taylor.0.restored.conv.components.15sig.xml']
     # list of only the field IDs e.g. "1428-12"
     sourcelist_fieldIDs = [field_from_sourcelist_string(srl) for srl in canfar_sourcelists]
     sleep(1) # google sheet shenanigans
