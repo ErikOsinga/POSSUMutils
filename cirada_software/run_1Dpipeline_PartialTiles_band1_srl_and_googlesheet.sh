@@ -1,7 +1,7 @@
 echo "Preparing sourcelists and google sheet. pipeline run name $1 field_ID $2 SB $3"
 
 workdir=/arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/create_srl_logs/
-echo "In directory $workdir$"
+echo "In directory $workdir"
 
 ## FOR BAND 1: Create config file and working directory
 ## config file name e.g. config_943MHz_1412-28_50413_summary.ini
