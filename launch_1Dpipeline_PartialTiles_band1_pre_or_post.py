@@ -81,7 +81,7 @@ if __name__ == "__main__":
     cores = 4
 
     if ptype == "post":
-        ram = 20 # 20 GB is just about enough for summary plot without density calc
+        ram = 30 # 23 GB is just about enough for summary plot without density calc
     elif ptype == "pre":
         ram = 10 # dont need a lot of ram for catalogue writing
 
