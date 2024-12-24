@@ -66,7 +66,7 @@ if __name__ == "__main__":
                     ,"check_ingest_1Dpipeline_PartialTiles.py"]
     
     # Interval between each run in seconds
-    interval = 600  # 10 minutes
+    interval = 300  # 5 minutes
 
     # Maximum number of runs for this script, set to None for infinite
     max_runs = None
