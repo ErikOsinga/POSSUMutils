@@ -19,9 +19,5 @@ export PREFECT_API_URL="http://localhost:4200/api"
 echo "adding RMtools[dev] to pythonpath to work with dev branch of RMtools"
 export PYTHONPATH="/arc/projects/CIRADA/polarimetry/software/RMtoolsdev/:$PYTHONPATH"
 
-echo "Starting pipeline run $1 field_ID $2 SBID $3 for sourcelist and google sheet job creation"
+echo "Starting pipeline run $1 field_ID $2 SBID $3 for sourcelist and google sheet job creation, plus download"
 psrecord "python /arc/projects/CIRADA/polarimetry/software/POSSUM_Polarimetry_Pipeline/pipeline/pipeline_prefect.py $workdir/config_943MHz_$2_$3_create_srl.ini" --include-children --log $workdir/psrecord_$2_$3_srl.txt --plot $workdir/psrecord_$2_$3_srl.png --interval 1
-
-echo "Starting download for tiles associated with field $2"
-# arguments fieldstr, tileID, target_dir, [--test]
-python /arc/projects/CIRADA/polarimetry/software/POSSUM_Polarimetry_Pipeline/pipeline/modules/download_partial_tiles.py $2 all /arc/projects/CIRADA/polarimetry/ASKAP/PartialTiles/943MHz/$2/
