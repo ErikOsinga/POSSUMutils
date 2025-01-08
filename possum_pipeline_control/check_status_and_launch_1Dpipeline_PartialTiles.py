@@ -115,6 +115,9 @@ def get_canfar_sourcelists(band_number):
         if result.returncode == 0:
             output = result.stdout
             canfar_sourcelists = output.splitlines()
+        else:
+            print("Error running command. Perhaps CANFAR is down?")
+            raise ValueError(f"Error running command: {cmd}\n{result.stderr}")
 
     elif band_number == 2:
         # TODO
