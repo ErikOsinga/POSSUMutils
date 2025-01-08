@@ -61,8 +61,8 @@ def launch_session(run_name, field_ID, SBnumber, image, cores, ram, ptype):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Launch a 1D pipeline Partial Tiles run")
-    parser.add_argument("field_ID", type=str, help="The field ID to process")
-    parser.add_argument("SBnumber", type=int, help="The SB number to process")
+    parser.add_argument("field_ID", type=str, help="The field ID to process, e.g. 1227-69")
+    parser.add_argument("SBnumber", type=int, help="The SB number to process, e.g. 61103")
     parser.add_argument("type", choices=["pre", "post"], help="Whether to run pre-processing or post-processing step")
 
     args = parser.parse_args()
