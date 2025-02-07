@@ -29,16 +29,22 @@ def run_script_intermittently(script_paths, interval, max_runs=None):
         try:
             # Get information about currently open sessions
             df_sessions = get_open_sessions()
-            print("Open sessions:")
-            print(df_sessions)
+            if len(df_sessions) == 0:
+                print("No open sessions.")
+                n_headless_pending = 0
+                n_headless_running = 0 
 
-            # Count the number of headless sessions with status 'Pending'
-            n_headless_pending = df_sessions[(df_sessions['type'] == 'headless') & (df_sessions['status'] == 'Pending')].shape[0]
-            print(f"Number of headless sessions with status 'Pending': {n_headless_pending}")
+            else:
+                print("Open sessions:")
+                print(df_sessions)
 
-            # Count the number of headless sessions with status 'Running'
-            n_headless_running = df_sessions[(df_sessions['type'] == 'headless') & (df_sessions['status'] == 'Running')].shape[0]
-            print(f"Number of headless sessions with status 'Running': {n_headless_running}")
+                # Count the number of headless sessions with status 'Pending'
+                n_headless_pending = df_sessions[(df_sessions['type'] == 'headless') & (df_sessions['status'] == 'Pending')].shape[0]
+                print(f"Number of headless sessions with status 'Pending': {n_headless_pending}")
+
+                # Count the number of headless sessions with status 'Running'
+                n_headless_running = df_sessions[(df_sessions['type'] == 'headless') & (df_sessions['status'] == 'Running')].shape[0]
+                print(f"Number of headless sessions with status 'Running': {n_headless_running}")
 
             # If the number of pending headless sessions is less than e.g. 10, run the script
             if n_headless_pending < max_pending:
