@@ -14,7 +14,8 @@ def get_open_sessions():
     df_sessions = pd.DataFrame([{
         'type': s['type'],
         'status': s['status'],
-        'startTime': s['startTime']
+        'startTime': s['startTime'],
+        'name': s['name'],
     } for s in open_sessions])
 
     return df_sessions
@@ -68,8 +69,13 @@ def run_script_intermittently(script_paths, interval, max_runs=None):
 
 if __name__ == "__main__":
     # Path to the script to be run intermittently
-    script_paths = ["check_status_and_launch_1Dpipeline_PartialTiles.py"
-                    ,"check_ingest_1Dpipeline_PartialTiles.py"]
+    script_paths = ["update_partialtile_google_sheet.py" # Check POSSUM Pipeline Status sheet and create queue of jobs in POSSUM Pipeline Validation sheet. 
+                                                         # This is done via "check_status_and_launch_1Dpipeline_PartialTiles.py 'pre'"
+                                                         # which also downloads the tiles in a CANFAR job.
+                    ,"check_status_and_launch_1Dpipeline_PartialTiles.py" # Check POSSUM Pipeline Validation sheet and launch jobs
+                    ,"check_ingest_1Dpipeline_PartialTiles.py" # TODO: Check POSSUM Pipeline Validation sheet and ingest results
+                    ,"log_processing_status_1Dpipeline.py" # TODO: Log processing status to POSSUM Pipeline Status sheet
+                    ]  
     
     # Interval between each run in seconds
     interval = 300  # 5 minutes

@@ -2,6 +2,7 @@ import argparse
 import ast
 from datetime import datetime
 from skaha.session import Session
+from control_1D_pipeline_PartialTiles import get_open_sessions
 
 """
 Submit a headless job to do either pre-processing or post-processing of 1D Partial Tile Pipeline.
@@ -39,6 +40,12 @@ def launch_session(run_name, field_ID, SBnumber, image, cores, ram, ptype):
         # Template bash script to run
         args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1_srl_and_googlesheet.sh {run_name} {field_ID} {SBnumber}"
 
+    df_sessions = get_open_sessions()
+
+    if (df_sessions['name'] == 'pre-dl').any():
+        print("A pre-dl job is already running. Skipping this run.")
+        return
+
     print("Launching session")
     print(f"Command: bash {args}")
 
@@ -71,8 +78,6 @@ if __name__ == "__main__":
     ptype = args.type
     
     timestr = ((datetime.now().strftime("%d/%m/%Y %H:%M:%S"))[11:]).replace(':','-') # ":" is not allowed character
-    # max 15 characters for run name. SBID+timenow: e.g. 50413-11-39-21
-    run_name = f"{SBnumber}-{timestr}"
 
     # optionally :latest for always the latest version. CANFAR has a bug with that though.
     # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
@@ -82,8 +87,11 @@ if __name__ == "__main__":
 
     if ptype == "post":
         ram = 30 # 23 GB is just about enough for summary plot without density calc
+        run_name = "pre-dl" # makes it clear a 'pre' download job is running. Dont want too many of these.
     elif ptype == "pre":
         ram = 10 # dont need a lot of ram for catalogue writing
+        # max 15 characters for run name. SBID+timenow: e.g. 50413-11-39-21
+        run_name = f"{SBnumber}-{timestr}"
 
     # Check allowed values at canfar.net/science-portal, 10, 20, 30, 40 GB should be allowed
 
