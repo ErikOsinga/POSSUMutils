@@ -87,11 +87,11 @@ if __name__ == "__main__":
 
     if ptype == "post":
         ram = 30 # 23 GB is just about enough for summary plot without density calc
-        run_name = "pre-dl" # makes it clear a 'pre' download job is running. Dont want too many of these.
+        run_name = f"{SBnumber}-{timestr}"
     elif ptype == "pre":
         ram = 10 # dont need a lot of ram for catalogue writing
         # max 15 characters for run name. SBID+timenow: e.g. 50413-11-39-21
-        run_name = f"{SBnumber}-{timestr}"
+        run_name = "pre-dl" # makes it clear a 'pre' download job is running. Dont want too many of these.
 
     # Check allowed values at canfar.net/science-portal, 10, 20, 30, 40 GB should be allowed
 
