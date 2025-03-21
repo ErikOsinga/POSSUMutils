@@ -42,7 +42,8 @@ def launch_session(run_name, field_ID, SBnumber, image, cores, ram, ptype):
 
     df_sessions = get_open_sessions()
 
-    if (df_sessions['name'] == 'pre-dl').any():
+    if df_sessions[df_sessions['status'] == 'Running']['name'].str.contains("pre-dl").any():
+        # check if any download jobs are currently running on CANFAR. Prevents overloading the system and confusing the dl jobs
         print("A pre-dl job is already running. Skipping this run.")
         return
 
