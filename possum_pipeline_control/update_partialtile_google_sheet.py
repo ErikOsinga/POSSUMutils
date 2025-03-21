@@ -66,7 +66,7 @@ if __name__ == "__main__":
     band = "943MHz" # hardcode for now
 
     # Update the POSSUM Pipeline Status spreadsheet as well. A complete field is being processed!
-    Google_API_token = "/arc/home/ErikOsinga/.ssh/psm_gspread_token.json"
+    Google_API_token = "/home/erik/.ssh/psm_gspread_token.json"
     # put the status as PartialTiles - Running
     
     
