@@ -8,6 +8,7 @@ import numpy as np
 import time
 import subprocess
 import astropy.table as at
+from log_processing_status_1D_PartialTiles_summary import update_status_spreadsheet
 
 """
 Run "check_status_and_launch_1Dpipeline_PartialTiles.py 'pre' " based on Camerons' POSSUM Pipeline Status google sheet.
@@ -62,8 +63,16 @@ if __name__ == "__main__":
     # parser = argparse.ArgumentParser(description="Update Partial Tile Google Sheet")
     # parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
     # args = parser.parse_args()
+    # band = args.band
     
-    ready_table = get_ready_fields("943MHz")
+    band = "943MHz" # hardcode for now
+
+    # Update the POSSUM Pipeline Status spreadsheet as well. A complete field is being processed!
+    Google_API_token = "/arc/home/ErikOsinga/.ssh/psm_gspread_token.json"
+    # put the status as PartialTiles - Running
+    
+    
+    ready_table = get_ready_fields(band)
     
     # Loop over each row in the returned table to launch the pipeline command.
     # The 'fieldname' is taken from the column "name" with "EMU_" stripped if present.
@@ -73,5 +82,10 @@ if __name__ == "__main__":
         if fieldname.startswith("EMU_"):
             fieldname = fieldname[len("EMU_"):]
         SBID = row["sbid"]
+        # Launch the job that downloads the tiles and populates Erik's google sheet
         launch_pipeline_command(fieldname, SBID)
+        # update the status in Cameron's spreadsheet
+        status_to_put = f"PartialTiles - Running"
+        update_status_spreadsheet(fieldname, SBID, band, Google_API_token, status_to_put, 'single_SB_1D_pipeline')
+    
         break # only do one every time the script is called
