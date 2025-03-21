@@ -229,7 +229,7 @@ def update_status(field_ID, tile_numbers, SBid, band, Google_API_token, status, 
         rows_to_update = [
             idx + 2  # +2 because gspread index is 1-based and skips the header row
             for idx, row in enumerate(tile_table)
-            if row['field_name'] == full_field_name and row['sbid'] == SBid
+            if row['field_name'] == full_field_name and row['sbid'] == str(SBid)
         ]
         if rows_to_update:
             col_letter = gspread.utils.rowcol_to_a1(1, column_names.index(status_column) + 1)[0]
@@ -251,7 +251,7 @@ def update_status(field_ID, tile_numbers, SBid, band, Google_API_token, status, 
                 and row['tile3'] == t3
                 and row['tile4'] == t4
                 and row['field_name'] == full_field_name
-                and row['sbid'] == SBid):
+                and row['sbid'] == str(SBid)):
                 tile_index = idx + 2  # +2 because gspread index is 1-based and we skip the header row
                 break
         if tile_index is not None:
