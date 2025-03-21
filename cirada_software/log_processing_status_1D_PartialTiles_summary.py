@@ -195,4 +195,6 @@ if __name__ == "__main__":
     if status == "Completed":
         # Update the POSSUM Pipeline Status spreadsheet as well. A complete field has been processed!
         Google_API_token = "/arc/home/ErikOsinga/.ssh/psm_gspread_token.json"
-        update_status_spreadsheet(field_ID, SB_num, band, Google_API_token, status, 'single_SB_1D_pipeline')
+        # put the status as PartialTiles - today's date (e.g. PartialTiles - 2025-03-22)
+        status_to_put = f"PartialTiles - {np.datetime64('today', 'D')}"
+        update_status_spreadsheet(field_ID, SB_num, band, Google_API_token, status_to_put, 'single_SB_1D_pipeline')
