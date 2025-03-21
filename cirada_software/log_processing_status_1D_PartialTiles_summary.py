@@ -41,10 +41,13 @@ def update_validation_spreadsheet(field_ID, SBid, band, Google_API_token, status
     Update the status of the specified tile in the VALIDATION Google Sheet.
     
     Args:
-    tile_number (str): The tile number to update.
+    field_id         : the field id
+    SBid             : the SB number
     band (str): The band of the tile.
     Google_API_token (str): The path to the Google API token JSON file.
-    status (str): The status to set in the '1d_pipeline' column.
+    status (str): The status to set in the 'status_column' column.
+    status_column: The column to update in the Google Sheet.
+
     """
     
     print("Updating POSSUM pipeline validation sheet with summary plot status")
@@ -68,7 +71,7 @@ def update_validation_spreadsheet(field_ID, SBid, band, Google_API_token, status
     rows_to_update = [
         idx + 2  # +2 because gspread index is 1-based and skips the header row
         for idx, row in enumerate(tile_table)
-        if row['field_name'] == full_field_name and row['sbid'] == SBid
+        if row['field_name'] == full_field_name and row['sbid'] == str(SBid)
     ]
     if rows_to_update:
         col_letter = gspread.utils.rowcol_to_a1(1, column_names.index(status_column) + 1)[0]
@@ -77,9 +80,53 @@ def update_validation_spreadsheet(field_ID, SBid, band, Google_API_token, status
             tile_sheet.update(range_name=f'{col_letter}{row_index}', values=[[status]])
         print(f"Updated all {len(rows_to_update)} rows for field {full_field_name} and SBID {SBid} to status '{status}' in '{status_column}' column.")
     else:
-        print(f"No rows found for field {full_field_name} and SBID {SBid}.")
+        print(f"No rows found for field {full_field_name} and SBID {SBid}")
 
     return
+
+def update_status_spreadsheet(field_ID, SBid, band, Google_API_token, status, status_column):
+    """
+    Update the status of the specified tile in the STATUS Google Sheet (Cameron's sheet).
+    
+    Args:
+    field_id         : the field id
+    SBid             : the SB number
+    band (str): The band of the tile.
+    Google_API_token (str): The path to the Google API token JSON file.
+    status (str): The status to set in the 'status column' column.
+    status_column: The column to update in the Google Sheet.
+    """    
+
+    # Authenticate and grab the spreadsheet
+    gc = gspread.service_account(filename=Google_API_token)
+    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0')
+    
+    # Select the worksheet for the given band number
+    band_number = '1' if band == '943MHz' else '2'
+    tile_sheet = ps.worksheet(f'Survey Fields - Band {band_number}')
+    tile_data = tile_sheet.get_all_values()
+    column_names = tile_data[0]
+    tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
+
+    # Build field name prefix
+    fieldname = "EMU_" if band == '943MHz' else 'WALLABY_'  # TODO: verify WALLABY_ fieldname
+    full_field_name = f"{fieldname}{field_ID}"
+
+    # Update all rows belonging to field and sbid
+    rows_to_update = [
+        idx + 2  # +2 because gspread index is 1-based and skips the header row
+        for idx, row in enumerate(tile_table)
+        if row['name'] == full_field_name and row['sbid'] == str(SBid)
+    ]
+    if rows_to_update:
+        print(f"Updating POSSUM Status Monitor with 1D pipeline status for field {full_field_name} and SBID {SBid}")
+        col_letter = gspread.utils.rowcol_to_a1(1, column_names.index(status_column) + 1)[0]
+        for row_index in rows_to_update:
+            sleep(1) # 60 writes per minute only
+            tile_sheet.update(range_name=f'{col_letter}{row_index}', values=[[status]])
+        print(f"Updated all {len(rows_to_update)} rows for field {full_field_name} and SBID {SBid} to status '{status}' in '{status_column}' column.")
+    else:
+        print(f"No rows found for field {full_field_name} and SBID {SBid}.")
 
 def tilenumbers_to_tilestr(tilenumbers):
     """
@@ -144,3 +191,8 @@ if __name__ == "__main__":
     # Update the POSSUM Validation spreadsheet
     Google_API_token = "/arc/home/ErikOsinga/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
     update_validation_spreadsheet(field_ID, SB_num, band, Google_API_token, status, '1d_pipeline_validation')
+
+    if status == "Completed":
+        # Update the POSSUM Pipeline Status spreadsheet as well. A complete field has been processed!
+        Google_API_token = "/arc/home/ErikOsinga/.ssh/psm_gspread_token.json"
+        update_status_spreadsheet(field_ID, SB_num, band, Google_API_token, status, 'single_SB_1D_pipeline')
