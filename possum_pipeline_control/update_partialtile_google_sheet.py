@@ -5,7 +5,7 @@ import gspread
 import numpy as np
 import subprocess
 import astropy.table as at
-sys.path.append('../') # to import update_status_spreadsheet
+sys.path.append('../cirada_software/') # to import update_status_spreadsheet
 from log_processing_status_1D_PartialTiles_summary import update_status_spreadsheet
 
 """
