@@ -1,11 +1,7 @@
 #!/usr/bin/env python
 import argparse
-import glob
-import os
-import csv
 import gspread
 import numpy as np
-import time
 import subprocess
 import astropy.table as at
 from log_processing_status_1D_PartialTiles_summary import update_status_spreadsheet
@@ -85,7 +81,7 @@ if __name__ == "__main__":
         # Launch the job that downloads the tiles and populates Erik's google sheet
         launch_pipeline_command(fieldname, SBID)
         # update the status in Cameron's spreadsheet
-        status_to_put = f"PartialTiles - Running"
+        status_to_put = "PartialTiles - Running"
         update_status_spreadsheet(fieldname, SBID, band, Google_API_token, status_to_put, 'single_SB_1D_pipeline')
     
         break # only do one every time the script is called
