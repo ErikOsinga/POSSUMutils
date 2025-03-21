@@ -31,7 +31,9 @@ def arg_as_list(s):
     return v
 
 def launch_session(run_name, field_ID, SBnumber, image, cores, ram, ptype):
-    """Launch 1D pipeline Partial Tile summary run"""
+    """Launch 1D pipeline Partial Tile summary run or download run"""
+
+    df_sessions = get_open_sessions()
 
     if ptype == "post":
         # Template bash script to run
@@ -40,12 +42,10 @@ def launch_session(run_name, field_ID, SBnumber, image, cores, ram, ptype):
         # Template bash script to run
         args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1_srl_and_googlesheet.sh {run_name} {field_ID} {SBnumber}"
 
-    df_sessions = get_open_sessions()
-
-    if df_sessions[df_sessions['status'] == 'Running']['name'].str.contains("pre-dl").any():
-        # check if any download jobs are currently running on CANFAR. Prevents overloading the system and confusing the dl jobs
-        print("A pre-dl job is already running. Skipping this run.")
-        return
+        if df_sessions[df_sessions['status'] == 'Running']['name'].str.contains("pre-dl").any() or df_sessions[df_sessions['status'] == 'Pending']['name'].str.contains("pre-dl").any():
+            # check if any download jobs are currently running on CANFAR. Prevents overloading the system and confusing the dl jobs
+            print("A pre-dl job is already running. Skipping this run.")
+            return
 
     print("Launching session")
     print(f"Command: bash {args}")
