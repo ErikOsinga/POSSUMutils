@@ -82,8 +82,10 @@ if __name__ == "__main__":
         SBID = row["sbid"]
         # Launch the job that downloads the tiles and populates Erik's google sheet
         launch_pipeline_command(fieldname, SBID)
-        # update the status in Cameron's spreadsheet
-        status_to_put = "PartialTiles - Running"
-        update_status_spreadsheet(fieldname, SBID, band, Google_API_token, status_to_put, 'single_SB_1D_pipeline')
+        
+        ## NOTE: actually better to do in the launched script
+        # # update the status in Cameron's spreadsheet
+        # status_to_put = "PartialTiles - Running"
+        # update_status_spreadsheet(fieldname, SBID, band, Google_API_token, status_to_put, 'single_SB_1D_pipeline')
     
         break # only do one every time the script is called
