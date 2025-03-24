@@ -71,6 +71,8 @@ if __name__ == "__main__":
     
     
     ready_table = get_ready_fields(band)
+
+    print(f"Found {len(ready_table)} fields ready for single SB partial tile pipeline processing in band {band}")
     
     # Loop over each row in the returned table to launch the pipeline command.
     # The 'fieldname' is taken from the column "name" with "EMU_" stripped if present.
