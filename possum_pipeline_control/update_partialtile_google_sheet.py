@@ -17,7 +17,7 @@ That will download the tiles in a CANFAR job and populate the google sheet.
 def get_ready_fields(band):
     """
     Connects to the POSSUM Status Monitor Google Sheet and returns a sub-table
-    containing only the rows where the 'sbid' and 'aus_src' fields are not empty.
+    containing only the rows where the 'sbid' and 'aus_src' fields are not empty and 'single_SB_1D_pipeline' is empty.
     
     Uses the following Google API token on p1:
         /home/erik/.ssh/psm_gspread_token.json
@@ -68,7 +68,6 @@ if __name__ == "__main__":
     # Update the POSSUM Pipeline Status spreadsheet as well. A complete field is being processed!
     Google_API_token = "/home/erik/.ssh/psm_gspread_token.json"
     # put the status as PartialTiles - Running
-    
     
     ready_table = get_ready_fields(band)
 
