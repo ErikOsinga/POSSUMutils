@@ -47,6 +47,7 @@ def download(url_list, sb):
         if url.find("checksum") != -1:
             continue
         print("Processing %s" %(url))
+        # -P --directory-prefix=sb   -- save files to ./sb/
         cmd = "wget -P "+sb+" --content-disposition \"%s\"" %(url)
         print(cmd)
         os.system(cmd)
@@ -97,9 +98,10 @@ if __name__ == '__main__':
 
     username="erik.osinga@utoronto.ca"
     
-    casda_tap = Tap("https://casda.csiro.au/casda_vo_tools/tap")
-    passw = getpass.getpass(str("Enter password for user "+username+": "))
-    casda = Casda(user=username, password=passw)
+    casda_tap = Tap(url="https://casda.csiro.au/casda_vo_tools/tap")
+    # passw = getpass.getpass(str("Enter password for user "+username+": "))
+    casda = Casda()
+    casda.login(username=username)
     
     # Get which fields are ready for processing from aussrc
     ready_table = get_all_sbids(band)
@@ -110,14 +112,14 @@ if __name__ == '__main__':
 
     for sb in tqdm.tqdm(sbids,desc="Downloading MFS images"):
         os.system("mkdir "+sb)
-        os.chdir(sb)
+        # os.chdir(sb)
         imageURLs = getImageURLs(casda_tap, sb)
-        evalURLs = getEvalURLs(casda_tap, sb)
+        # evalURLs = getEvalURLs(casda_tap, sb)
         print(f'Downloading image files for SBID = {sb}')
         download(imageURLs, sb)
         # print(f'Downloading evaluation files for SBID = {sb}')
         # download(evalURLs, sb)
 
-        os.chdir('/arc/projects/CIRADA/polarimetry/ASKAP/single_SB_pipeline/mfs_images/')
+        # os.chdir('/arc/projects/CIRADA/polarimetry/ASKAP/single_SB_pipeline/mfs_images/')
 
     print("All MFS images downloaded.")
