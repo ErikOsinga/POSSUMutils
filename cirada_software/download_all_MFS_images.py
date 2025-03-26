@@ -111,12 +111,14 @@ if __name__ == '__main__':
     os.chdir('/arc/projects/CIRADA/polarimetry/ASKAP/single_SB_pipeline/mfs_images/')
 
     for sb in tqdm.tqdm(sbids,desc="Downloading MFS images"):
+        os.makedirs(sb, exist_ok=True)
+        # os.system("mkdir "+sb, exist_ok=True)
+
         # Check if the directory already contains a .fits image
         if any(fname.endswith('.fits') for fname in os.listdir(sb)):
             print(f"Directory {sb} already contains .fits images. Skipping download.")
             continue
         
-        os.system("mkdir "+sb)
         # os.chdir(sb)
         imageURLs = getImageURLs(casda_tap, sb)
         # evalURLs = getEvalURLs(casda_tap, sb)
