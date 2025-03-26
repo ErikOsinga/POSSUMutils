@@ -25,4 +25,5 @@ psrecord "python /arc/projects/CIRADA/polarimetry/software/POSSUM_Polarimetry_Pi
 
 echo "Logging pipeline status"
 # field, sbid, band
+# also uses Prefect
 python /arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/log_processing_status_1D_PartialTiles_summary.py $2 $3 943MHz

@@ -5,6 +5,7 @@ import numpy as np
 import astropy.table as at
 import ast
 from time import sleep
+from prefect import flow, task
 
 """
 Usage: python log_processing_status.py fieldstr sbid tilestr
@@ -139,22 +140,9 @@ def tilenumbers_to_tilestr(tilenumbers):
     tilestr = ("+").join([ t for t in tilenumbers if t != ''])
     return tilestr
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Check pipeline status and update CSV file")
-    parser.add_argument(
-        "field_ID",
-        metavar="field",
-        help="Field ID. e.g. 1412-28",
-    )
-    parser.add_argument(
-        "SB_num",
-        metavar="SB",
-        type=int,
-        help="SB number. e.g. 50413",
-    )
-    parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
+@flow(log_prints=True, name="log_PartialTiles_summary")
+def main(args):
 
-    args = parser.parse_args()
     field_ID = args.field_ID
     SB_num = args.SB_num
     band = args.band
@@ -190,11 +178,33 @@ if __name__ == "__main__":
 
     # Update the POSSUM Validation spreadsheet
     Google_API_token = "/arc/home/ErikOsinga/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
-    update_validation_spreadsheet(field_ID, SB_num, band, Google_API_token, status, '1d_pipeline_validation')
+    t1 = task(update_validation_spreadsheet, name="update_validation_spreadsheet")
+    # execute tasks serially such that logging is preserved (instead of .submit)
+    t1(field_ID, SB_num, band, Google_API_token, status, '1d_pipeline_validation')
 
     if status == "Completed":
         # Update the POSSUM Pipeline Status spreadsheet as well. A complete field has been processed!
         Google_API_token = "/arc/home/ErikOsinga/.ssh/psm_gspread_token.json"
         # put the status as PartialTiles - today's date (e.g. PartialTiles - 2025-03-22)
         status_to_put = f"PartialTiles - {np.datetime64('today', 'D')}"
-        update_status_spreadsheet(field_ID, SB_num, band, Google_API_token, status_to_put, 'single_SB_1D_pipeline')
+        t2 = task(update_status_spreadsheet, name="update_status_spreadsheet")
+        t2(field_ID, SB_num, band, Google_API_token, status_to_put, 'single_SB_1D_pipeline')
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Check pipeline status and update CSV file")
+    parser.add_argument(
+        "field_ID",
+        metavar="field",
+        help="Field ID. e.g. 1412-28",
+    )
+    parser.add_argument(
+        "SB_num",
+        metavar="SB",
+        type=int,
+        help="SB number. e.g. 50413",
+    )
+    parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
+
+    args = parser.parse_args()
+
+    main(args)
