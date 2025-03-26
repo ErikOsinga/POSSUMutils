@@ -122,7 +122,7 @@ def update_status_spreadsheet(field_ID, SBid, band, Google_API_token, status, st
         print(f"Updating POSSUM Status Monitor with 1D pipeline status for field {full_field_name} and SBID {SBid}")
         col_letter = gspread.utils.rowcol_to_a1(1, column_names.index(status_column) + 1)[0]
         for row_index in rows_to_update:
-            sleep(1) # 60 writes per minute only
+            sleep(2) # 60 writes per minute only
             tile_sheet.update(range_name=f'{col_letter}{row_index}', values=[[status]])
         print(f"Updated all {len(rows_to_update)} rows for field {full_field_name} and SBID {SBid} to status '{status}' in '{status_column}' column.")
     else:
