@@ -1,8 +1,10 @@
+import os
 from vos import Client
 import subprocess
 import gspread
 import astropy.table as at
 import numpy as np
+import time
 from time import sleep
 
 """
@@ -102,11 +104,21 @@ def get_tiles_for_pipeline_run(band_number, Google_API_token):
 
     return fields_to_run, tile1_to_run, tile2_to_run, tile3_to_run, tile4_to_run, SBids_to_run, can_make_validation
 
-def get_canfar_sourcelists(band_number):
+def get_canfar_sourcelists(band_number, local_file="./sourcelist_canfar.txt"):
     client = Client()
     # force=True to not use cache
     # assumes directory structure doesnt change and symlinks are created
     print("Getting sourcelists from CANFAR...")
+    
+    # Check if cache file exists and is less than a day old
+    if os.path.exists(local_file):
+        file_mod_time = os.path.getmtime(local_file)
+        if (time.time() - file_mod_time) < 86400:  # 86400 seconds = 1 day
+            print(f"Reading sourcelists from local file cache: {local_file}")
+            with open(local_file, "r") as f:
+                canfar_sourcelists = f.read().splitlines()
+            return canfar_sourcelists
+
     if band_number == 1:
         # canfar_sourcelists = client.listdir("vos://cadc.nrc.ca~arc/projects/CIRADA/polarimetry/ASKAP/PartialTiles/sourcelists/",force=True)
         # disabled above command due to issue with client.listdir for many files https://github.com/opencadc/vostools/issues/228
@@ -126,6 +138,11 @@ def get_canfar_sourcelists(band_number):
         canfar_sourcelists = client.listdir("vos://cadc.nrc.ca~arc/projects/CIRADA/polarimetry/ASKAP/Tiles/1367MHz/",force=True)
     else:
         raise ValueError(f"Band number {band_number} not defined")
+    
+    # Save the results to the local cache file for future use
+    with open(local_file, "w") as f:
+        f.write("\n".join(canfar_sourcelists))
+    
     return canfar_sourcelists
 
 def field_from_sourcelist_string(srclist_str):
