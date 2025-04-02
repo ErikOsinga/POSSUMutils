@@ -275,7 +275,7 @@ def update_status(field_ID, tile_numbers, SBid, band, Google_API_token, status, 
             # Update the status in the specified column
             col_letter = gspread.utils.rowcol_to_a1(1, column_names.index(status_column) + 1)[0]
             tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
-            print(f"Updated row with tiles {tile_numbers} to status '{status}' in '{status_column}' column.")
+            print(f"Updated row {col_letter}{tile_index} with tiles {tile_numbers} to status '{status}' in '{status_column}' column.")
         else:
             print(f"Field {full_field_name} with tiles {tile_numbers} not found in the sheet.")
 
