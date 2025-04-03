@@ -1,3 +1,4 @@
+import os
 import argparse
 import glob
 import gspread
@@ -140,6 +141,34 @@ def tilenumbers_to_tilestr(tilenumbers):
     tilestr = ("+").join([ t for t in tilenumbers if t != ''])
     return tilestr
 
+def delete_field_from_canfar(field_ID, SB_num, band):
+    """
+    Delete the field from CANFAR.
+    
+    Args:
+    field_ID (str): The field ID.
+    SB_num (int): The SB number.
+    band (str): The band of the tile.
+    """
+    if band == "943MHz":
+        fielddir = "/arc/projects/CIRADA/polarimetry/ASKAP/PartialTiles/943MHz/"
+    elif band == "1367MHz":
+        fielddir = "/arc/projects/CIRADA/polarimetry/ASKAP/PartialTiles/1367MHz/"
+    else:
+        raise ValueError(f"Unknown band: {band}")
+
+    fielddir = os.path.join(fielddir, field_ID)
+    # Here we are assuming there's only 1 SBID per field
+    # pawsey doesnt actually distinguish which SBID a field has
+    
+    # delete all the PSM*fits files in the fielddir
+    for file in os.listdir(fielddir):
+        if file.startswith("PSM") and file.endswith(".fits"):
+            os.remove(os.path.join(fielddir, file))
+            print(f"Deleted {file} from {fielddir}")
+
+    return
+
 @flow(log_prints=True, name="log_PartialTiles_summary")
 def main(args):
 
@@ -189,6 +218,10 @@ def main(args):
         status_to_put = f"PartialTiles - {np.datetime64('today', 'D')}"
         t2 = task(update_status_spreadsheet, name="update_status_spreadsheet")
         t2(field_ID, SB_num, band, Google_API_token, status_to_put, 'single_SB_1D_pipeline')
+
+        # Then delete the field from CANFAR
+        t3 = task(delete_field_from_canfar, name="delete_field_from_canfar")
+        t3(field_ID, SB_num, band)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Check pipeline status and update CSV file")
