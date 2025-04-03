@@ -169,15 +169,20 @@ def field_from_sourcelist_string(srclist_str):
 
     returns 
 
-    1441+04
+    1441+04B
     """
+    field_ID = srclist_str.split(".")[2]  # Extract the field ID from the sourcelist string
+    # Remove the prefix "EMU_" or "WALLABY_"
+    field_ID = remove_prefix(field_ID)
+
     if "EMU" in srclist_str:
-        field_ID = srclist_str.split("EMU_")[1][:7]
+        pass
     elif "WALLABY" in srclist_str:
-        field_ID = srclist_str.split("WALLABY_")[1][:7]
+        pass
     else:
         field_ID = None
         print(f"Warning, could not find field_ID for sourcelist {srclist_str}")
+    
     return field_ID
 
 def launch_pipeline(field_ID, tilenumbers, SBid, band):
@@ -325,8 +330,8 @@ def launch_band1_1Dpipeline():
 
         for (field, sbid) in fields_to_validate:
             print(f"Launching job to create summary plot for field {field} with sbid {sbid}")
-            if band == "943MHz":
-                field = field.strip("EMU_")
+            
+            field = remove_prefix(field)
 
             launch_pipeline_summary(field, sbid, band)
 
