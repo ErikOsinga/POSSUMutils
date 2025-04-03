@@ -6,6 +6,7 @@ import astropy.table as at
 import numpy as np
 import time
 from time import sleep
+import re
 
 """
 Should be executed on p1
@@ -64,6 +65,19 @@ def get_results_per_field_sbid(tile_table, verbose=False):
 
     return results
 
+def remove_prefix(field_name):
+    """
+    Remove the prefix "EMU_" or "WALLABY_" from the field name.
+    
+    e.g. 
+    s = tile_table['field_name'][1935]
+    print(s) # output will be 'EMU_2108-09A'
+    s = remove_prefix(s)
+    print(s)  # Output will be '2108-09A'
+    """
+    # The regex looks for either "EMU_" or "WALLABY_" at the beginning of the string
+    return re.sub(r'^(EMU_|WALLABY_)', '', field_name)
+
 def get_tiles_for_pipeline_run(band_number, Google_API_token):
     """
     Get a list of tile numbers that should be ready to be processed by the 1D pipeline 
@@ -90,7 +104,7 @@ def get_tiles_for_pipeline_run(band_number, Google_API_token):
     tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
 
     # Find the tiles that satisfy the conditions (i.e. has an SBID and not yet a '1d_pipeline' status)
-    fields_to_run = [row['field_name'].strip("EMU_").strip("WALLABY_") for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
+    fields_to_run = [remove_prefix(row['field_name']) for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
     tile1_to_run = [row['tile1'] for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
     tile2_to_run = [row['tile2'] for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
     tile3_to_run = [row['tile3'] for row in tile_table if row['sbid'] != '' and row['number_sources'] != '' and row['1d_pipeline'] == '']
@@ -320,7 +334,7 @@ def launch_band1_1Dpipeline():
             update_status(field, None, sbid, band, Google_API_token, "Running", status_column='1d_pipeline_validation')
 
     if len(field_IDs) > 0:
-        print(f"Found {len(field_IDs)} partial tiles in Band 1 ready to be processed with 1D pipeline")
+        print(f"Found {len(field_IDs)} partial tile runs in Band 1 ready to be processed with 1D pipeline")
         print(f"On CANFAR, found {len(sourcelist_fieldIDs)} sourcelists for Band 1")
 
         # if len(field_IDs) > len(sourcelist_fieldIDs):
@@ -328,10 +342,11 @@ def launch_band1_1Dpipeline():
         print(f"Field IDs ready according to the sheet but sourcelist not on CANFAR: {tiles_ready_but_not_canfar}")
         # else:
         tiles_canfar_not_ready = set(sourcelist_fieldIDs) - set(field_IDs)
-        print(f"Field ID sourcelists on CANFAR but not ready to run: {tiles_canfar_not_ready}")
+        # print(f"Field ID sourcelists on CANFAR but not ready to run: {tiles_canfar_not_ready}")
 
         fields_on_both = set(field_IDs) & set(sourcelist_fieldIDs)
         # print(f"Fields ready on both CADC and CANFAR: {tiles_on_both}")
+        print(f"Number of fields ready according to the sheet and available on CANFAR: {len(fields_on_both)}")
 
         if fields_on_both:
             # Launch the first field_ID that has a sourcelist (assumes this script will be called many times)
