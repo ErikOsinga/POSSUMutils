@@ -231,6 +231,10 @@ def main(args):
         t3 = task(delete_field_from_canfar, name="delete_field_from_canfar")
         t3(field_ID, SB_num, band)
 
+    else:
+        # Make sure prefect dashboard show crashed run
+        raise ValueError(f"Status is {status} for field {field_ID} SB {SB_num}. Please check the log file {log_file_path} for details.")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Check pipeline status and update CSV file")
     parser.add_argument(
