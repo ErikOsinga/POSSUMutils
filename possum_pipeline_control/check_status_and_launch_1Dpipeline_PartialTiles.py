@@ -35,6 +35,59 @@ Cameron is in charge of generating the source lists per partial tile and separat
 @author: Erik Osinga
 """
 
+def get_results_per_field_sbid_skip_edges(tile_table, verbose=False):
+    """
+    Group the tile_table by 'field_name' and 'sbid' and check the validation condition
+    for each group while skipping rows that are considered edge rows.
+    
+    An edge row is defined as a row where the 'type' column contains
+    the substring "crosses projection boundary" (case insensitive).
+    
+    For the remaining rows within each group, the conditions are met if:
+       - all '1d_pipeline_validation' entries are ''
+       - all '1d_pipeline' entries are 'Completed'
+       
+    If after filtering there are no rows remaining in the group, the function returns False for that group.
+    
+    Args:
+        tile_table: The table that supports a .group_by() method to group by the given columns.
+        verbose (bool): If True, print a message for each group.
+    
+    Returns:
+        dict: A dictionary with keys as (field_name, sbid) tuples and boolean values indicating whether 
+              the conditions are met for the non-edge rows.
+    """
+    # Group the table by 'field_name' and 'sbid'
+    grouped_table = tile_table.group_by(['field_name', 'sbid'])
+    results = {}
+
+    for group in grouped_table.groups:
+        field_name = group['field_name'][0]
+        sbid = group['sbid'][0]
+
+        # Filter out rows where the 'type' column contains "crosses projection boundary"
+        valid_indices = [
+            i for i, typ in enumerate(group['type'])
+            if "crosses projection boundary" not in typ.lower()
+        ]
+
+        # If there are no valid (non-edge) rows, mark conditions as not met (vacuously False)
+        if not valid_indices:
+            all_conditions_met = False
+        else:
+            all_conditions_met = (
+                all(group['1d_pipeline_validation'][i] == '' for i in valid_indices) and
+                all(group['1d_pipeline'][i] == 'Completed' for i in valid_indices)
+            )
+        
+        results[(field_name, sbid)] = all_conditions_met
+
+        if verbose:
+            status = "all conditions met" if all_conditions_met else "conditions not met"
+            print(f"Field '{field_name}', SBID '{sbid}': after filtering edges, conditions are {status}.")
+
+    return results
+
 def get_results_per_field_sbid(tile_table, verbose=False):
     """
     Group google validation sheet by field name and sbid
@@ -61,7 +114,7 @@ def get_results_per_field_sbid(tile_table, verbose=False):
     if verbose:
         for (field, sbid), conditions_met in results.items():
             status = "all conditions met" if conditions_met else "conditions not met"
-            print(f"Field name '{field}', SBID '{sbid}' has 1d_pipeline_validation and 1d_pipeline {status}.")
+            print(f"Field name '{field}', SBID '{sbid}' has 1d_pipeline_validation='' and 1d_pipeline='{status}'.")
 
     return results
 
@@ -116,7 +169,14 @@ def get_tiles_for_pipeline_run(band_number, Google_API_token):
     # return only a list of (fieldnames,sbid) pairs for which we can start a validation job
     can_make_validation = [key for (key,value) in results_grouped.items() if value]
 
-    return fields_to_run, tile1_to_run, tile2_to_run, tile3_to_run, tile4_to_run, SBids_to_run, can_make_validation
+    # Also find fields that have all partial tiles completed except edge cases, and validation plot not yet made
+    results_grouped_plus_edges = get_results_per_field_sbid_skip_edges(tile_table)
+    can_make_val_if_skip_edges = [ key for (key,value) in results_grouped_plus_edges.items() if value]
+    # remove the ones from the edges list if already in the full list
+    # so this list contains only the projection boundary cases
+    can_make_val_if_skip_edges = set(can_make_val_if_skip_edges) - set(can_make_validation)
+
+    return fields_to_run, tile1_to_run, tile2_to_run, tile3_to_run, tile4_to_run, SBids_to_run, can_make_validation, can_make_val_if_skip_edges
 
 def get_canfar_sourcelists(band_number, local_file="./sourcelist_canfar.txt"):
     client = Client()
@@ -219,7 +279,7 @@ def launch_pipeline_summary(field_ID, SBid, band):
     if band == "943MHz":
         command = ["python", "launch_1Dpipeline_PartialTiles_band1_pre_or_post.py", str(field_ID), str(SBid), "post"]
     elif band == "1367MHz":
-        command = ["python", "launch_1Dpipeline_PartialTiles_band2_pre_or_post.py", str(field_ID), str(SBid)]
+        command = ["python", "launch_1Dpipeline_PartialTiles_band2_pre_or_post.py", str(field_ID), str(SBid), "post"]
         command = ""
         raise NotImplementedError("TODO: Temporarily disabled launching band 2 because need to write that run script")
     else:
@@ -310,7 +370,7 @@ def launch_band1_1Dpipeline():
     
     # Check google sheet for band 1 tiles that have been ingested into CADC 
     # (and thus available on CANFAR) but not yet processed with 3D pipeline
-    field_IDs, tile1, tile2, tile3, tile4, SBids, fields_to_validate = get_tiles_for_pipeline_run(band_number=1, Google_API_token=Google_API_token)
+    field_IDs, tile1, tile2, tile3, tile4, SBids, fields_to_validate, field_to_validate_boundaryissues = get_tiles_for_pipeline_run(band_number=1, Google_API_token=Google_API_token)
     assert len(tile1) == len(tile2) == len(tile3) == len(tile4), "Need to have 4 tile columns in google sheet. Even if row can be empty."
     # list of full sourcelist filenames
     canfar_sourcelists = get_canfar_sourcelists(band_number=1) 
@@ -337,6 +397,20 @@ def launch_band1_1Dpipeline():
 
             # Update the status of the '1d_pipeline_validation' column to "Running" regardless of tile number
             update_status(field, None, sbid, band, Google_API_token, "Running", status_column='1d_pipeline_validation')
+
+    if len(field_to_validate_boundaryissues) > 0:
+        print(f"Found {len(field_to_validate_boundaryissues)} fields that are partially finished (except projection boundaries): {field_to_validate_boundaryissues}\n")
+
+        for (field, sbid) in field_to_validate_boundaryissues:
+            print(f"Launching job to create summary plot for field {field} with sbid {sbid} (skipping edges)")
+            
+            field = remove_prefix(field)
+
+            launch_pipeline_summary(field, sbid, band)
+
+            # Update the status of the '1d_pipeline_validation' column to "Running" regardless of tile number
+            update_status(field, None, sbid, band, Google_API_token, "Running", status_column='1d_pipeline_validation')
+
 
     if len(field_IDs) > 0:
         print(f"Found {len(field_IDs)} partial tile runs in Band 1 ready to be processed with 1D pipeline")
