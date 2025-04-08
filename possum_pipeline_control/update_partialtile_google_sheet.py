@@ -237,6 +237,8 @@ if __name__ == "__main__":
     if not os.path.exists(local_file):
         print("Creating 1D pipeline progress plot")
         create_progress_plot(full_table)
+        print("Collating all the 1D pipeline outputs")
+        launch_collate_job()        
     else:
         file_mod_time = os.path.getmtime(local_file)
         if (time.time() - file_mod_time) > 86400:  # 86400 seconds = 1 day
