@@ -77,14 +77,17 @@ def update_validation_spreadsheet(field_ID, SBid, band, Google_API_token, status
     ]
     if rows_to_update:
         col_letter = gspread.utils.rowcol_to_a1(1, column_names.index(status_column) + 1)[0]
+        boundary_issue = False # keep track if theres any projection boundary issue in this field
         for row_index in rows_to_update:
+            if "crosses projection boundary" in tile_table['type'][row_index].lower():
+                boundary_issue = True
             sleep(2) # 60 writes per minute only
             tile_sheet.update(range_name=f'{col_letter}{row_index}', values=[[status]])
         print(f"Updated all {len(rows_to_update)} rows for field {full_field_name} and SBID {SBid} to status '{status}' in '{status_column}' column.")
     else:
         print(f"No rows found for field {full_field_name} and SBID {SBid}")
 
-    return
+    return boundary_issue
 
 def update_status_spreadsheet(field_ID, SBid, band, Google_API_token, status, status_column):
     """
@@ -209,13 +212,18 @@ def main(args):
     Google_API_token = "/arc/home/ErikOsinga/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
     t1 = task(update_validation_spreadsheet, name="update_validation_spreadsheet")
     # execute tasks serially such that logging is preserved (instead of .submit)
-    t1(field_ID, SB_num, band, Google_API_token, status, '1d_pipeline_validation')
+    has_boundary_issue = t1(field_ID, SB_num, band, Google_API_token, status, '1d_pipeline_validation')
 
     if status == "Completed":
         # Update the POSSUM Pipeline Status spreadsheet as well. A complete field has been processed!
         Google_API_token = "/arc/home/ErikOsinga/.ssh/psm_gspread_token.json"
         # put the status as PartialTiles - today's date (e.g. PartialTiles - 2025-03-22)
         status_to_put = f"PartialTiles - {np.datetime64('today', 'D')}"
+
+        if has_boundary_issue:
+            # put BI flag for Boundary Issue
+            status_to_put = f"PartialTilesBI - {np.datetime64('today', 'D')}"
+
         t2 = task(update_status_spreadsheet, name="update_status_spreadsheet")
         t2(field_ID, SB_num, band, Google_API_token, status_to_put, 'single_SB_1D_pipeline')
 
