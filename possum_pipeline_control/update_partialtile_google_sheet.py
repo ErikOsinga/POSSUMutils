@@ -180,6 +180,42 @@ def create_progress_plot(full_table):
     plt.show()
     plt.close()
 
+def launch_collate_job():
+    """
+    Launches the collate job for the 1D pipeline. Once per day
+    """
+    from skaha.session import Session
+    session = Session()
+
+    # e.g. for band 1
+    basedir = "/arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/943MHz/"
+    # Template bash script to run
+    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/collate_1Dpipeline_PartialTiles.sh {basedir}"
+
+    print("Launching collate job")
+    print(f"Command: bash {args}")
+
+    run_name = "collate"
+    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.11.0" # v1.12.1 has astropy issue https://github.com/astropy/astropy/issues/17497
+    # good default values
+    cores = 4
+    ram = 40 # Check allowed values at canfar.net/science-portal
+
+    session_id = session.create(
+        name=run_name.replace('_', '-'),  # Prevent Error 400: name can only contain alpha-numeric chars and '-'
+        image=image,
+        cores=cores,
+        ram=ram,
+        kind="headless",
+        cmd="bash",
+        args=args,
+        replicas=1,
+        env={},
+    )
+
+    print("Check sessions at https://ws-uv.canfar.net/skaha/v0/session")
+    print(f"Check logs at https://ws-uv.canfar.net/skaha/v0/session/{session_id[0]}?view=logs")
+
 if __name__ == "__main__":
     # parser = argparse.ArgumentParser(description="Update Partial Tile Google Sheet")
     # parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
@@ -206,6 +242,8 @@ if __name__ == "__main__":
         if (time.time() - file_mod_time) > 86400:  # 86400 seconds = 1 day
             print("Updating 1D pipeline progress plot")
             create_progress_plot(full_table)
+            print("Collating all the 1D pipeline outputs")
+            launch_collate_job()
 
     # Loop over each row in the returned table to launch the pipeline command.
     # The 'fieldname' is taken from the column "name" with "EMU_" stripped if present.
