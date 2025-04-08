@@ -84,12 +84,14 @@ if __name__ == "__main__":
     
     # Interval between each run in seconds
     interval = 300  # 5 minutes
+    interval = 60 #1min
+    interval = 120 # 2min
 
     # Maximum number of runs for this script, set to None for infinite
     max_runs = None
 
     # Maximum number of headless jobs pendings, will not submit a session if theres more
-    max_pending = 10
+    max_pending = 30
 
     run_script_intermittently(script_paths, interval, max_runs)
 
