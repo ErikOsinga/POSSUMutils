@@ -16,6 +16,7 @@ def get_open_sessions():
         'status': s['status'],
         'startTime': s['startTime'],
         'name': s['name'],
+        'id': s['id'],
     } for s in open_sessions])
 
     # sort by startTime
