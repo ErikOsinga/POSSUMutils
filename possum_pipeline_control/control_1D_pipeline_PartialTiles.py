@@ -18,6 +18,11 @@ def get_open_sessions():
         'name': s['name'],
     } for s in open_sessions])
 
+    # sort by startTime
+    df_sessions = df_sessions.sort_values(by='startTime', ascending=False)
+    # Reset the index
+    df_sessions = df_sessions.reset_index(drop=True)
+
     return df_sessions
 
 def run_script_intermittently(script_paths, interval, max_runs=None):
