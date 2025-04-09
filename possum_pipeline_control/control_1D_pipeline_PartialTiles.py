@@ -71,6 +71,7 @@ def run_script_intermittently(script_paths, interval, max_runs=None):
             break
         
         print(f"Sleeping for {interval} seconds...")
+        print("\n ============================== \n")
         time.sleep(interval)
 
 if __name__ == "__main__":
