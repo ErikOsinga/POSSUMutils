@@ -80,8 +80,8 @@ if __name__ == "__main__":
                                                          # This is done via "check_status_and_launch_1Dpipeline_PartialTiles.py 'pre'"
                                                          # which also downloads the tiles in a CANFAR job.
                     ,"check_status_and_launch_1Dpipeline_PartialTiles.py" # Check POSSUM Pipeline Validation sheet and launch jobs
-                    ,"check_ingest_1Dpipeline_PartialTiles.py" # TODO: Check POSSUM Pipeline Validation sheet and ingest results
-                    ,"log_processing_status_1Dpipeline.py" # TODO: Log processing status to POSSUM Pipeline Status sheet
+                    # ,"check_ingest_1Dpipeline_PartialTiles.py" # TODO: Check POSSUM Pipeline Validation sheet and ingest results
+                                                            # actually, Craig will validate, and Cameron will ingest into YouCat
                     ]  
     
     # Interval between each run in seconds
