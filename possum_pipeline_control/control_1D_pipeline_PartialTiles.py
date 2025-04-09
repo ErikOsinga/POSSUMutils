@@ -33,6 +33,7 @@ def run_script_intermittently(script_paths, interval, max_runs=None):
     run_count = 0
 
     while max_runs is None or run_count < max_runs:
+        print("================================")
         try:
             # Get information about currently open sessions
             df_sessions = get_open_sessions()
