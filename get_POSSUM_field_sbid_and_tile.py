@@ -2,12 +2,13 @@
 """
 Created on 2025-04-10
 
-This script retrieves survey data from a public Google Sheet containing four sheets:
+This script retrieves survey data from the public Google Sheet containing the POSSUM Processing Status
+The relevant tabs are:
   - "Survey Fields - Band 1" and "Survey Fields - Band 2"
   - "Survey Tiles - Band 1" and "Survey Tiles - Band 2"
 
 For field centers the sheet contains:
-  - name      : Field identifier (formerly popupTitle)
+  - name      : Field identifier
   - ra_deg    : Right Ascension in decimal degrees
   - dec_deg   : Declination in decimal degrees
   - sbid      : SBID of the observation
@@ -28,12 +29,12 @@ It then computes and prints:
   - The closest field center (with its field name, SBID, separation, processing status, and, if applicable,
     links to pipeline data, catalog, FDF and spectra)
   - The closest tile center (with its tile id, separation, and processing status)
+                            TODO: add download links for 3D pipeline
 
 Usage examples:
   python script.py --target "Abell 3627" --band 1
   python script.py --coords 252.5 -41.9 --band 1
 
-Assumes a flat-sky approximation so that small-scale distortions may be neglected.
 """
 
 import argparse
