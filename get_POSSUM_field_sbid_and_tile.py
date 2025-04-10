@@ -2,104 +2,128 @@
 """
 Created on 2025-04-10
 
-This script downloads a survey page (for band 1 or 2) and extracts both "field markers"
-and "tile markers" from the JavaScript content. Each marker is defined by an RA, DEC and
-various properties (e.g. popupTitle and SBID for field markers). The script then computes
-the angular distance (in degrees) between a user-provided target (or coordinates) and each
-marker using astropy, and reports separately:
-  - The closest field marker (including its field name and SBID)
-  - The closest tile marker
+This script retrieves survey data from a public Google Sheet containing four sheets:
+  - "Survey Fields - Band 1" and "Survey Fields - Band 2"
+  - "Survey Tiles - Band 1" and "Survey Tiles - Band 2"
 
-Coordinates can be provided directly using the --coords argument (RA DEC in decimal degrees)
-or by target name via the --target argument (which queries SIMBAD).
+For field centers the sheet contains:
+  - name      : Field identifier (formerly popupTitle)
+  - ra_deg    : Right Ascension in decimal degrees
+  - dec_deg   : Declination in decimal degrees
+  - sbid      : SBID of the observation
+  - processed, validated, aus_src, single_SB_1D_pipeline: status columns
+
+The status columns are ordered in ascending steps:
+  processed < validated < aus_src < single_SB_1D_pipeline,
+so if "single_SB_1D_pipeline" contains a value then that field is fully processed.
+
+For tile centers the sheet contains:
+  - tile_id   : Tile identifier
+  - ra_deg    : Right Ascension in decimal degrees
+  - dec_deg   : Declination in decimal degrees
+  - aus_src, 3d_pipeline: status columns (with 3d_pipeline indicating the most advanced processing).
+
+The script accepts a target via its name (queried via SIMBAD) or direct coordinates.
+It then computes and prints:
+  - The closest field center (with its field name, SBID, separation, processing status, and, if applicable,
+    links to pipeline data, catalog, FDF and spectra)
+  - The closest tile center (with its tile id, separation, and processing status)
 
 Usage examples:
   python script.py --target "Abell 3627" --band 1
   python script.py --coords 252.5 -41.9 --band 1
 
-Assumes a flat sky approximation so small-scale distortions may be neglected.
+Assumes a flat-sky approximation so that small-scale distortions may be neglected.
 """
 
 import argparse
 import sys
+import csv
+import io
 import re
+from urllib.parse import quote
+
 import requests
-from bs4 import BeautifulSoup
 from astroquery.simbad import Simbad
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 
-def fetch_html(band):
-    """Fetches the HTML content for the given band (1 or 2)."""
-    if band == 1:
-        url = "https://www.mso.anu.edu.au/~cvaneck/possum/aladin_survey_band1.html"
-    elif band == 2:
-        url = "https://www.mso.anu.edu.au/~cvaneck/possum/aladin_survey_band2.html"
-    else:
-        raise ValueError("Band has to be 1 or 2.")
+def remove_prefix(field_name):
+    """
+    Remove the prefix "EMU_" or "WALLABY_" from the field name.
+    
+    e.g. 
+      s = "EMU_2108-09A"
+      remove_prefix(s) -> "2108-09A"
+    """
+    return re.sub(r'^(EMU_|WALLABY_)', '', field_name)
+
+def fetch_field_centers(band):
+    """
+    Fetches the field centers from the appropriate Google Sheet tab for the given band.
+    The sheet names are "Survey Fields - Band 1" or "Survey Fields - Band 2".
+    """
+    sheet_name = f"Survey Fields - Band {band}"
+    encoded_sheet_name = quote(sheet_name)
+    url = (f"https://docs.google.com/spreadsheets/d/"
+           f"1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0/gviz/tq?tqx=out:csv&sheet={encoded_sheet_name}")
     response = requests.get(url)
     if response.status_code != 200:
-        sys.exit(f"Error: Unable to fetch URL {url} (HTTP {response.status_code}).")
-    return response.content
+        sys.exit(f"Error: Unable to fetch data from Google Sheets ({response.status_code}).")
+    
+    csv_data = response.content.decode('utf-8')
+    reader = csv.DictReader(io.StringIO(csv_data))
+    field_centers = []
+    for row in reader:
+        try:
+            ra = float(row['ra_deg'])
+            dec = float(row['dec_deg'])
+        except ValueError:
+            continue
+        marker = {
+            'name': row['name'],
+            'ra': ra,
+            'dec': dec,
+            'sbid': row['sbid'],
+            'processed': row.get('processed', '').strip(),
+            'validated': row.get('validated', '').strip(),
+            'aus_src': row.get('aus_src', '').strip(),
+            'single_SB_1D_pipeline': row.get('single_SB_1D_pipeline', '').strip()
+        }
+        field_centers.append(marker)
+    return field_centers
 
-def parse_markers(html_content):
+def fetch_tile_centers(band):
     """
-    Parses the HTML and extracts field and tile markers.
-    
-    For field markers, extracts:
-      - RA, DEC
-      - popupTitle (field name)
-      - SBID (if present in popupDesc)
-    
-    For tile markers, extracts:
-      - RA, DEC
-      - popupTitle (tile id)
+    Fetches the tile centers from the appropriate Google Sheet tab for the given band.
+    The sheet names are "Survey Tiles - Band 1" or "Survey Tiles - Band 2".
     """
-    soup = BeautifulSoup(html_content, 'html.parser')
-    # Combine all script text into one string
-    script_text = "\n".join(script.get_text() for script in soup.find_all('script'))
+    sheet_name = f"Survey Tiles - Band {band}"
+    encoded_sheet_name = quote(sheet_name)
+    url = (f"https://docs.google.com/spreadsheets/d/"
+           f"1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0/gviz/tq?tqx=out:csv&sheet={encoded_sheet_name}")
+    response = requests.get(url)
+    if response.status_code != 200:
+        sys.exit(f"Error: Unable to fetch data from Google Sheets ({response.status_code}).")
     
-    field_markers = []
-    tile_markers = []
-    
-    # Regex for field markers (lines that start with field_cat.addSources)
-    field_regex = r"field_cat\.addSources\(\[A\.marker\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*\{([^}]+)\}\)\]\);"
-    for match in re.findall(field_regex, script_text):
-        ra_str, dec_str, props = match
-        ra = float(ra_str)
-        dec = float(dec_str)
-        # Extract popupTitle
-        popup_title_match = re.search(r"popupTitle:\s*'([^']+)'", props)
-        popup_title = popup_title_match.group(1) if popup_title_match else None
-        
-        # Extract popupDesc so that we can pull out the SBID value.
-        popup_desc_match = re.search(r"popupDesc:\s*'([^']+)'", props)
-        popup_desc = popup_desc_match.group(1) if popup_desc_match else ""
-        sbid_match = re.search(r"<em>SBID:</em>\s*([^<]+)", popup_desc)
-        sbid = sbid_match.group(1).strip() if sbid_match else ""
-        
-        field_markers.append({
+    csv_data = response.content.decode('utf-8')
+    reader = csv.DictReader(io.StringIO(csv_data))
+    tile_centers = []
+    for row in reader:
+        try:
+            ra = float(row['ra_deg'])
+            dec = float(row['dec_deg'])
+        except ValueError:
+            continue
+        marker = {
+            'tile_id': row['tile_id'],
             'ra': ra,
             'dec': dec,
-            'popupTitle': popup_title,
-            'SBID': sbid
-        })
-    
-    # Regex for tile markers (lines that start with tile_cat.addSources)
-    tile_regex = r"tile_cat\.addSources\(\[A\.marker\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*\{([^}]+)\}\)\]\);"
-    for match in re.findall(tile_regex, script_text):
-        ra_str, dec_str, props = match
-        ra = float(ra_str)
-        dec = float(dec_str)
-        popup_title_match = re.search(r"popupTitle:\s*'([^']+)'", props)
-        popup_title = popup_title_match.group(1) if popup_title_match else None
-        tile_markers.append({
-            'ra': ra,
-            'dec': dec,
-            'popupTitle': popup_title
-        })
-    
-    return field_markers, tile_markers
+            'aus_src': row.get('aus_src', '').strip(),
+            '3d_pipeline': row.get('3d_pipeline', '').strip()
+        }
+        tile_centers.append(marker)
+    return tile_centers
 
 def get_coordinates_from_simbad(target_name):
     """
@@ -109,6 +133,7 @@ def get_coordinates_from_simbad(target_name):
     simbad = Simbad()
     result_table = simbad.query_object(target_name)
     if result_table is not None and 'ra' in result_table.colnames and 'dec' in result_table.colnames:
+        # SIMBAD returns coordinates in degrees (per the update)
         assert result_table['ra'].unit == u.deg
         assert result_table['dec'].unit == u.deg
         coords = SkyCoord(result_table['ra'][0], result_table['dec'][0], unit=(u.deg, u.deg))
@@ -117,10 +142,38 @@ def get_coordinates_from_simbad(target_name):
         print(f"Error: Target '{target_name}' not found in SIMBAD.")
         sys.exit(1)
 
+def compute_field_status(marker):
+    """
+    Determines the most relevant status of a field center based on the status columns.
+    The hierarchy is (from lowest to highest): processed < validated < aus_src < single_SB_1D_pipeline.
+    """
+    if marker['single_SB_1D_pipeline']:
+        return "Fully Processed (1D Partial Tile pipeline)"
+    elif marker['aus_src']:
+        return "Post-Processed (AUS SRC)"
+    elif marker['validated']:
+        return "Validated (POSSUM)"
+    elif marker['processed']:
+        return "Processed (ASKAP)"
+    else:
+        return "Not processed"
+
+def compute_tile_status(marker):
+    """
+    Determines the most relevant status of a tile center.
+    The hierarchy is: aus_src < 3d_pipeline.
+    """
+    if marker['3d_pipeline']:
+        return "Processed (3D pipeline)"
+    elif marker['aus_src']:
+        return "Post-Processed (AUS SRC)"
+    else:
+        return "Not processed"
+
 def find_closest_marker(target_ra, target_dec, markers):
     """
     Given target coordinates and a list of markers (each with 'ra' and 'dec'),
-    returns the marker dictionary that is closest to the target (and adds a
+    returns the marker dictionary that is closest to the target (adding a
     'separation' key with the angular distance in degrees).
     """
     target_coord = SkyCoord(ra=target_ra * u.deg, dec=target_dec * u.deg)
@@ -137,7 +190,7 @@ def find_closest_marker(target_ra, target_dec, markers):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Find the closest field marker and tile marker to a given target (by name or coordinates)."
+        description="Find the closest survey field center and tile to a given target (by name or coordinates)."
     )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-t", "--target", type=str,
@@ -146,47 +199,87 @@ def main():
                        help="Directly provide coordinates in decimal degrees.")
     
     parser.add_argument("-b", "--band", type=int, default=1, choices=[1, 2],
-                        help="Observing band (1 or 2) to select the correct survey page (default: 1).")
+                        help="Observing band (1 or 2) to select the correct survey sheet (default: 1).")
     
     args = parser.parse_args()
     
-    # Get target coordinates either via SIMBAD or from direct input
+    # Get target coordinates via SIMBAD query or direct input
     if args.coords:
         target_ra, target_dec = args.coords
     else:
         target_ra, target_dec = get_coordinates_from_simbad(args.target)
     
-    print("================================================")
-    print(f"Target Name: {args.target if args.target else 'Provided Coordinates'}")
-    print(f"Target Coordinates: RA = {target_ra:.6f} deg, DEC = {target_dec:.6f} deg")
-    print("================================================")
-
-    # Fetch and parse the HTML content from the appropriate survey page
-    html_content = fetch_html(args.band)
-    field_markers, tile_markers = parse_markers(html_content)
+    header = "=" * 60
+    print(header)
+    print(f"Target: {args.target if args.target else 'Provided Coordinates'}")
+    print(f"Coordinates: RA = {target_ra:.6f} deg | DEC = {target_dec:.6f} deg")
+    print(header)
     
-    # Find and report the closest field marker
-    if not field_markers:
-        print("No field markers found in the page.")
-    else:
-        closest_field = find_closest_marker(target_ra, target_dec, field_markers)
-        print("Closest Field Marker:")
-        print(f"  Field Name (popupTitle): {closest_field.get('popupTitle', 'N/A')}")
-        print(f"  SBID: {closest_field.get('SBID', 'N/A')}")
-        print(f"  RA: {closest_field.get('ra'):.6f} deg")
-        print(f"  DEC: {closest_field.get('dec'):.6f} deg")
-        print(f"  Separation: {closest_field.get('separation'):.6f} deg")
+    # Fetch field and tile centers from the Google Sheet
+    field_centers = fetch_field_centers(args.band)
+    tile_centers = fetch_tile_centers(args.band)
     
-    # Find and report the closest tile marker
-    if not tile_markers:
-        print("No tile markers found in the page.")
+    # Determine and report the closest field center
+    if not field_centers:
+        print("No field centers found.")
     else:
-        closest_tile = find_closest_marker(target_ra, target_dec, tile_markers)
-        print("\nClosest Tile Marker:")
-        print(f"  Tile ID (popupTitle): {closest_tile.get('popupTitle', 'N/A')}")
-        print(f"  RA: {closest_tile.get('ra'):.6f} deg")
-        print(f"  DEC: {closest_tile.get('dec'):.6f} deg")
-        print(f"  Separation: {closest_tile.get('separation'):.6f} deg")
+        closest_field = find_closest_marker(target_ra, target_dec, field_centers)
+        field_status = compute_field_status(closest_field)
+        print("\nClosest Field Center:")
+        print("-" * 60)
+        print(f" Field Name : {closest_field.get('name', 'N/A')}")
+        print(f" SBID       : {closest_field.get('sbid', 'N/A')}")
+        print(f" RA         : {closest_field.get('ra'):.6f} deg")
+        print(f" DEC        : {closest_field.get('dec'):.6f} deg")
+        print(f" Separation : {closest_field.get('separation'):.6f} deg")
+        print(f" Status     : {field_status}")
+        
+        # If Fully Processed, construct and print pipeline & file links
+        if field_status == "Fully Processed (1D Partial Tile pipeline)":
+            base_url = "https://www.canfar.net/storage/arc/list/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/"
+            band_str = "943MHz" if args.band == 1 else "1367MHz"
+            field_id = remove_prefix(closest_field.get('name', ''))
+            sbid = closest_field.get('sbid', '').strip()
+            pipeline_link = f"{base_url}{band_str}/{field_id}/{sbid}"
+            
+            base_url_files = "https://ws-uv.canfar.net/arc/files/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/"
+            catalog_link = f"{base_url_files}{band_str}/{field_id}/{sbid}/PSM.{field_id}.{sbid}.catalog.fits"
+            fdf_link = f"{base_url_files}{band_str}/{field_id}/{sbid}/PSM.{field_id}.{sbid}.FDF.fits"   
+            spectra_link = f"{base_url_files}{band_str}/{field_id}/{sbid}/PSM.{field_id}.{sbid}.spectra.fits"
+            
+            print("\n Pipeline Data:")
+            print(f"  Pipeline Link : {pipeline_link}")
+            print("  Additional Files:")
+            print(f"   Catalog : {catalog_link}")
+            print(f"   FDF     : {fdf_link}")
+            print(f"   Spectra : {spectra_link}")
+            
+            # Write the extra links to a local file called links_{fieldid}.txt
+            filename = f"links_{field_id}.txt"
+            with open(filename, "w") as outfile:
+                outfile.write("Pipeline Data Links\n")
+                outfile.write("=" * 40 + "\n")
+                outfile.write(f"Pipeline Link : {pipeline_link}\n")
+                outfile.write(f"Catalog Link  : {catalog_link}\n")
+                outfile.write(f"FDF Link      : {fdf_link}\n")
+                outfile.write(f"Spectra Link  : {spectra_link}\n")
+            print(f"\n [Info] Pipeline file links written to: {filename}")
+    
+    # Determine and report the closest tile center
+    if not tile_centers:
+        print("\nNo tile centers found.")
+    else:
+        closest_tile = find_closest_marker(target_ra, target_dec, tile_centers)
+        tile_status = compute_tile_status(closest_tile)
+        print("\n" + "=" * 60)
+        print("Closest Tile Center:")
+        print("-" * 60)
+        print(f" Tile ID    : {closest_tile.get('tile_id', 'N/A')}")
+        print(f" RA         : {closest_tile.get('ra'):.6f} deg")
+        print(f" DEC        : {closest_tile.get('dec'):.6f} deg")
+        print(f" Separation : {closest_tile.get('separation'):.6f} deg")
+        print(f" Status     : {tile_status}")
+        print("=" * 60)
 
 if __name__ == '__main__':
     main()
