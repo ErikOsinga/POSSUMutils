@@ -131,11 +131,12 @@ def check_coordinates_in_overlay(ra, dec, overlay_name, band=1, overlay_polygons
 def get_coordinates_from_simbad(target_name):
     simbad = Simbad()
     result_table = simbad.query_object(target_name)
-    if result_table is not None and 'RA' in result_table.colnames and 'DEC' in result_table.colnames:
+    if result_table is not None and 'ra' in result_table.colnames and 'dec' in result_table.colnames:
         # Convert coordinates from sexagesimal to degrees using astropy
-        coords = SkyCoord(result_table['RA'][0], result_table['DEC'][0], unit=(u.hourangle, u.deg))
+        coords = SkyCoord(result_table['ra'][0], result_table['dec'][0], unit=(u.hourangle, u.deg))
         return coords.ra.deg, coords.dec.deg
     else:
+        print(f"Target {target_name} not found in Simbad")
         return None
     
 if __name__ == '__main__':
@@ -156,8 +157,8 @@ if __name__ == '__main__':
     target = 'Abell 1651'
     target = 'Abell 3627'
     target = 'Dorado Group'
-    target = 'Abell 3526'
-    target = 'Abell S 636'
+    #target = 'Abell 3526'
+    #target = 'Abell S 636'
     ra_input, dec_input = get_coordinates_from_simbad(target)
     
     # Compute whether target is in the requested field type
