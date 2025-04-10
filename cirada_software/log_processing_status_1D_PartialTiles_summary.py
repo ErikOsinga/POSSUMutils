@@ -79,7 +79,8 @@ def update_validation_spreadsheet(field_ID, SBid, band, Google_API_token, status
         col_letter = gspread.utils.rowcol_to_a1(1, column_names.index(status_column) + 1)[0]
         boundary_issue = False # keep track if theres any projection boundary issue in this field
         for row_index in rows_to_update:
-            if "crosses projection boundary" in tile_table['type'][row_index].lower():
+            # -2 because python index is 0-based and header row is already skipped
+            if "crosses projection boundary" in tile_table['type'][row_index-2].lower():
                 boundary_issue = True
             sleep(2) # 60 writes per minute only
             tile_sheet.update(range_name=f'{col_letter}{row_index}', values=[[status]])
