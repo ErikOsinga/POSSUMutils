@@ -112,9 +112,10 @@ def check_validation_sheet_integrity(band_number=1, verbose=False):
 def extract_date(entry):
     # Remove extra whitespace
     entry = entry.strip()
-    # Use regex to match the exact pattern "PartialTiles - YYYY-MM-DD"
+    # Use regex to match the exact pattern "PartialTiles(BI) - YYYY-MM-DD"
     # This regex allows for optional whitespace around the hyphen
-    match = re.match(r'^PartialTiles\s*-\s*(\d{4}-\d{2}-\d{2})$', entry)
+    match = re.match(r'^PartialTiles(?:BI)?\s*-\s*(\d{4}-\d{2}-\d{2})$', entry)
+
     if match:
         return match.group(1)
     else:
