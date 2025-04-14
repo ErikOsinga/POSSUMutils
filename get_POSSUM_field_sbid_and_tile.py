@@ -167,9 +167,9 @@ def compute_tile_status(marker):
     if marker['3d_pipeline']:
         return "Processed (3D pipeline)"
     elif marker['aus_src']:
-        return "Post-Processed (AUS SRC)"
+        return "Post-Processed (AUS SRC). 1D/3D pipeline not yet available."
     else:
-        return "Not processed"
+        return "Not processed (1D/3D pipeline). Tile not yet available"
 
 def find_closest_marker(target_ra, target_dec, markers):
     """
@@ -226,7 +226,7 @@ def main():
     else:
         closest_field = find_closest_marker(target_ra, target_dec, field_centers)
         field_status = compute_field_status(closest_field)
-        print("\nClosest Field Center:")
+        print("Closest Field Center:")
         print("-" * 60)
         print(f" Field Name : {closest_field.get('name', 'N/A')}")
         print(f" SBID       : {closest_field.get('sbid', 'N/A')}")
