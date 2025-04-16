@@ -7,6 +7,7 @@ import numpy as np
 import time
 from time import sleep
 import re
+import random
 
 """
 Should be executed on p1
@@ -288,6 +289,21 @@ def launch_pipeline_summary(field_ID, SBid, band):
     print(f"Running command: {' '.join(command)}")
     subprocess.run(command, check=True)    
 
+def safe_update_cells(sheet, cells, max_retries=5):
+    for attempt in range(max_retries):
+        try:
+            sheet.update_cells(cells)
+            return True
+        except Exception as e:
+            # Check for rate limit error
+            if "429" in str(e):
+                sleep_time = (2 ** attempt) + random.uniform(0, 1)
+                print(f"Rate limit hit; retrying in {sleep_time:.2f} seconds...")
+                sleep(sleep_time)
+            else:
+                raise e
+    return False
+
 def update_status(field_ID, tile_numbers, SBid, band, Google_API_token, status, status_column='1d_pipeline'):
     """
     Update the status of the specified partial tile or all rows for a given field_name and sbid in the Google Sheet.
@@ -296,68 +312,77 @@ def update_status(field_ID, tile_numbers, SBid, band, Google_API_token, status, 
     If tile_numbers is None, update all rows that match the field_ID and sbid.
     
     Args:
-    field_ID (str): The field_ID to update, e.g. "1412-28".
-    tile_numbers (list[str|int]|None): List of up to 4 tile numbers, or None to update all matching rows.
-    band (str): The band of the tile.
-    Google_API_token (str): The path to the Google API token JSON file.
-    status (str): The status to set in the specified column.
-    status_column (str): The column to update in the sheet. Defaults to '1d_pipeline'.
+        field_ID (str): The field_ID to update, e.g. "1412-28".
+        tile_numbers (list[str|int]|None): List of up to 4 tile numbers, or None to update all matching rows.
+        band (str): The band of the tile.
+        Google_API_token (str): The path to the Google API token JSON file.
+        status (str): The status to set in the specified column.
+        status_column (str): The column to update in the sheet. Defaults to '1d_pipeline'.
     """
+    print("Updating partial tile status in the POSSUM pipeline validation sheet.")
+
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
-    # POSSUM Pipeline Validation sheet, maintained by Erik
     ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k')
-
+    
     # Select the worksheet for the given band number
     band_number = '1' if band == '943MHz' else '2'
     tile_sheet = ps.worksheet(f'Partial Tile Pipeline - regions - Band {band_number}')
     tile_data = tile_sheet.get_all_values()
     column_names = tile_data[0]
+    # at.Table is assumed to create a structured table from the data.
     tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
-
-    # Build field name prefix
-    fieldname = "EMU_" if band == '943MHz' else 'WALLABY_'  # TODO: verify WALLABY_ fieldname
+    
+    # Build field name prefix and the full field name
+    fieldname = "EMU_" if band == '943MHz' else 'WALLABY_'
     full_field_name = f"{fieldname}{field_ID}"
+    
+    # Determine the index (1-based) for the column to update
+    col_index = column_names.index(status_column) + 1
 
-    # Update all rows belonging to field and sbid
     if tile_numbers is None:
-        # Update all rows that match field_name and sbid
+        # Update all rows matching field_name and sbid
         rows_to_update = [
-            idx + 2  # +2 because gspread index is 1-based and skips the header row
+            idx + 2  # +2: one for header and converting to 1-based indexing for gspread
             for idx, row in enumerate(tile_table)
             if row['field_name'] == full_field_name and row['sbid'] == str(SBid)
         ]
         if rows_to_update:
-            col_letter = gspread.utils.rowcol_to_a1(1, column_names.index(status_column) + 1)[0]
+            cells = []
             for row_index in rows_to_update:
-                sleep(1) # 60 writes per minute only
-                tile_sheet.update(range_name=f'{col_letter}{row_index}', values=[[status]])
-            print(f"Updated all {len(rows_to_update)} rows for field {full_field_name} and SBID {SBid} to status '{status}' in '{status_column}' column.")
+                # Prepare each cell in the specified column for updating
+                cell = tile_sheet.cell(row_index, col_index)
+                cell.value = status
+                cells.append(cell)
+            if safe_update_cells(tile_sheet, cells):
+                print(f"Updated all {len(rows_to_update)} rows for field {full_field_name} and SBID {SBid} to status '{status}' in '{status_column}' column.")
+            else:
+                print("Failed to update cells after multiple retries.")
         else:
             print(f"No rows found for field {full_field_name} and SBID {SBid}.")
-    # Update one specific row
     else:
-        # Extract individual tile numbers
+        # Update one specific row based on provided tile_numbers
         t1, t2, t3, t4 = tile_numbers
-        # Find the row index for the specified tile numbers
         tile_index = None
         for idx, row in enumerate(tile_table):
-            if (row['tile1'] == t1
-                and row['tile2'] == t2
-                and row['tile3'] == t3
-                and row['tile4'] == t4
+            if (row['tile1'] == str(t1)
+                and row['tile2'] == str(t2)
+                and row['tile3'] == str(t3)
+                and row['tile4'] == str(t4)
                 and row['field_name'] == full_field_name
                 and row['sbid'] == str(SBid)):
-                tile_index = idx + 2  # +2 because gspread index is 1-based and we skip the header row
+                tile_index = idx + 2  # Adjust index for header and 1-based indexing
                 break
         if tile_index is not None:
-            # Update the status in the specified column
-            col_letter = gspread.utils.rowcol_to_a1(1, column_names.index(status_column) + 1)[0]
-            tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
-            print(f"Updated row {col_letter}{tile_index} with tiles {tile_numbers} to status '{status}' in '{status_column}' column.")
+            cell = tile_sheet.cell(tile_index, col_index)
+            cell.value = status
+            if safe_update_cells(tile_sheet, [cell]):
+                cell_address = gspread.utils.rowcol_to_a1(tile_index, col_index)
+                print(f"Updated row {cell_address} with tiles {tile_numbers} to status '{status}' in '{status_column}' column.")
+            else:
+                print("Failed to update the cell after multiple retries.")
         else:
             print(f"Field {full_field_name} with tiles {tile_numbers} not found in the sheet.")
-
 
 def launch_band1_1Dpipeline():
     """
