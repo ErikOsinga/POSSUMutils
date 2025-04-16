@@ -6,6 +6,7 @@ import numpy as np
 import astropy.table as at
 import ast
 from time import sleep
+import random
 from prefect import flow, task
 
 """
@@ -37,6 +38,21 @@ def check_pipeline_complete(log_file_path):
         return "Completed"
     else:
         return "Failed"
+
+def safe_update_cells(sheet, cells, max_retries=5):
+    for attempt in range(max_retries):
+        try:
+            sheet.update_cells(cells)
+            return True
+        except Exception as e:
+            # Check for rate limit error
+            if "429" in str(e):
+                sleep_time = (2 ** attempt) + random.uniform(0, 1)
+                print(f"Rate limit hit; retrying in {sleep_time:.2f} seconds...")
+                sleep(sleep_time)
+            else:
+                raise e
+    return False
 
 def update_validation_spreadsheet(field_ID, SBid, band, Google_API_token, status, status_column):
     """
@@ -75,18 +91,33 @@ def update_validation_spreadsheet(field_ID, SBid, band, Google_API_token, status
         for idx, row in enumerate(tile_table)
         if row['field_name'] == full_field_name and row['sbid'] == str(SBid)
     ]
-    if rows_to_update:
-        col_letter = gspread.utils.rowcol_to_a1(1, column_names.index(status_column) + 1)[0]
-        boundary_issue = False # keep track if theres any projection boundary issue in this field
-        for row_index in rows_to_update:
-            # -2 because python index is 0-based and header row is already skipped
-            if "crosses projection boundary" in tile_table['type'][row_index-2].lower():
-                boundary_issue = True
-            sleep(2) # 60 writes per minute only
-            tile_sheet.update(range_name=f'{col_letter}{row_index}', values=[[status]])
+
+    if not rows_to_update:
+        print(f"No rows found for field {full_field_name} and SBID {SBid}")
+        return False
+    
+    # Determine the column letter of the status column.
+    # col_letter = gspread.utils.rowcol_to_a1(1, column_names.index(status_column) + 1)[0]
+    
+    # Prepare a list of cell updates.
+    cells = []
+    boundary_issue = False
+    for row_index in rows_to_update:
+        # Check for the projection boundary issue
+        if "crosses projection boundary" in tile_table['type'][row_index - 2].lower():
+            boundary_issue = True
+        
+        # Get the cell that needs updating.
+        # Note: gspread's cell(row, col) method can be used here.
+        cell = tile_sheet.cell(row_index, column_names.index(status_column) + 1)
+        cell.value = status
+        cells.append(cell)
+    
+    # Use safe_update_cells to attempt the batch update with retries.
+    if safe_update_cells(tile_sheet, cells):
         print(f"Updated all {len(rows_to_update)} rows for field {full_field_name} and SBID {SBid} to status '{status}' in '{status_column}' column.")
     else:
-        print(f"No rows found for field {full_field_name} and SBID {SBid}")
+        print("Failed to update cells after multiple retries.")
 
     return boundary_issue
 
