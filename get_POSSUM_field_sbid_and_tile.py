@@ -202,6 +202,9 @@ def main():
     parser.add_argument("-b", "--band", type=int, default=1, choices=[1, 2],
                         help="Observing band (1 or 2) to select the correct survey sheet (default: 1).")
     
+    parser.add_argument("-maxdist", "--maxdist", type=float, default=4.0,
+                        help="Maximum distance to the field center. If closest field is further than this, it will not be reported (default: 4.0 degrees).")
+
     args = parser.parse_args()
     
     # Get target coordinates via SIMBAD query or direct input
@@ -222,10 +225,17 @@ def main():
     
     # Determine and report the closest field center
     if not field_centers:
-        print("No field centers found.")
+        print("No field centers found. Please check the Google Sheet.")
     else:
         closest_field = find_closest_marker(target_ra, target_dec, field_centers)
         field_status = compute_field_status(closest_field)
+
+        # Check if the closest field is within the maximum distance
+        if closest_field['separation'] > args.maxdist:
+            print(f"\n[Info] Closest field center is {closest_field['separation']:.2f} degrees away, which exceeds the maximum distance of {args.maxdist} degrees.")
+            print("No POSSUM field center found within the specified maximum distance (--maxdist).")
+            sys.exit(0)
+
         print("Closest Field Center:")
         print("-" * 60)
         print(f" Field Name : {closest_field.get('name', 'N/A')}")
