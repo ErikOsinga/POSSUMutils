@@ -10,6 +10,10 @@ def get_open_sessions():
     # Fetch open sessions
     open_sessions = session.fetch()
 
+    if len(open_sessions) == 0:
+        print("No open sessions.")
+        return pd.DataFrame()
+
     # Convert the list of dictionaries to a pandas DataFrame
     df_sessions = pd.DataFrame([{
         'type': s['type'],
