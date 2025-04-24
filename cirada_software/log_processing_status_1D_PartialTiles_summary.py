@@ -8,6 +8,7 @@ import ast
 from time import sleep
 import random
 from prefect import flow, task
+from gspread import Cell
 
 """
 Usage: python log_processing_status.py fieldstr sbid tilestr
@@ -99,21 +100,20 @@ def update_validation_spreadsheet(field_ID, SBid, band, Google_API_token, status
     # Determine the column letter of the status column.
     # col_letter = gspread.utils.rowcol_to_a1(1, column_names.index(status_column) + 1)[0]
     
+    # Determine the index (1-based) for the column to update
+    col_index = column_names.index(status_column) + 1
+    
     # Prepare a list of cell updates.
-    cells = []
+    cells = [Cell(r, col_index, status) for r in rows_to_update]
+
+    # Check if any row has "crosses projection boundary" in the type column
     boundary_issue = False
     for row_index in rows_to_update:
         # Check for the projection boundary issue
         if "crosses projection boundary" in tile_table['type'][row_index - 2].lower():
             boundary_issue = True
         
-        # Get the cell that needs updating.
-        # Note: gspread's cell(row, col) method can be used here.
-        cell = tile_sheet.cell(row_index, column_names.index(status_column) + 1)
-        cell.value = status
-        cells.append(cell)
-    
-    # Use safe_update_cells to attempt the batch update with retries.
+    # Update the cells in 1 go. # Use safe_update_cells to attempt the batch update with retries.
     if safe_update_cells(tile_sheet, cells):
         print(f"Updated all {len(rows_to_update)} rows for field {full_field_name} and SBID {SBid} to status '{status}' in '{status_column}' column.")
     else:

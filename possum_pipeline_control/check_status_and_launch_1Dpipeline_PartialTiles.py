@@ -8,6 +8,7 @@ import time
 from time import sleep
 import re
 import random
+from gspread import Cell
 
 """
 Should be executed on p1
@@ -348,12 +349,12 @@ def update_status(field_ID, tile_numbers, SBid, band, Google_API_token, status, 
             if row['field_name'] == full_field_name and row['sbid'] == str(SBid)
         ]
         if rows_to_update:
-            cells = []
-            for row_index in rows_to_update:
-                # Prepare each cell in the specified column for updating
-                cell = tile_sheet.cell(row_index, col_index)
-                cell.value = status
-                cells.append(cell)
+            col_letter = gspread.utils.rowcol_to_a1(1, col_index)[0]
+
+            # build exactly one Cell per row
+            cells = [Cell(r, col_index, status) for r in rows_to_update]
+
+            # Update the cells in the specified column for all matching rows
             if safe_update_cells(tile_sheet, cells):
                 print(f"Updated all {len(rows_to_update)} rows for field {full_field_name} and SBID {SBid} to status '{status}' in '{status_column}' column.")
             else:
