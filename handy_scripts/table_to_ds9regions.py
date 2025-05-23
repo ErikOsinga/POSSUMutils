@@ -3,7 +3,7 @@ from astropy.table import Table
 # from astropy.io import fits
 import argparse
 
-def write_ds9_regionfile(cat, outfile, racol='RA', deccol='DEC', majcol=None, mincol=None, PAcol=None, majcolunits="deg"):
+def write_ds9_regionfile(cat, outfile, racol='RA', deccol='DEC', majcol=None, mincol=None, PAcol=None, majcolunits="deg", defaultmaj=45.0):
     """
     Write a DS9 region file from the catalogue located at 'cat'.
 
@@ -15,6 +15,7 @@ def write_ds9_regionfile(cat, outfile, racol='RA', deccol='DEC', majcol=None, mi
     majcol  -- str -- name of major axis column in the catalogue (default None)
     mincol  -- str -- name of minor axis column in the catalogue (default None)
     PAcol   -- str -- name of position angle column in the catalogue (default None)
+    defaultmaj  -- float -- default major axis FWHM for the region if majcol is None
     """
 
     # Read the data table
@@ -37,23 +38,24 @@ def write_ds9_regionfile(cat, outfile, racol='RA', deccol='DEC', majcol=None, mi
 
     # If majcol is provided, use it; else default to 20 arcsec
     if majcol is not None and majcol in tdata.colnames:
-        Maj = tdata[majcol]
+        Maj = tdata[majcol] / 2 # divide by two for FWHM to radius
         if majcolunits == "asec":
             Maj /= 3600
         elif majcolunits == "amin":
             Maj /= 60
+
     else:
-        Maj = np.ones(num_sources) * (20.0 / 3600.0)  # Default to 20 arcsec in degrees
+        Maj = np.ones(num_sources) * (defaultmaj / 2 / 3600.0)  # Default to 45/2 arcsec in degrees
 
     # If mincol is provided, use it; else default to 20 arcsec
     if mincol is not None and mincol in tdata.colnames:
-        Min = tdata[mincol]
+        Min = tdata[mincol] / 2 # divide by two for FWHM to radius
         if majcolunits == "asec":
             Min /= 3600
         elif majcolunits == "amin":
             Min /= 60        
     else:
-        Min = np.ones(num_sources) * (20.0 / 3600.0)  # Default to 20 arcsec in degrees
+        Min = np.ones(num_sources) * (defaultmaj / 2 / 3600.0)  # Default to 45/2 arcsec in degrees
 
     # If PAcol is provided, use it; else default to 0
     if PAcol is not None and PAcol in tdata.colnames:
@@ -106,10 +108,11 @@ if __name__ == "__main__":
     parser.add_argument('outfile', help='Output DS9 region file.')
     parser.add_argument('--racol', default='RA', help='Name of the RA column in the catalogue.')
     parser.add_argument('--deccol', default='DEC', help='Name of the DEC column in the catalogue.')
-    parser.add_argument('--majcol', default=None, help='Name of the major axis column in the catalogue.')
-    parser.add_argument('--mincol', default=None, help='Name of the minor axis column in the catalogue.')
+    parser.add_argument('--majcol', default=None, help='Name of the major axis column (FWHM) in the catalogue.')
+    parser.add_argument('--mincol', default=None, help='Name of the minor axis column (FWHM) in the catalogue.')
     parser.add_argument('--PAcol', default=None, help='Name of the position angle column in the catalogue.')
     parser.add_argument('--majcolunits', choices=["deg","amin","asec"], default="deg", help='Units of major and minor axis. Default deg')
+    parser.add_argument('--defaultmaj', type=float, default=45.0, help='Default FWHM of the major axis in arcsec. Only used if Majocol is None. Default 45.0 arcsec (NVSS)')
 
 
     args = parser.parse_args()
@@ -122,5 +125,6 @@ if __name__ == "__main__":
         majcol=args.majcol,
         mincol=args.mincol,
         PAcol=args.PAcol,
-        majcolunits=args.majcolunits
+        majcolunits=args.majcolunits,
+        defaultmaj=args.defaultmaj
     )
