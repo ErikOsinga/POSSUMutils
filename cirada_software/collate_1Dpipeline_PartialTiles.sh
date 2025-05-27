@@ -14,4 +14,4 @@ export PREFECT_API_URL="http://localhost:4200/api"
 psrecord "python /arc/projects/CIRADA/polarimetry/software/POSSUM_Polarimetry_Pipeline/pipeline/pipeline_prefect.py $workdir/config_collate_band1.ini" --include-children --log $workdir/psrecord.txt --plot $workdir/psrecord.png --interval 1
 
 # move all logfiles to the logdir to keep it clean
-mv $workdir/combined/*log $workdir/combined/logs/
+mv $workdir/*log $workdir/logs/
