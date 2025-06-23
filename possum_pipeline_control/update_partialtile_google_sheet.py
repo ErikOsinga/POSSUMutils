@@ -133,7 +133,7 @@ def create_progress_plot(full_table):
     n_total_observed = np.sum(full_table['sbid'] != '')
 
     # Remove rows where the "validated" column contains "REJECTED"
-    full_table = full_table[[not ('REJECTED' in str(val).upper()) for val in full_table['validated']]]
+    full_table = full_table[['REJECTED' not in str(val).upper() for val in full_table['validated']]]
 
     # Remove rows where the row is equal to ''
     full_table = full_table[[not all(str(val).strip() == '' for val in row) for row in full_table['validated']]]
