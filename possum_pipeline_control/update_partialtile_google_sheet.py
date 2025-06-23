@@ -9,10 +9,11 @@ import re
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.ticker as ticker
 import time
 from datetime import datetime
 sys.path.append('../cirada_software/') # to import update_status_spreadsheet
-from log_processing_status_1D_PartialTiles_summary import update_status_spreadsheet
+from log_processing_status_1D_PartialTiles_summary import update_status_spreadsheet # type: ignore  # noqa: F401
 
 """
 Run "check_status_and_launch_1Dpipeline_PartialTiles.py 'pre' " based on Camerons' POSSUM Pipeline Status google sheet.
@@ -128,7 +129,21 @@ def create_progress_plot(full_table):
      - A scatter plot per field.
      - A cumulative plot showing the total number of fields processed vs. date.
     """
-    # Extract finish times using your helper (make sure extract_date is defined)
+    # how many SBids are observed
+    n_total_observed = np.sum(full_table['sbid'] != '')
+
+    # Remove rows where the "validated" column contains "REJECTED"
+    full_table = full_table[[not ('REJECTED' in str(val).upper()) for val in full_table['validated']]]
+
+    # Remove rows where the row is equal to ''
+    full_table = full_table[[not all(str(val).strip() == '' for val in row) for row in full_table['validated']]]
+
+    # Extract validated times
+    valid_times = [datetime.strptime(t, '%Y-%m-%d') 
+                   for t in full_table['validated'] 
+                   if pd.notna(t)]
+
+    # Extract finish times using helper
     full_table['pipeline_finish_time'] = [extract_date(x) for x in full_table['single_SB_1D_pipeline']]
     
     # Remove rows where pipeline_finish_time is NaN
@@ -178,6 +193,104 @@ def create_progress_plot(full_table):
     plt.tight_layout()
     plt.grid()
     plt.savefig('./plots/1D_pipeline_progress_cumulative.png')
+    plt.show()
+    plt.close()
+
+    # ----------------------------
+    # 3. Fields vs Days Since Start Plot
+    # ----------------------------
+    # compute days since first processed field
+    start_date = cumulative_counts.index.min()
+    days_since_start = (cumulative_counts.index - start_date).days
+    counts = cumulative_counts.values
+
+    # estimate remaining days to reach n_total_observed fields
+    elapsed = days_since_start[-1]
+    processed = counts[-1]
+    rate_per_day = processed / elapsed if elapsed > 0 else np.nan
+    days_left = (n_total_observed - processed) / rate_per_day if rate_per_day and rate_per_day > 0 else np.nan
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(days_since_start, counts, marker='o', linestyle='-')
+    plt.title(f'Fields Processed vs Days Since {start_date:%Y-%m-%d}')
+    plt.xlabel('Days Since Start')
+    plt.ylabel('Cumulative Fields Processed')
+    # plt.xticks(days_since_start)
+    ax = plt.gca()
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
+    plt.tight_layout()
+    plt.grid()
+
+    # annotate estimated days left
+    txt = f'~{days_left:.1f} days left to reach {n_total_observed} fields'
+    plt.gca().text(0.05, 0.95, txt, transform=plt.gca().transAxes, va='top')
+
+    plt.savefig('./plots/fields_vs_days_since_start.png')
+    plt.show()
+    plt.close()
+
+
+    # ----------------------------
+    # 4. Validated vs Observing Start Plot
+    # ----------------------------
+
+    # Determine observing start date
+    obs_start = min(valid_times)
+
+    # Build cumulative counts for validated
+    df_val = pd.DataFrame({'date': valid_times})
+    df_val['date'] = pd.to_datetime(df_val['date']).dt.normalize()
+    daily_val = df_val.groupby('date').size().sort_index()
+    cum_val = daily_val.cumsum()
+
+    # Compute days since observing start for both series
+    days_val = (cum_val.index - obs_start).days
+    days_proc_obs = (cumulative_counts.index - obs_start).days
+    proc_counts = cumulative_counts.values
+    val_counts = cum_val.values
+
+    # Plot both processed and validated vs days since observing start
+    plt.figure(figsize=(10, 6))
+    plt.plot(days_proc_obs, proc_counts, marker='o', linestyle='-', label='Processed')
+    plt.plot(days_val, val_counts,  marker='s', linestyle='--', label='Validated')
+    ax = plt.gca()
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(30))
+
+    # Linear fits & intersection
+    slope_proc, intercept_proc = np.polyfit(days_proc_obs, proc_counts, 1)
+    slope_val,  intercept_val  = np.polyfit(days_val,       val_counts,  1)
+
+    if slope_proc != slope_val:
+        x_int     = (intercept_val - intercept_proc) / (slope_proc - slope_val)
+        days_left = x_int - days_proc_obs[-1]
+    else:
+        x_int = days_left = np.nan
+
+    # Extrapolate both lines out to intersection
+    x_ext       = np.arange(0, int(np.ceil(x_int)) + 1)
+    # y_ext_proc  = slope_proc * x_ext + intercept_proc
+    y_ext_val   = slope_val  * x_ext + intercept_val
+
+    # only start processing line after processing actually started
+    startday = days_proc_obs[0]
+    x_ext_proc = np.arange(startday, int(np.ceil(x_int)) + 1)
+    y_ext_proc = slope_proc * x_ext_proc + intercept_proc
+
+    plt.plot(x_ext_proc, y_ext_proc, linestyle=':', label='Proc trend')
+    plt.plot(x_ext, y_ext_val,  linestyle=':', label='Val trend')
+
+    # Annotate days until catch-up
+    txt = f"Days until processing catches up with validated observations: {days_left:.1f}"
+    ax.text(0.05, 0.95, txt, transform=ax.transAxes, va='top')
+
+
+    plt.title(f'Fields Processed & Validated vs Days Since Observing Start ({obs_start:%Y-%m-%d})')
+    plt.xlabel('Days Since Observing Start')
+    plt.ylabel('Cumulative Fields')
+    plt.legend(loc='center left')
+    plt.tight_layout()
+    plt.grid()
+    plt.savefig('./plots/processed_validated_vs_days_since_observing_start.png')
     plt.show()
     plt.close()
 
