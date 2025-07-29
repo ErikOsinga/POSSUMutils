@@ -95,7 +95,8 @@ if __name__ == "__main__":
         ram = 30 # 23 GB is just about enough for summary plot without density calc
         run_name = f"{SBnumber}-{timestr}"
     elif ptype == "pre":
-        ram = 10 # dont need a lot of ram for catalogue writing
+        ram = 2 # dont need a lot of ram for catalogue writing & downloading
+        cores = 1 # neither do we need a lot of cores
         # max 15 characters for run name. SBID+timenow: e.g. 50413-11-39-21
         run_name = "pre-dl" # makes it clear a 'pre' download job is running. Dont want too many of these.
 
