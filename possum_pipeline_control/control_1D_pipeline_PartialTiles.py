@@ -89,15 +89,20 @@ if __name__ == "__main__":
                     ]  
     
     # Interval between each run in seconds
-    interval = 300  # 5 minutes
-    interval = 60 #1min
-    interval = 120 # 2min
+    #interval = 300  # 5 minutes
+    #interval = 60 #1min
+    #interval = 10*60 # 10 min
+    interval = 1*60*60 # 1 hours (download is slow atm)
 
     # Maximum number of runs for this script, set to None for infinite
     max_runs = None
 
     # Maximum number of headless jobs pendings, will not submit a session if theres more
-    max_pending = 30
+    max_pending = 20
 
+    # Maximum number of headless jobs running. will not submit if theres more
+    max_running = "TODO"
+
+    # start 
     run_script_intermittently(script_paths, interval, max_runs)
 
