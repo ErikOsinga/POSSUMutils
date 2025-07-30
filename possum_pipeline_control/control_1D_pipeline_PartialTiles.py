@@ -29,7 +29,7 @@ def get_open_sessions():
 
     return df_sessions
 
-def run_script_intermittently(script_paths, interval, max_runs=None):
+def run_script_intermittently(script_paths, interval, max_runs=None, max_pending=20, max_running=100):
     """
     Execute all scripts in script_paths intermittently
     """
@@ -58,12 +58,15 @@ def run_script_intermittently(script_paths, interval, max_runs=None):
                 print(f"Number of headless sessions with status 'Running': {n_headless_running}")
 
             # If the number of pending headless sessions is less than e.g. 10, run the script
-            if n_headless_pending < max_pending:
+            if n_headless_pending < max_pending and n_headless_running < max_running:
                 for script_path in script_paths:
                     print(f"Running script: {script_path}")
                     subprocess.run(["python", script_path], check=True)
             else:
-                print("Too many pending headless sessions. Skipping this run.")
+                if n_headless_pending > max_pending:
+                    print("Too many pending headless sessions. Skipping this run.")
+                if n_headless_running > max_running:
+                    print("Too many running headless sessions. Skipping this run.")
 
         except subprocess.CalledProcessError as e:
             print(f"Error occurred while running the script: {e}")
@@ -89,10 +92,10 @@ if __name__ == "__main__":
                     ]  
     
     # Interval between each run in seconds
-    #interval = 300  # 5 minutes
+    interval = 300  # 5 minutes
     #interval = 60 #1min
     #interval = 10*60 # 10 min
-    interval = 1*60*60 # 1 hours (download is slow atm)
+    # interval = 1*60*60 # 1 hours (download is slow atm)
 
     # Maximum number of runs for this script, set to None for infinite
     max_runs = None
@@ -101,8 +104,8 @@ if __name__ == "__main__":
     max_pending = 20
 
     # Maximum number of headless jobs running. will not submit if theres more
-    max_running = "TODO"
+    max_running = 30
 
     # start 
-    run_script_intermittently(script_paths, interval, max_runs)
+    run_script_intermittently(script_paths, interval, max_runs, max_pending, max_running)
 
