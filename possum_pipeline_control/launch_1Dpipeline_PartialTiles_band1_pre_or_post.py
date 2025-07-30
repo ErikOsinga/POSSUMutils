@@ -92,7 +92,7 @@ if __name__ == "__main__":
     cores = 4
 
     if ptype == "post":
-        ram = 30 # 23 GB is just about enough for summary plot without density calc
+        ram = 40 # 40 GB is just about enough for summary plot without density calc
         run_name = f"{SBnumber}-{timestr}"
     elif ptype == "pre":
         ram = 2 # dont need a lot of ram for catalogue writing & downloading
