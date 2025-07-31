@@ -63,9 +63,9 @@ def run_script_intermittently(script_paths, interval, max_runs=None, max_pending
                     print(f"Running script: {script_path}")
                     subprocess.run(["python", script_path], check=True)
             else:
-                if n_headless_pending > max_pending:
+                if n_headless_pending >= max_pending:
                     print("Too many pending headless sessions. Skipping this run.")
-                if n_headless_running > max_running:
+                if n_headless_running >= max_running:
                     print("Too many running headless sessions. Skipping this run.")
 
         except subprocess.CalledProcessError as e:
@@ -101,10 +101,10 @@ if __name__ == "__main__":
     max_runs = None
 
     # Maximum number of headless jobs pendings, will not submit a session if theres more
-    max_pending = 20
+    max_pending = 10
 
     # Maximum number of headless jobs running. will not submit if theres more
-    max_running = 30
+    max_running = 10
 
     # start 
     run_script_intermittently(script_paths, interval, max_runs, max_pending, max_running)
