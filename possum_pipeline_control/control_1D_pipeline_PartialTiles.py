@@ -29,7 +29,7 @@ def get_open_sessions():
 
     return df_sessions
 
-def run_script_intermittently(script_paths, interval, max_runs=None, max_pending=20, max_running=100):
+def run_script_intermittently(script_paths, interval, max_runs=None, max_pending=20, max_running=50):
     """
     Execute all scripts in script_paths intermittently
     """
