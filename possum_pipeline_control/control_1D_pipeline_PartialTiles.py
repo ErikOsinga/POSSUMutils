@@ -92,10 +92,10 @@ if __name__ == "__main__":
                     ]  
     
     # Interval between each run in seconds
-    interval = 300  # 5 minutes
+    #interval = 300  # 5 minutes
     #interval = 60 #1min
     #interval = 10*60 # 10 min
-    # interval = 1*60*60 # 1 hours (download is slow atm)
+    interval = 0.5*60*60 # 0.5 hours (download is slow atm)
 
     # Maximum number of runs for this script, set to None for infinite
     max_runs = None
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     max_pending = 10
 
     # Maximum number of headless jobs running. will not submit if theres more
-    max_running = 10
+    max_running = 15 # probably good to set low to limit parallel downloads of separate tiles
 
     # start 
     run_script_intermittently(script_paths, interval, max_runs, max_pending, max_running)
