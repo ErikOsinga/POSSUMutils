@@ -6,8 +6,8 @@ import numpy as np
 from time import sleep
 
 """
-Checks POSSUM tile status (google sheet) if 3D pipeline can be started.
-Updates the POSSUM tile status (google sheet) to "running" if 3D pipeline is submitted.
+Checks POSSUM tile status (Cameron's survey overview google sheet) if 3D pipeline can be started.
+Updates the POSSUM tile status (Cameron's survey overview google sheet) to "running" if 3D pipeline is submitted.
 
 Should be executed on p1
 
@@ -45,6 +45,7 @@ def get_tiles_for_pipeline_run(band_number, Google_API_token):
     """
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
+    # Cameron's survey overview
     ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0')
 
     # Select the worksheet for the given band number
