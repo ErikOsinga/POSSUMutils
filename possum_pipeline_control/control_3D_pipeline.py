@@ -77,7 +77,7 @@ if __name__ == "__main__":
     max_runs = None
 
     # Maximum number of headless jobs pendings, will not submit a session if theres more
-    max_pending = 10
+    max_pending = 5 # 3d pipeline jobs are quite heavy, so 5 pending is enough
 
     # Maximum number of headless jobs running. will not submit if theres more
     max_running = 10
