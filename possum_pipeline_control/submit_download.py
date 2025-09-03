@@ -35,7 +35,7 @@ def launch_download():
 
     # Template bash/python script to run
     cmd = "bash"
-    args = "/arc/projects/CIRADA/polarimetry/software/downloadscript.sh"
+    args = "/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/3dpipeline_downloadscript.sh"
 
     print("Launching session")
     print(f"Command: {cmd} {args}")
