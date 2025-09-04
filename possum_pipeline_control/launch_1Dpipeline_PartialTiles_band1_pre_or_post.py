@@ -30,7 +30,7 @@ def arg_as_list(s):
         raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (s))
     return v
 
-def launch_session(run_name, field_ID, SBnumber, image, cores, ram, ptype):
+def launch_session(run_name, field_ID, SBnumber, image, cores, ram, ptype, max_dl_jobs=2):
     """Launch 1D pipeline Partial Tile summary run or download run"""
 
     df_sessions = get_open_sessions()
@@ -46,9 +46,13 @@ def launch_session(run_name, field_ID, SBnumber, image, cores, ram, ptype):
             print("No open sessions. Can launch a pre-dl job.")
 
         else:
-            if df_sessions[df_sessions['status'] == 'Running']['name'].str.contains("pre-dl").any() or df_sessions[df_sessions['status'] == 'Pending']['name'].str.contains("pre-dl").any():
-                # check if any download jobs are currently running on CANFAR. Prevents overloading the system and confusing the dl jobs
-                print("A pre-dl job is already running. Skipping this run.")
+            running_or_pending_pre_dl = df_sessions[
+                (df_sessions['status'].isin(['Running', 'Pending'])) & 
+                (df_sessions['name'].str.contains("pre-dl"))
+            ]
+
+            if len(running_or_pending_pre_dl) >= max_dl_jobs:
+                print(f"Greater than or equal to {max_dl_jobs} download jobs are already running. Skipping this run.")
                 return
 
     print("Launching session")
@@ -90,6 +94,7 @@ if __name__ == "__main__":
     image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.14.1" # v1.14.1 is the latest version as of 2025-07-22
     # good default values
     cores = 4
+    max_dl_jobs = 2
 
     if ptype == "post":
         ram = 40 # 40 GB is just about enough for summary plot without density calc
@@ -102,4 +107,4 @@ if __name__ == "__main__":
 
     # Check allowed values at canfar.net/science-portal, 10, 20, 30, 40 GB should be allowed
 
-    launch_session(run_name, field_ID, SBnumber, image, cores, ram, ptype)
+    launch_session(run_name, field_ID, SBnumber, image, cores, ram, ptype, max_dl_jobs=max_dl_jobs)
