@@ -254,34 +254,101 @@ def create_progress_plot(full_table):
     plt.plot(days_proc_obs, proc_counts, marker='o', linestyle='-', label='Processed')
     plt.plot(days_val, val_counts,  marker='s', linestyle='--', label='Validated')
     ax = plt.gca()
-    ax.xaxis.set_major_locator(ticker.MultipleLocator(30))
 
-    # Linear fits & intersection
+    # --- Linear fits & intersection (full-range) ---
     slope_proc, intercept_proc = np.polyfit(days_proc_obs, proc_counts, 1)
     slope_val,  intercept_val  = np.polyfit(days_val,       val_counts,  1)
 
     if slope_proc != slope_val:
-        x_int     = (intercept_val - intercept_proc) / (slope_proc - slope_val)
-        days_left = x_int - days_proc_obs[-1]
+        x_int_full = (intercept_val - intercept_proc) / (slope_proc - slope_val)
+        days_left_full = x_int_full - days_proc_obs[-1]
     else:
-        x_int = days_left = np.nan
+        x_int_full = np.nan
+        days_left_full = np.nan
 
-    # Extrapolate both lines out to intersection
-    x_ext       = np.arange(0, int(np.ceil(x_int)) + 1)
-    # y_ext_proc  = slope_proc * x_ext + intercept_proc
-    y_ext_val   = slope_val  * x_ext + intercept_val
+    # Extrapolate both lines out to intersection (full-range)
+    x_ext_full = np.arange(0, int(np.ceil(x_int_full)) + 1) if np.isfinite(x_int_full) else np.arange(0, max(days_proc_obs.max(), days_val.max()) + 1)
+    y_ext_val_full = slope_val  * x_ext_full + intercept_val
 
-    # only start processing line after processing actually started
+    # only start processing line after processing actually started (full-range)
     startday = days_proc_obs[0]
-    x_ext_proc = np.arange(startday, int(np.ceil(x_int)) + 1)
-    y_ext_proc = slope_proc * x_ext_proc + intercept_proc
+    x_ext_proc_full = np.arange(startday, x_ext_full[-1] + 1)
+    y_ext_proc_full = slope_proc * x_ext_proc_full + intercept_proc
 
-    plt.plot(x_ext_proc, y_ext_proc, linestyle=':', label='Proc trend')
-    plt.plot(x_ext, y_ext_val,  linestyle=':', label='Val trend')
+    plt.plot(x_ext_proc_full, y_ext_proc_full, linestyle=':', label='Proc trend')
+    plt.plot(x_ext_full,      y_ext_val_full,  linestyle=':', label='Val trend')
 
-    # Annotate days until catch-up
-    txt = f"Days until processing catches up with validated observations: {days_left:.1f}"
-    ax.text(0.05, 0.95, txt, transform=ax.transAxes, va='top')
+    # --- 60-day window trends & intersection ---
+    latest_date = max(cumulative_counts.index.max(), cum_val.index.max())
+    cutoff_60d = latest_date - pd.Timedelta(days=60)
+
+    # recent processed
+    recent_proc = cumulative_counts[cumulative_counts.index >= cutoff_60d]
+    recent_val  = cum_val[cum_val.index >= cutoff_60d]
+
+    # Require at least 2 points to fit; otherwise skip
+    if (recent_proc.size >= 2) and (recent_val.size >= 2):
+        days_proc_60 = (recent_proc.index - obs_start).days
+        counts_proc_60 = recent_proc.values
+
+        days_val_60 = (recent_val.index - obs_start).days
+        counts_val_60 = recent_val.values
+
+        slope_proc_60, intercept_proc_60 = np.polyfit(days_proc_60, counts_proc_60, 1)
+        slope_val_60,  intercept_val_60  = np.polyfit(days_val_60,  counts_val_60,  1)
+
+        if slope_proc_60 != slope_val_60:
+            x_int_60 = (intercept_val_60 - intercept_proc_60) / (slope_proc_60 - slope_val_60)
+            days_left_60 = x_int_60 - days_proc_obs[-1]
+        else:
+            x_int_60 = np.nan
+            days_left_60 = np.nan
+
+        # Extrapolate dashed 60-day trend lines
+        x_ext_60 = np.arange(0, int(np.ceil(x_int_60)) + 1) if np.isfinite(x_int_60) else np.arange(0, max(days_proc_obs.max(), days_val.max()) + 1)
+
+        # processed: only after processing actually started
+        x_ext_proc_60 = x_ext_60[x_ext_60 >= startday]
+        y_ext_proc_60 = slope_proc_60 * x_ext_proc_60 + intercept_proc_60
+        y_ext_val_60  = slope_val_60  * x_ext_60        + intercept_val_60
+
+        plt.plot(x_ext_proc_60, y_ext_proc_60, linestyle='--', label='Proc trend (60d)')
+        plt.plot(x_ext_60,      y_ext_val_60,  linestyle='--', label='Val trend (60d)')
+    else:
+        x_int_60 = np.nan
+        days_left_60 = np.nan
+
+    # --- Annotations ---
+    txt_full = f"Days until processing catches up with validated observations: {days_left_full:.1f}"
+    ax.text(0.05, 0.95, txt_full, transform=ax.transAxes, va='top')
+
+    txt_60 = f"Using last 60 days: {days_left_60:.1f} days"
+    ax.text(0.05, 0.90, txt_60, transform=ax.transAxes, va='top')
+
+    # --- Smarter x-axis locator & limits ---
+    xmin = -30
+    # include all relevant candidates: observed maxima and both intersections (if finite)
+    candidates = [days_proc_obs.max(), days_val.max()]
+    if np.isfinite(x_int_full):
+        candidates.append(x_int_full)
+    if np.isfinite(x_int_60):
+        candidates.append(x_int_60)
+
+    xmax = int(np.ceil(max(candidates))) if len(candidates) > 0 else 0
+    xmax = max(xmax, 0)  # ensure non-negative right bound
+
+    ax.set_xlim(xmin, xmax)
+
+    # 20 major intervals from -30 to xmax
+    n_intervals = 20
+    step = (xmax - xmin) / n_intervals if n_intervals > 0 else 1
+    # Guard against zero/negative step
+    step = step if step > 0 else 1
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(step))
+
+    ax.set_xlabel("Days since observing start")
+    ax.set_ylabel("Cumulative count")
+    ax.legend()
 
 
     plt.title(f'Fields Processed & Validated vs Days Since Observing Start ({obs_start:%Y-%m-%d})')
