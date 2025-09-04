@@ -51,7 +51,7 @@ def create_symlinks():
             tile_files[tile_number].append(survey_file)
 
     # Find all FITS files in the mfs subdirectories
-    mfs_files = glob.glob(os.path.join(base_path, "2024*/mfs/*/*fits"))
+    mfs_files = glob.glob(os.path.join(base_path, "202*/mfs/*/*fits")) # This line will work until 2030. Hopefully survey is done by then.
 
     # Index MFS files
     for mfs_file in mfs_files:
