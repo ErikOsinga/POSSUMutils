@@ -291,6 +291,8 @@ def create_progress_plot(full_table):
         days_proc_60 = (recent_proc.index - obs_start).days
         counts_proc_60 = recent_proc.values
 
+        first_day_60d_ago = days_proc_60[0]
+
         days_val_60 = (recent_val.index - obs_start).days
         counts_val_60 = recent_val.values
 
@@ -305,10 +307,10 @@ def create_progress_plot(full_table):
             days_left_60 = np.nan
 
         # Extrapolate dashed 60-day trend lines
-        x_ext_60 = np.arange(0, int(np.ceil(x_int_60)) + 1) if np.isfinite(x_int_60) else np.arange(0, max(days_proc_obs.max(), days_val.max()) + 1)
+        x_ext_60 = np.arange(first_day_60d_ago, int(np.ceil(x_int_60)) + 1) if np.isfinite(x_int_60) else np.arange(first_day_60d_ago, max(days_proc_obs.max(), days_val.max()) + 1)
 
-        # processed: only after processing actually started
-        x_ext_proc_60 = x_ext_60[x_ext_60 >= startday]
+        # show slope over last 60 days
+        x_ext_proc_60 = x_ext_60[x_ext_60 >= first_day_60d_ago]
         y_ext_proc_60 = slope_proc_60 * x_ext_proc_60 + intercept_proc_60
         y_ext_val_60  = slope_val_60  * x_ext_60        + intercept_val_60
 
@@ -344,6 +346,8 @@ def create_progress_plot(full_table):
     step = (xmax - xmin) / n_intervals if n_intervals > 0 else 1
     # Guard against zero/negative step
     step = step if step > 0 else 1
+    # round to nearest 10
+    step = np.round(step/10, decimals=0)*10
     ax.xaxis.set_major_locator(ticker.MultipleLocator(step))
 
     ax.set_xlabel("Days since observing start")
@@ -354,7 +358,7 @@ def create_progress_plot(full_table):
     plt.title(f'Fields Processed & Validated vs Days Since Observing Start ({obs_start:%Y-%m-%d})')
     plt.xlabel('Days Since Observing Start')
     plt.ylabel('Cumulative Fields')
-    plt.legend(loc='center left')
+    plt.legend(loc='center left', ncol=3)
     plt.tight_layout()
     plt.grid()
     plt.savefig('./plots/processed_validated_vs_days_since_observing_start.png')
