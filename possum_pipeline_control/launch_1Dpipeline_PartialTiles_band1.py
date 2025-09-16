@@ -1,7 +1,8 @@
 import argparse
 import ast
 from datetime import datetime
-from skaha.session import Session
+# from skaha.session import Session
+from canfar.sessions import Session
 # from skaha.models import ContainerRegistry
 
 # Shouldnt put these on github...

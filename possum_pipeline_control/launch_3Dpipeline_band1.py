@@ -1,5 +1,6 @@
 import argparse
-from skaha.session import Session
+# from skaha.session import Session
+from canfar.sessions import Session
 
 session = Session()
 
