@@ -1,7 +1,8 @@
 import argparse
 import ast
 from datetime import datetime
-from skaha.session import Session
+# from skaha.session import Session
+from canfar.sessions import Session
 from control_1D_pipeline_PartialTiles import get_open_sessions
 
 """
