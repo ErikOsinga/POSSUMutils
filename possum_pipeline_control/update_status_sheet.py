@@ -3,6 +3,7 @@ import gspread
 import astropy.table as at
 import numpy as np
 from automation import database_queries as db
+import util
 
 """
 Updates the POSSUM tile ! 3d pipeline ! status (google sheet) to a specific value input by user
@@ -37,7 +38,7 @@ def update_status(tile_number, band, Google_API_token, status):
     ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0')
 
     # Select the worksheet for the given band number
-    band_number = '1' if band == '943MHz' else '2'
+    band_number = util.get_band_number(band)
     tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_number}')
     tile_data = tile_sheet.get_all_values()
     column_names = tile_data[0]
