@@ -95,7 +95,7 @@ def update_status_spreadsheet(field_ID, SBid, band, Google_API_token, status, st
         for row_index in rows_to_update:
             sleep(2) # 60 writes per minute only
             tile_sheet.update(range_name=f'{col_letter}{row_index}', values=[[status]])
-            db.update_single_SB_1d_pipeline_status(full_field_name, SBid, band_number, status)
+            db.update_single_sb_1d_pipeline_status(full_field_name, SBid, band_number, status)
         print(f"Updated all {len(rows_to_update)} rows for field {full_field_name} and SBID {SBid} to status '{status}' in '{status_column}' column.")
     else:
         print(f"No rows found for field {full_field_name} and SBID {SBid}.")

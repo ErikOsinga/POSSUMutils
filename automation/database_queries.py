@@ -4,7 +4,6 @@ Database query functions for interacting with the ausSRC database.
 import os
 import psycopg2
 from dotenv import load_dotenv
-from datetime import datetime
 
 def execute_query(query, params=None):
     """
@@ -126,7 +125,7 @@ def remove_askap_prefix(sbid):
     """
     return sbid.removeprefix('ASKAP-')
 
-def update_single_SB_1d_pipeline_status(field_name, sbid, band_number, status):
+def update_single_sb_1d_pipeline_status(field_name, sbid, band_number, status):
     """
     Update the single_1d_pipeline_validation{band_number} column in the observation table.
     This is to the equivalent to POSSUM pipeline status sheet: Survey Fields - Band {band_number}
@@ -160,19 +159,22 @@ def find_boundary_issues(sbid, observation):
         SELECT EXISTS (
             SELECT 1
             FROM possum.partial_tile_1d_pipeline
-            WHERE sbid = %s AND observation = %s AND type like '%%crosses projection boundary%%'
+            WHERE sbid = %s AND observation = %s AND LOWER(type) like '%%crosses projection boundary%%'
         ) AS match_found;
     """
     params = (remove_askap_prefix(sbid), observation)
     results = execute_query(query, params)
     issues_found = results[0][0]
-    if issues_found:
+    if issues_found is True:
         print("Boundary issues found.")
     else:
         print("No boundary issues found.")
     return issues_found
 
 def validate_band_number(band_number):
+    """
+    Making sure band number is valid
+    """
     if band_number not in ["1", "2"]:
         raise ValueError("band_number must be either 1 or 2")
 

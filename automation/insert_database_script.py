@@ -145,6 +145,9 @@ def update_tile_table():
         set_tile_3d_pipeline(row, band_number='2')
 
 def set_tile_3d_pipeline(row, band_number):
+    """
+    Update 3d_pipeline_band{band_number} status in the database
+    """
     if row[10] == '': # Skip empty cells
         return
     sql = f"""
