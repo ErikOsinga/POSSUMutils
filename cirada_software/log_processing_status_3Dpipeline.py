@@ -5,6 +5,7 @@ import csv
 import gspread
 import numpy as np
 import astropy.table as at
+from automation import database_queries as db
 
 """
 Usage: python log_processing_status.py tilenumber band
@@ -111,6 +112,7 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
         # as of >v6.0.0 the .update function requires a list of lists
         tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
         print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
+        db.update_3d_pipeline_status(tile_number, band_number, status)
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 

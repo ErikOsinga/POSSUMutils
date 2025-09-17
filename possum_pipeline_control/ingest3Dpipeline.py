@@ -23,7 +23,7 @@ import datetime
 from time import sleep
 # important to grab _run() because run() is wrapped in sys.exit()
 from possum2caom2.composable import _run as possum_run # type: ignore
-
+from automation import database_queries as db
 
 # 14 (grouped) products for the 3D pipeline
 all_3dproducts = [ 
@@ -247,6 +247,8 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
         # as of >v6.0.0 the .update function requires a list of lists
         tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
         print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
+        # Also update the DB
+        db.update_3d_pipeline_status(tile_number, band_number, status)
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 

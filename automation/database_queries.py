@@ -81,7 +81,6 @@ def update_3d_pipeline_status(tile_number, band, status):
         SET "{column_name}" = %s
         WHERE tile = %s;
     """
-    #TODO: update the table with existing values from google sheet
     params = (status, tile_number)
     execute_query(query, params)
 
@@ -106,8 +105,26 @@ def update_1d_pipeline_validation_status(field_name, sbid, band_number, status):
         SET {column_name} = %s
         WHERE field_name = %s AND sbid = %s;
     """
-    params = (status, field_name, sbid)
-    execute_query(query, params)
+    params = (status, field_name, add_askap_prefix(sbid))
+    results = execute_query(query, params)
+    rows_num = len(results)
+    if rows_num > 0:
+        print(f"Updated all {rows_num} rows for field {field_name} and SBID {sbid} to status '{status}' in '{column_name}' column.")
+    else:
+        print(f"No rows found for field {field_name} and SBID {sbid}.")
+
+def add_askap_prefix(sbid):
+    """
+    In possum.observation, sbid column values are stored with 'ASKAP-' prefix.
+    """
+    if not sbid.startsWith('ASKAP-'):
+        return 'ASKAP-' + sbid
+
+def remove_askap_prefix(sbid):
+    """
+    In possum.partial_tile_1d_pipeline, sbids are stored without the 'ASKAP-' prefix.
+    """
+    return sbid.removeprefix('ASKAP-')
 
 def update_single_SB_1d_pipeline_status(field_name, sbid, band_number, status):
     """
@@ -129,7 +146,7 @@ def update_single_SB_1d_pipeline_status(field_name, sbid, band_number, status):
         SET {column_name} = %s
         WHERE field_name = %s AND sbid = %s;
     """
-    params = (status, field_name, sbid)
+    params = (status, field_name, add_askap_prefix(sbid))
     execute_query(query, params)
 
 def find_boundary_issues(sbid, observation):
@@ -146,7 +163,7 @@ def find_boundary_issues(sbid, observation):
             WHERE sbid = %s AND observation = %s AND type like '%%crosses projection boundary%%'
         ) AS match_found;
     """
-    params = (sbid, observation)
+    params = (remove_askap_prefix(sbid), observation)
     results = execute_query(query, params)
     issues_found = results[0][0]
     if issues_found:
@@ -186,7 +203,6 @@ def get_tiles_for_pipeline_run(band_number):
         ON associated_tile.name = observation.name
         WHERE observation.cube_state = 'COMPLETED' AND tile."{column_name}" IS NULL;
     """
-    #TODO: update the table with existing values from google sheet
     return execute_query(query)
 
 def update_partial_tile_1d_pipeline_status(field_id, tile_numbers, band_number, status):
@@ -208,7 +224,11 @@ def update_partial_tile_1d_pipeline_status(field_id, tile_numbers, band_number, 
         WHERE field_ID = %s AND tile1 = %s AND tile2 = %s AND tile3 = %s AND tile4 = %s;
     """
     params = (status, field_id, t1, t2, t3, t4)
-    return execute_query(query, params)
+    results = execute_query(query, params)
+    if len(results) > 0:
+        print(f"Updated row with tiles {tile_numbers} status to {status} in '1d_pipeline' column.")
+    else:
+        print(f"Field {field_id} with tiles {tile_numbers} not found in the sheet.")
 
 def get_partial_tiles_for_1d_pipeline_run(band_number):
     """
@@ -236,23 +256,59 @@ def get_partial_tiles_for_1d_pipeline_run(band_number):
     """
     return execute_query(query)
 
-#    def check_3d_pipeline_complete():
-#        SELECT *
-#FROM possum.tile
-#where "3d_pipeline_band1"::text is not null
+def get_observations_with_complete_partial_tiles(band_number):
+    """
+    For each observation, check if all '1d_pipeline' is "Completed" and 1d_pipeline_validation' is empty
+    Return rows of: (observation, sbid, all_complete)
+    for which all_complete is True if all partial tiles for that observation and sbid
+    have '1d_pipeline' marked as "Completed" and '1d_pipeline_validation' for the observation is NULL
+    """
+    sql = f"""
+        SELECT pt.observation, pt.sbid,
+        CASE 
+            WHEN EXISTS (
+                SELECT 1
+                FROM possum.partial_tile_1d_pipeline pt2
+                WHERE pt2.observation = pt.observation
+                AND LOWER(pt2."1d_pipeline_band{band_number}") != 'completed'
+                ) THEN false
+            WHEN ob."1d_pipeline_validation_band{band_number}" IS NULL AND LOWER(pt."1d_pipeline_band{band_number}") = 'completed'
+                THEN true
+            ELSE
+                false
+        END AS all_complete
+        FROM possum.partial_tile_1d_pipeline pt, possum.observation ob
+        WHERE ob.name = pt.observation
+        GROUP BY pt.observation, pt.sbid, ob."1d_pipeline_validation_band{band_number}", pt."1d_pipeline_band{band_number}";
+    """
+    return execute_query(sql)
 
-def update_aussrc_status(tile_number, band):
+def get_observations_non_edge_rows(band_number):
     """
-    Update the status of a tile in the database.
-
-    Args:
-    tile_number (str): The tile number to update.
-    band (str): The band of the tile.
+    For each observation, check if all '1d_pipeline' is "Completed" and 1d_pipeline_validation' is empty,
+    and if any partial tile type is an edge case (includes "crosses projection boundary").
+    Return rows of: (observation, sbid, non_edge_complete)
+    for which non_edge_complete is True if all partial tiles for that observation and sbid
+    have '1d_pipeline' marked as "Completed" and '1d_pipeline_validation' for the observation is NULL
+    and it does not contain a partial tile that has "crosses projection boundary" in its type.
     """
-    query = """
-        UPDATE tile
-        SET "aus_src" = %s
-        WHERE tile = %s;
+    sql = f"""
+        SELECT pt.observation, pt.sbid,
+        CASE 
+            WHEN EXISTS (
+                SELECT 1
+                FROM possum.partial_tile_1d_pipeline pt2
+                WHERE pt2.observation = pt.observation
+                AND (LOWER(pt2."1d_pipeline_band{band_number}") != 'completed' OR LOWER(pt2.type) like '%crosses projection boundary%')
+                ) THEN false    
+            WHEN ob."1d_pipeline_validation_band{band_number}" IS NULL AND LOWER(pt."1d_pipeline_band{band_number}") = 'completed'
+                THEN true
+            ELSE
+                false
+        END AS all_complete
+        FROM possum.partial_tile_1d_pipeline pt, possum.observation ob
+        WHERE ob.name = pt.observation
+        GROUP BY pt.observation, pt.sbid, ob."1d_pipeline_validation_band{band_number}", pt."1d_pipeline_band{band_number}";
     """
-    #make sure to do this to local copy
-    # au
+    
+    return execute_query(sql)
