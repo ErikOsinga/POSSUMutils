@@ -14,20 +14,23 @@ STATUS_SHEET = None
 def create_partial_tile_pipeline_table():
     """
     Create the partial_tile_1d_pipeline table in the database if it does not exist.
+    Prevent duplicates by adding unique constraints 
+    (similar to how update_partialtile_google_sheet does check_validation_sheet_integrity).
     """
     sql = """
         CREATE TABLE IF NOT EXISTS possum.partial_tile_1d_pipeline (
             id SERIAL PRIMARY KEY,
             observation TEXT,
-            sbid CHARACTER VARYING,
-            tile1 BIGINT,
-            tile2 BIGINT,
-            tile3 BIGINT,
-            tile4 BIGINT,
+            sbid CHARACTER VARYING, -- Not using INT because we need to allow '' instead of NULL to enable Unique constraint
+            tile1 CHARACTER VARYING, -- Not using INT because we need to allow '' instead of NULL to enable Unique constraint
+            tile2 CHARACTER VARYING, -- Not using INT because we need to allow '' instead of NULL to enable Unique constraint
+            tile3 CHARACTER VARYING, -- Not using INT because we need to allow '' instead of NULL to enable Unique constraint
+            tile4 CHARACTER VARYING, -- Not using INT because we need to allow '' instead of NULL to enable Unique constraint
             type TEXT,
             number_sources INT,
             "1d_pipeline_band1" TEXT,
-            "1d_pipeline_band2" TEXT
+            "1d_pipeline_band2" TEXT,
+            UNIQUE (observation, sbid, tile1, tile2, tile3, tile4, type, number_sources) -- Unique constraint to prevent duplicates
         );
     """
     db.execute_query(sql)
@@ -48,10 +51,10 @@ def insert_partial_tile_data():
         args = (
            row[0],  # observation
            row[1],  # sbid
-           row[2] if row[2].isdigit() else None,  # tile_1
-           row[3] if row[3].isdigit() else None,  # tile_2
-           row[4] if row[4].isdigit() else None,  # tile_3
-           row[5] if row[5].isdigit() else None,  # tile_4
+           row[2] if row[2].isdigit() else '',  # tile_1
+           row[3] if row[3].isdigit() else '',  # tile_2
+           row[4] if row[4].isdigit() else '',  # tile_3
+           row[5] if row[5].isdigit() else '',  # tile_4
            row[6],  # type
            row[7] if row[7].isdigit() else None,  # number_sources
            row[8] if len(row) > 8 else None, # 1d_pipeline_band_1
@@ -74,13 +77,13 @@ def update_observation_table():
     tile_sheet = ps.worksheet('Survey Fields - Band 1')
     tile_data = tile_sheet.get_all_values()
     for row in tile_data[1:]:  # Skip header row
-        set_observation_single_SB_1D_pipeline(row, band_number='1')
+        set_observation_single_sb_1D_pipeline(row, band_number='1')
 
     #POSSUM Status Sheet: Survey Fields - Band 2: single_SB_1D_pipeline
     tile_sheet = ps.worksheet('Survey Fields - Band 2')
     tile_data = tile_sheet.get_all_values()
     for row in tile_data[1:]:  # Skip header row
-        set_observation_single_SB_1D_pipeline(row, band_number='2')
+        set_observation_single_sb_1D_pipeline(row, band_number='2')
 
     #POSSUM Pipeline Validation: Partial Tile Pipeline - regions - Band 1: 1d_pipeline_validation
     ps = GC.open_by_url(VALIDATION_SHEET)
@@ -101,16 +104,19 @@ def update_observation_table():
            row[9],  # 1d_pipeline_validation
            row[0],  # observation
            row[1],  # sbid
-           row[2] if row[2].isdigit() else None,  # tile_1
-           row[3] if row[3].isdigit() else None,  # tile_2
-           row[4] if row[4].isdigit() else None,  # tile_3
-           row[5] if row[5].isdigit() else None   # tile_4
+           row[2] if row[2].isdigit() else '',  # tile_1
+           row[3] if row[3].isdigit() else '',  # tile_2
+           row[4] if row[4].isdigit() else '',  # tile_3
+           row[5] if row[5].isdigit() else ''   # tile_4
         )
         db.execute_query(sql, args)
 
-def set_observation_single_SB_1D_pipeline(row, band_number):
+def set_observation_single_sb_1D_pipeline(row, band_number):
+    """
+    Set single_SB_1d_pipeline_band{band_number} column in possum.observation table.
+    """
     if row[19] == '': # Skip empty cells
-       return
+        return
     sql = f"""
         UPDATE possum.observation
         SET single_SB_1D_pipeline_band{band_number} = %s
