@@ -135,3 +135,4 @@ if __name__ == "__main__":
 
     # Update the POSSUM partial_tile_1d_pipeline database table
     update_partial_tile_1d_pipeline(field_ID, tilenumbers, band, status)
+    

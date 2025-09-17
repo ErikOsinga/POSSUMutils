@@ -7,9 +7,9 @@ import gspread
 from dotenv import load_dotenv
 import database_queries as db
 
-gc = None
-validation_sheet = None
-status_sheet = None
+GC = None
+VALIDATION_SHEET = None
+STATUS_SHEET = None
 
 def create_partial_tile_pipeline_table():
     """
@@ -35,7 +35,7 @@ def create_partial_tile_pipeline_table():
 def insert_partial_tile_data():
     """Stream the Google Sheet into the database table
     """
-    ps = gc.open_by_url(validation_sheet)
+    ps = GC.open_by_url(VALIDATION_SHEET)
     tile_sheet = ps.worksheet('Partial Tile Pipeline - regions - Band 1')
     tile_data = tile_sheet.get_all_values()
 
@@ -70,7 +70,7 @@ def update_observation_table():
     """
     db.execute_query(add_column_sql)
     #POSSUM Status Sheet: Survey Fields - Band 1: single_SB_1D_pipeline
-    ps = gc.open_by_url(status_sheet)
+    ps = GC.open_by_url(STATUS_SHEET)
     tile_sheet = ps.worksheet('Survey Fields - Band 1')
     tile_data = tile_sheet.get_all_values()
     for row in tile_data[1:]:  # Skip header row
@@ -83,14 +83,12 @@ def update_observation_table():
         set_observation_single_SB_1D_pipeline(row, band_number='2')
 
     #POSSUM Pipeline Validation: Partial Tile Pipeline - regions - Band 1: 1d_pipeline_validation
-    ps = gc.open_by_url(validation_sheet)
+    ps = GC.open_by_url(VALIDATION_SHEET)
     tile_sheet = ps.worksheet('Partial Tile Pipeline - regions - Band 1')
     tile_data = tile_sheet.get_all_values()
     for row in tile_data[1:]:  # Skip header row
         if row[9] == '': # Skip empty cells
             continue
-        #TODO: update when Erik replies re: 1d_pipeline_validation column
-        # For now, let's assume 1 observation = 1 1d_pipeline_validation status
         sql = """
             UPDATE possum.observation o
             SET "1d_pipeline_validation_band1" = %s
@@ -135,7 +133,7 @@ def update_tile_table():
     """
     db.execute_query(add_column_sql)
     #POSSUM Status Sheet: Survey Tiles - Band 1: 3d_pipeline
-    ps = gc.open_by_url(status_sheet)
+    ps = GC.open_by_url(STATUS_SHEET)
     tile_sheet = ps.worksheet('Survey Tiles - Band 1')
     tile_data = tile_sheet.get_all_values()
     for row in tile_data[1:]:  # Skip header row
@@ -161,13 +159,11 @@ def set_tile_3d_pipeline(row, band_number):
     db.execute_query(sql, args)
 
 if __name__ == "__main__":
-    """Main function to update the tables and insert data.
-    """
     load_dotenv(dotenv_path='config.env')
     google_api_token = os.getenv('GOOGLE_API_TOKEN_PATH')
-    gc = gspread.service_account(filename=google_api_token)
-    validation_sheet = os.getenv('POSSUM_PIPELINE_VALIDATION_SHEET')
-    status_sheet = os.getenv('POSSUM_STATUS_SHEET')
+    GC = gspread.service_account(filename=google_api_token)
+    VALIDATION_SHEET = os.getenv('POSSUM_PIPELINE_VALIDATION_SHEET')
+    STATUS_SHEET = os.getenv('POSSUM_STATUS_SHEET')
 
     create_partial_tile_pipeline_table()
     insert_partial_tile_data()
