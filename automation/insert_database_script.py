@@ -13,12 +13,12 @@ STATUS_SHEET = None
 
 def create_partial_tile_pipeline_table():
     """
-    Create the partial_tile_1d_pipeline table in the database if it does not exist.
+    Create the partial_tile_1d_pipeline tables in the database if it does not exist.
     Prevent duplicates by adding unique constraints 
     (similar to how update_partialtile_google_sheet does check_validation_sheet_integrity).
     """
     sql = """
-        CREATE TABLE IF NOT EXISTS possum.partial_tile_1d_pipeline (
+        CREATE TABLE IF NOT EXISTS possum.partial_tile_1d_pipeline_band{} (
             id SERIAL PRIMARY KEY,
             observation TEXT,
             sbid CHARACTER VARYING, -- Not using INT because we need to allow '' instead of NULL to enable Unique constraint
@@ -28,12 +28,13 @@ def create_partial_tile_pipeline_table():
             tile4 CHARACTER VARYING, -- Not using INT because we need to allow '' instead of NULL to enable Unique constraint
             type TEXT,
             number_sources INT,
-            "1d_pipeline_band1" TEXT,
-            "1d_pipeline_band2" TEXT,
-            UNIQUE (observation, sbid, tile1, tile2, tile3, tile4, type, number_sources) -- Unique constraint to prevent duplicates
+            "1d_pipeline" TEXT,
+            UNIQUE (observation, sbid, tile1, tile2, tile3, tile4, type), -- Unique constraint to prevent duplicates
         );
     """
-    db.execute_query(sql)
+    # Create 2 separate tables for each band 1 and band 2
+    db.execute_query(sql.format('1'))
+    db.execute_query(sql.format('2'))
 
 def insert_partial_tile_data():
     """Stream the Google Sheet into the database table
@@ -41,11 +42,13 @@ def insert_partial_tile_data():
     ps = GC.open_by_url(VALIDATION_SHEET)
     tile_sheet = ps.worksheet('Partial Tile Pipeline - regions - Band 1')
     tile_data = tile_sheet.get_all_values()
+    # We only have data for band 1 for now
+    band_number = 1
 
     for row in tile_data[1:]:  # Skip header row
-        sql = """
-            INSERT INTO possum.partial_tile_1d_pipeline
-            (observation, sbid, tile1, tile2, tile3, tile4, type, number_sources, "1d_pipeline_band1", "1d_pipeline_band2")
+        sql = f"""
+            INSERT INTO possum.partial_tile_1d_pipeline_band{band_number}
+            (observation, sbid, tile1, tile2, tile3, tile4, type, number_sources, "1d_pipeline")
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         args = (
@@ -57,8 +60,7 @@ def insert_partial_tile_data():
            row[5] if row[5].isdigit() else '',  # tile_4
            row[6],  # type
            row[7] if row[7].isdigit() else None,  # number_sources
-           row[8] if len(row) > 8 else None, # 1d_pipeline_band_1
-           None # id_pipeline_band_2
+           row[8] if len(row) > 8 else None # 1d_pipeline
         )
         db.execute_query(sql, args)
 
