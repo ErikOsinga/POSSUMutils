@@ -4,6 +4,7 @@ Usage: python3 insert_database_script.py
 """
 import os
 import gspread
+import pandas as pd
 from dotenv import load_dotenv
 import database_queries as db
 
@@ -79,6 +80,9 @@ def insert_partial_tile_data():
             INSERT INTO possum.partial_tile_1d_pipeline_band{band_number}
             (observation, sbid, tile1, tile2, tile3, tile4, type, number_sources, "1d_pipeline")
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            -- If row already exists, then update
+            ON CONFLICT (observation, sbid, tile1, tile2, tile3, tile4, type) DO UPDATE
+            SET "1d_pipeline" = %s
         """
         args = (
            row[0],  # observation
@@ -89,7 +93,8 @@ def insert_partial_tile_data():
            row[5] if row[5].isdigit() else '',  # tile_4
            row[6],  # type
            row[7] if row[7].isdigit() else None,  # number_sources
-           row[8] if len(row) > 8 else None # 1d_pipeline
+           row[8] if len(row) > 8 else None, # 1d_pipeline
+           row[9] if len(row) > 8 else None # 1d_pipeline for update if row already exists
         )
         db.execute_query(sql, args)
 
@@ -122,44 +127,44 @@ def create_observation_1d_relation_tables():
     #POSSUM Pipeline Validation: Partial Tile Pipeline - regions - Band 1: 1d_pipeline_validation
     ps = GC.open_by_url(VALIDATION_SHEET)
     tile_sheet = ps.worksheet('Partial Tile Pipeline - regions - Band 1')
-    tile_data = tile_sheet.get_all_values()
+    tile_data = pd.DataFrame(tile_sheet.get_all_records())
+    # Drop repeated observation rows so don't have to reinsert and only take the last row
+    observation_unique = tile_data.drop_duplicates(subset='field_name', keep='last')
     band_number = '1'
-    for row in tile_data[1:]:  # Skip header row
-        if row[9] == '': # Skip empty cells
-            continue
+    for row in observation_unique[1:]:  # Skip header row
         sql = f"""
-            UPDATE possum.observation_1d_pipeline_band{band_number} o
-            SET "1d_pipeline_validation" = %s
-            FROM possum.partial_tile_1d_pipeline_band{band_number} pt
-            WHERE o.name= %s and o.name = pt.observation
-            and pt.sbid = %s and pt.tile1 = %s
-            and pt.tile2 = %s and pt.tile3 = %s and pt.tile4 = %s;
+            INSERT possum.observation_1d_pipeline_band{band_number} o
+            (name, sbid, "1d_pipeline_validation")
+            VALUES (%, %, %)
+            -- If row already exists, then update
+            ON CONFLICT (name) DO UPDATE
+            SET "1d_pipeline_validation" = %s;
        """
         args = (
-           row[9],  # 1d_pipeline_validation
-           row[0],  # observation
+           row[0],  # field_name
            row[1],  # sbid
-           row[2] if row[2].isdigit() else '',  # tile_1
-           row[3] if row[3].isdigit() else '',  # tile_2
-           row[4] if row[4].isdigit() else '',  # tile_3
-           row[5] if row[5].isdigit() else ''   # tile_4
+           row[9], #1d_pipeline_validation
+           row[9] #1d_pipeline_validation for UPDATE
         )
         db.execute_query(sql, args)
 
 def set_observation_single_sb_1d_pipeline(row, band_number):
     """
-    Set single_SB_1d_pipeline_band{band_number} column in possum.observation table.
+    Set single_SB_1d_pipeline column in possum.observation_1d_pipeline_band{band_number} table.
     """
-    if row[19] == '': # Skip empty cells
-        return
     sql = f"""
         INSERT INTO possum.observation_1d_pipeline_band{band_number}
-        SET single_SB_1D_pipeline = %s
-        WHERE name = %s;
-        """
+        (name, sbid, single_SB_1D_pipeline)
+        VALUES (%s, %s, %s) 
+        -- If row already exists, then update
+        ON CONFLICT (name) DO UPDATE
+        SET "single_SB_1D_pipeline" = %s;
+    """
     args = (
+       row[0],  # name  
+       row[15], # sbid
        row[19],  # single_SB_1D_pipeline
-       row[0]  # name
+       row[19]  # single_SB_1D_pipeline in case of UPDATE      
     )
     db.execute_query(sql, args)
 
