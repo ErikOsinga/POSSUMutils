@@ -30,7 +30,36 @@ def create_partial_tile_pipeline_tables():
             number_sources INT,
             "1d_pipeline" TEXT,
             UNIQUE (observation, sbid, tile1, tile2, tile3, tile4, type), -- Unique constraint to prevent duplicates
-        );
+            CHECK (
+            -- none of the tile is the same, except for empty values
+            -- Only block rows where two tile values are equal and at least one of them is not ''
+                NOT (
+                    (tile1 <> '' AND LOWER(tile1) = LOWER(tile2)) OR
+                    (tile1 <> '' AND LOWER(tile1) = LOWER(tile3)) OR
+                    (tile1 <> '' AND LOWER(tile1) = LOWER(tile4)) OR
+                    (tile2 <> '' AND LOWER(tile2) = LOWER(tile3)) OR
+                    (tile2 <> '' AND LOWER(tile2) = LOWER(tile4)) OR
+                    (tile3 <> '' AND LOWER(tile3) = LOWER(tile4))
+                )
+            ),
+            CHECK (
+            -- if 4 tile numbers are present, type == corner or type==corner - crosses projection boundary!
+                NOT(
+                    tile1 != '' AND tile2 != '' AND tile3 != '' AND tile4 != ''
+                ) OR LOWER(type) IN ('corner', 'corner - crosses projection boundary!')
+            ),
+            CHECK (
+            -- if 2 tile numbers are present (the first two are not null, the last two are null), type==edge or type==edge - crosses projection boundary!
+                NOT(
+                    tile1 != '' AND tile2 != '' AND tile3 = '' AND tile4 = ''
+                ) OR LOWER(type) IN ('edge', 'edge - crosses projection boundary!')
+            ),
+            CHECK (
+            -- if 1 tile number is present type == center
+               NOT(
+                   tile1 != '' AND tile2 = '' AND tile3 = '' AND tile4 = ''
+               ) OR LOWER(type) = 'center'
+            ));
     """
     # Create 2 separate tables for each band 1 and band 2
     db.execute_query(sql.format('1'))
