@@ -5,6 +5,8 @@ import csv
 import gspread
 import numpy as np
 import astropy.table as at
+from automation import database_queries as db
+from possum_pipeline_control import util
 
 """
 Usage: python log_processing_status.py tilenumber band
@@ -92,7 +94,7 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
     ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0')
 
     # Select the worksheet for the given band number
-    band_number = '1' if band == '943MHz' else '2'
+    band_number = util.get_band_number(band)
     tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_number}')
     tile_data = tile_sheet.get_all_values()
     column_names = tile_data[0]
@@ -111,6 +113,7 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
         # as of >v6.0.0 the .update function requires a list of lists
         tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
         print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
+        db.update_3d_pipeline_status(tile_number, band_number, status)
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 
@@ -134,7 +137,7 @@ def update_validation_spreadsheet(tile_number, band, Google_API_token, status):
     ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k')
 
     # Select the worksheet for the given band number
-    band_number = '1' if band == '943MHz' else '2'
+    band_number = util.get_band_number(band)
     tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_number}')
     tile_data = tile_sheet.get_all_values()
     column_names = tile_data[0]
