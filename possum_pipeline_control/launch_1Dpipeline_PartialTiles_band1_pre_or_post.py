@@ -1,7 +1,8 @@
 import argparse
 import ast
 from datetime import datetime
-from skaha.session import Session
+# from skaha.session import Session
+from canfar.sessions import Session
 from control_1D_pipeline_PartialTiles import get_open_sessions
 
 """
@@ -30,7 +31,7 @@ def arg_as_list(s):
         raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (s))
     return v
 
-def launch_session(run_name, field_ID, SBnumber, image, cores, ram, ptype):
+def launch_session(run_name, field_ID, SBnumber, image, cores, ram, ptype, max_dl_jobs=2):
     """Launch 1D pipeline Partial Tile summary run or download run"""
 
     df_sessions = get_open_sessions()
@@ -46,9 +47,13 @@ def launch_session(run_name, field_ID, SBnumber, image, cores, ram, ptype):
             print("No open sessions. Can launch a pre-dl job.")
 
         else:
-            if df_sessions[df_sessions['status'] == 'Running']['name'].str.contains("pre-dl").any() or df_sessions[df_sessions['status'] == 'Pending']['name'].str.contains("pre-dl").any():
-                # check if any download jobs are currently running on CANFAR. Prevents overloading the system and confusing the dl jobs
-                print("A pre-dl job is already running. Skipping this run.")
+            running_or_pending_pre_dl = df_sessions[
+                (df_sessions['status'].isin(['Running', 'Pending'])) & 
+                (df_sessions['name'].str.contains("pre-dl"))
+            ]
+
+            if len(running_or_pending_pre_dl) >= max_dl_jobs:
+                print(f"Greater than or equal to {max_dl_jobs} download jobs are already running. Skipping this run.")
                 return
 
     print("Launching session")
@@ -86,18 +91,21 @@ if __name__ == "__main__":
 
     # optionally :latest for always the latest version. CANFAR has a bug with that though.
     # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.11.0" # v1.12.1 has astropy issue https://github.com/astropy/astropy/issues/17497
+    # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.11.0" # v1.12.1 has astropy issue https://github.com/astropy/astropy/issues/17497
+    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.14.1" # v1.14.1 is the latest version as of 2025-07-22
     # good default values
     cores = 4
+    max_dl_jobs = 2
 
     if ptype == "post":
-        ram = 30 # 23 GB is just about enough for summary plot without density calc
+        ram = 40 # 40 GB is just about enough for summary plot without density calc
         run_name = f"{SBnumber}-{timestr}"
     elif ptype == "pre":
-        ram = 10 # dont need a lot of ram for catalogue writing
+        ram = 2 # dont need a lot of ram for catalogue writing & downloading
+        cores = 1 # neither do we need a lot of cores
         # max 15 characters for run name. SBID+timenow: e.g. 50413-11-39-21
-        run_name = "pre-dl" # makes it clear a 'pre' download job is running. Dont want too many of these.
+        run_name = f"pre-dl-{SBnumber}" # makes it clear a 'pre' download job is running. Dont want too many of these.
 
     # Check allowed values at canfar.net/science-portal, 10, 20, 30, 40 GB should be allowed
 
-    launch_session(run_name, field_ID, SBnumber, image, cores, ram, ptype)
+    launch_session(run_name, field_ID, SBnumber, image, cores, ram, ptype, max_dl_jobs=max_dl_jobs)
