@@ -103,7 +103,7 @@ def update_1d_pipeline_validation_status(field_name, sbid, band_number, status):
         SET 1d_pipeline_validation = %s
         WHERE name = %s AND sbid = %s;
     """
-    params = (status, field_name, add_askap_prefix(sbid))
+    params = (status, field_name, sbid)
     results = execute_query(query, params)
     rows_num = len(results)
     if rows_num > 0:
@@ -112,19 +112,6 @@ def update_1d_pipeline_validation_status(field_name, sbid, band_number, status):
               observation_1d_pipeline_band{band_number}.1d_pipeline_validation' column.""")
     else:
         print(f"No rows found for field {field_name} and SBID {sbid}.")
-
-def add_askap_prefix(sbid):
-    """
-    In possum.observation, sbid column values are stored with 'ASKAP-' prefix.
-    """
-    if not sbid.startsWith('ASKAP-'):
-        return 'ASKAP-' + sbid
-
-def remove_askap_prefix(sbid):
-    """
-    In possum.partial_tile_1d_pipeline, sbids are stored without the 'ASKAP-' prefix.
-    """
-    return sbid.removeprefix('ASKAP-')
 
 def update_single_sb_1d_pipeline_status(field_name, sbid, band_number, status):
     """
@@ -145,7 +132,7 @@ def update_single_sb_1d_pipeline_status(field_name, sbid, band_number, status):
         SET single_SB_1D_pipeline = %s
         WHERE name = %s AND sbid = %s;
     """
-    params = (status, field_name, add_askap_prefix(sbid))
+    params = (status, field_name, sbid)
     execute_query(query, params)
 
 def find_boundary_issues(sbid, observation):
@@ -162,7 +149,7 @@ def find_boundary_issues(sbid, observation):
             WHERE sbid = %s AND observation = %s AND LOWER(type) like '%%crosses projection boundary%%'
         ) AS match_found;
     """
-    params = (remove_askap_prefix(sbid), observation)
+    params = (sbid, observation)
     results = execute_query(query, params)
     issues_found = results[0][0]
     if issues_found is True:
