@@ -8,8 +8,8 @@ from automation import database_queries as db
 import util
 
 """
-Checks POSSUM tile status (google sheet) if 3D pipeline can be started.
-Updates the POSSUM tile status (google sheet) to "running" if 3D pipeline is submitted.
+Checks POSSUM tile status (Cameron's survey overview google sheet) if 3D pipeline can be started.
+Updates the POSSUM tile status (Cameron's survey overview google sheet) to "running" if 3D pipeline is submitted.
 
 Should be executed on p1
 
@@ -64,7 +64,7 @@ def update_status(tile_number, band, Google_API_token, status):
     
     Args:
     tile_number (str): The tile number to update.
-    band (str): The band of the tile.
+    band (str): The band of the tile. ('943MHz' or '1367MHz')
     Google_API_token (str): The path to the Google API token JSON file.
     status (str): The status to set in the '3d_pipeline' column.
     """

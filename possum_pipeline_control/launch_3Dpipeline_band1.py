@@ -1,5 +1,6 @@
 import argparse
-from skaha.session import Session
+# from skaha.session import Session
+from canfar.sessions import Session
 
 session = Session()
 
@@ -7,7 +8,7 @@ def launch_session(run_name, tilenumber, image, cores, ram):
     """Launch 3D pipeline run"""
 
     # Template bash script to run
-    args = f"/arc/projects/CIRADA/polarimetry/software/run_3Dpipeline_band1_prefect.sh {run_name} {tilenumber}"
+    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_3Dpipeline_band1_prefect.sh {run_name} {tilenumber}"
 
     print("Launching session")
     print(f"Command: bash {args}")
@@ -39,7 +40,7 @@ if __name__ == "__main__":
 
     # optionally :latest for always the latest version
     # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.11.0"
+    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.15.0"
     # good default values
     cores = 16
     ram = 112  # Check allowed values at canfar.net/science-portal

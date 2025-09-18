@@ -19,7 +19,7 @@ def get_open_sessions():
 
     return df_sessions
 
-def run_script_intermittently(script_paths, interval, max_runs=None):
+def run_script_intermittently(script_paths, interval, max_runs=None, max_pending=20, max_running=50):
     run_count = 0
 
     ### a chron job executes POSSUM_run_remote and create_symlinks.py every week on CANFAR.
@@ -43,12 +43,15 @@ def run_script_intermittently(script_paths, interval, max_runs=None):
             print(f"Number of headless sessions with status 'Running': {n_headless_running}")
 
             # If the number of pending headless sessions is less than e.g. 10, run the script
-            if n_headless_pending < max_pending:
+            if n_headless_pending < max_pending and n_headless_running < max_running:
                 for script_path in script_paths:
                     print(f"Running script: {script_path}")
                     subprocess.run(["python", script_path], check=True)
             else:
-                print("Too many pending headless sessions. Skipping this run.")
+                if n_headless_pending >= max_pending:
+                    print("Too many pending headless sessions. Skipping this run.")
+                if n_headless_running >= max_running:
+                    print("Too many running headless sessions. Skipping this run.")
 
         except subprocess.CalledProcessError as e:
             print(f"Error occurred while running the script: {e}")
@@ -74,7 +77,10 @@ if __name__ == "__main__":
     max_runs = None
 
     # Maximum number of headless jobs pendings, will not submit a session if theres more
-    max_pending = 10
+    max_pending = 5 # 3d pipeline jobs are quite heavy, so 5 pending is enough
 
-    run_script_intermittently(script_paths, interval, max_runs)
+    # Maximum number of headless jobs running. will not submit if theres more
+    max_running = 10
+
+    run_script_intermittently(script_paths, interval, max_runs, max_pending, max_running)
 

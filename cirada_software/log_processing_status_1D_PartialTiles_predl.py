@@ -1,15 +1,11 @@
 #!/usr/bin/env python
 import sys
 import argparse
-import gspread
-import numpy as np
-import subprocess
-import astropy.table as at
 sys.path.append('../cirada_software/') # to import update_status_spreadsheet
 from log_processing_status_1D_PartialTiles_summary import update_status_spreadsheet
 
 """
-After downloading the tiles in a CANFAR job and populating the POSSUM Pipeline Validation sheet, log the processing status
+While downloading the tiles in a CANFAR job and populating the POSSUM Pipeline Validation sheet, log the processing status
 to the main POSSUM Status Monitor sheet.
 """
 

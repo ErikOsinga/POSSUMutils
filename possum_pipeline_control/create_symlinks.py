@@ -51,7 +51,7 @@ def create_symlinks():
             tile_files[tile_number].append(survey_file)
 
     # Find all FITS files in the mfs subdirectories
-    mfs_files = glob.glob(os.path.join(base_path, "2024*/mfs/*/*fits"))
+    mfs_files = glob.glob(os.path.join(base_path, "202*/mfs/*/*fits")) # This line will work until 2030. Hopefully survey is done by then.
 
     # Index MFS files
     for mfs_file in mfs_files:
@@ -85,6 +85,8 @@ def create_symlinks():
                     link_name = os.path.join(tiledir, os.path.basename(file))
                     if not os.path.exists(link_name):
                         # Create a symbolic link
+                        # This could error if there is a link but it points towards a deleted file.
+                        # in that case user should delete the link manually
                         os.symlink(file, link_name)
                         created_links.append(link_name)
                     else:

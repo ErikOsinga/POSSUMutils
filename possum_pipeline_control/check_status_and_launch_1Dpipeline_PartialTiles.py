@@ -6,6 +6,7 @@ from time import sleep
 import re
 from automation import database_queries as db
 import util
+from control_1D_pipeline_PartialTiles import get_open_sessions
 
 """
 Should be executed on p1
@@ -249,15 +250,32 @@ def launch_pipeline_summary(field_ID, SBid, band):
     print(f"Running command: {' '.join(command)}")
     subprocess.run(command, check=True)    
 
+def check_predl_job_running_with_sbid(SBnumber: str) -> bool:
+    """
+    Check if a pre-dl job is already running on CANFAR for the given SBnumber.
+    Returns True if a job is running or pending, False otherwise.
+    """
+    df_sessions = get_open_sessions()
+    # corresponds to jobname as set in launch_1Dpipeline_PartialTiles_band1_pre_or_post.py
+    jobname = f"pre-dl-{SBnumber}"
+    if df_sessions[df_sessions['status'] == 'Running']['name'].str.contains(jobname).any() or df_sessions[df_sessions['status'] == 'Pending']['name'].str.contains(jobname).any():
+        return True
+    else:
+        return False
+
+
 def launch_band1_1Dpipeline():
     """
     Launch a headless job to CANFAR for a 1D pipeline Partial Tile
     """
     band = "943MHz"
-
-    # Check google sheet for band 1 tiles that have been ingested into CADC
-    # (and thus available on CANFAR) but not yet processed with 3D pipeline
-    field_IDs, tile1, tile2, tile3, tile4, SBids, fields_to_validate, field_to_validate_boundaryissues = get_tiles_for_pipeline_run(band_number=1)
+    # on p1, token for accessing Erik's google sheets 
+    # consider chmod 600 <file> to prevent access
+    Google_API_token = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
+    
+    # Get a list of tile numbers that should be ready to be processed by the 1D pipeline according to Erik's sheet.
+    # i.e.  'SBID' column is not empty, 'number_sources' is not empty, and '1d_pipeline' column is empty
+    field_IDs, tile1, tile2, tile3, tile4, SBids, fields_to_validate, field_to_validate_boundaryissues = get_tiles_for_pipeline_run(band_number=1, Google_API_token=Google_API_token)
     assert len(tile1) == len(tile2) == len(tile3) == len(tile4), "Need to have 4 tile columns in google sheet. Even if row can be empty."
     # list of full sourcelist filenames
     canfar_sourcelists = get_canfar_sourcelists(band_number=1)
@@ -329,6 +347,15 @@ def launch_band1_1Dpipeline():
                     print(f"Skipping {field_ID} as it doesnt have a sourcelist on CANFAR")
                     continue
                 else:
+
+                    # Can launch this job, if there isn't a pre-dl job running for this SBID
+                    # (we dont want to overload CANFAR with too many download jobs)
+                    predl_job_running = check_predl_job_running_with_sbid(SBid)
+                    
+                    if predl_job_running:
+                        print(f"A pre-dl job is already running for SBID {SBid}. Skipping launching this job for field {field_ID} covering partial tiles {tilenumbers}.")
+                        continue
+
                     print(f"\nLaunching headless job for 1D pipeline for field {field_ID} observed in SBid {SBid} covering partial tiles {tilenumbers} ")
 
                     # Launch the pipeline
@@ -342,7 +369,7 @@ def launch_band1_1Dpipeline():
         else:
             print("No tiles are available on both CADC and CANFAR.")
     else:
-        print("Found no tiles ready to be processed.")
+        print("Found no tiles ready to be processed. Either all are done, or a pre-dl job is already running.")
 
 if __name__ == "__main__":
     launch_band1_1Dpipeline()
