@@ -275,7 +275,7 @@ def launch_band1_1Dpipeline():
     
     # Get a list of tile numbers that should be ready to be processed by the 1D pipeline according to Erik's sheet.
     # i.e.  'SBID' column is not empty, 'number_sources' is not empty, and '1d_pipeline' column is empty
-    field_IDs, tile1, tile2, tile3, tile4, SBids, fields_to_validate, field_to_validate_boundaryissues = get_tiles_for_pipeline_run(band_number=1, Google_API_token=Google_API_token)
+    field_IDs, tile1, tile2, tile3, tile4, SBids, fields_to_validate, field_to_validate_boundaryissues = get_tiles_for_pipeline_run(band_number=1)
     assert len(tile1) == len(tile2) == len(tile3) == len(tile4), "Need to have 4 tile columns in google sheet. Even if row can be empty."
     # list of full sourcelist filenames
     canfar_sourcelists = get_canfar_sourcelists(band_number=1)

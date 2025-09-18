@@ -11,7 +11,7 @@ GC = None
 VALIDATION_SHEET = None
 STATUS_SHEET = None
 
-def create_partial_tile_pipeline_table():
+def create_partial_tile_pipeline_tables():
     """
     Create the partial_tile_1d_pipeline tables in the database if it does not exist.
     Prevent duplicates by adding unique constraints 
@@ -64,40 +64,44 @@ def insert_partial_tile_data():
         )
         db.execute_query(sql, args)
 
-def update_observation_table():
+def create_observation_1d_relation_tables():
     """Add additional columns to the observation table if they do not exist"""
     add_column_sql = """
-        ALTER TABLE possum.observation
-        ADD COLUMN IF NOT EXISTS single_SB_1D_pipeline_band1 TEXT,
-        ADD COLUMN IF NOT EXISTS single_SB_1D_pipeline_band2 TEXT,
-        ADD COLUMN IF NOT EXISTS "1d_pipeline_validation_band1" TEXT,
-        ADD COLUMN IF NOT EXISTS "1d_pipeline_validation_band2" TEXT;
+        CREATE TABLE IF NOT EXISTS possum.observation_1d_pipeline_band{} (
+            name PRIMARY KEY,
+            sbid CHARACTER VARYING,
+            1d_pipeline_validation TEXT,
+            single_SB_1D_pipeline TEXT
+        );
     """
-    db.execute_query(add_column_sql)
+    # 1 table per band since the footprints are different
+    db.execute_query(add_column_sql.format('1'))
+    db.execute_query(add_column_sql.format('2'))
     #POSSUM Status Sheet: Survey Fields - Band 1: single_SB_1D_pipeline
     ps = GC.open_by_url(STATUS_SHEET)
     tile_sheet = ps.worksheet('Survey Fields - Band 1')
     tile_data = tile_sheet.get_all_values()
     for row in tile_data[1:]:  # Skip header row
-        set_observation_single_sb_1D_pipeline(row, band_number='1')
+        set_observation_single_sb_1d_pipeline(row, band_number='1')
 
     #POSSUM Status Sheet: Survey Fields - Band 2: single_SB_1D_pipeline
     tile_sheet = ps.worksheet('Survey Fields - Band 2')
     tile_data = tile_sheet.get_all_values()
     for row in tile_data[1:]:  # Skip header row
-        set_observation_single_sb_1D_pipeline(row, band_number='2')
+        set_observation_single_sb_1d_pipeline(row, band_number='2')
 
     #POSSUM Pipeline Validation: Partial Tile Pipeline - regions - Band 1: 1d_pipeline_validation
     ps = GC.open_by_url(VALIDATION_SHEET)
     tile_sheet = ps.worksheet('Partial Tile Pipeline - regions - Band 1')
     tile_data = tile_sheet.get_all_values()
+    band_number = '1'
     for row in tile_data[1:]:  # Skip header row
         if row[9] == '': # Skip empty cells
             continue
-        sql = """
-            UPDATE possum.observation o
-            SET "1d_pipeline_validation_band1" = %s
-            FROM possum.partial_tile_1d_pipeline pt
+        sql = f"""
+            UPDATE possum.observation_1d_pipeline_band{band_number} o
+            SET "1d_pipeline_validation" = %s
+            FROM possum.partial_tile_1d_pipeline_band{band_number} pt
             WHERE o.name= %s and o.name = pt.observation
             and pt.sbid = %s and pt.tile1 = %s
             and pt.tile2 = %s and pt.tile3 = %s and pt.tile4 = %s;
@@ -113,15 +117,15 @@ def update_observation_table():
         )
         db.execute_query(sql, args)
 
-def set_observation_single_sb_1D_pipeline(row, band_number):
+def set_observation_single_sb_1d_pipeline(row, band_number):
     """
     Set single_SB_1d_pipeline_band{band_number} column in possum.observation table.
     """
     if row[19] == '': # Skip empty cells
         return
     sql = f"""
-        UPDATE possum.observation
-        SET single_SB_1D_pipeline_band{band_number} = %s
+        INSERT INTO possum.observation_1d_pipeline_band{band_number}
+        SET single_SB_1D_pipeline = %s
         WHERE name = %s;
         """
     args = (
@@ -176,7 +180,7 @@ if __name__ == "__main__":
     VALIDATION_SHEET = os.getenv('POSSUM_PIPELINE_VALIDATION_SHEET')
     STATUS_SHEET = os.getenv('POSSUM_STATUS_SHEET')
 
-    create_partial_tile_pipeline_table()
+    create_partial_tile_pipeline_tables()
     insert_partial_tile_data()
-    update_observation_table()
+    create_observation_1d_relation_tables()
     update_tile_table()
