@@ -59,27 +59,70 @@ def execute_query(query, params=None, verbose=True):
         if conn:
             conn.close()
 
-def update_3d_pipeline_status(tile_number, band, status):
+def update_3d_pipeline_ingest(tile_number, band_number, status):
     """
-    Update the 'tile' table, setting either '3d_pipeline_band1' or '3d_pipeline_band2'
-    with given status. Possible values:
-        - Running (Job has been submitted and is currently running)
+    Update the 'tile_3d_pipeline' table, setting either '3d_pipeline_ingest_band1' 
+    or '3d_pipeline_ingest_band2' with given status. Possible values:
+        - Ingested
+        - IngestFailed
+        _ IngestRunning
+
+    Args:
+    tile_number (str): The tile number to update.
+    band_number (str): 1 or 2
+    status (str): The status to set in the respective column.
+    """
+    validate_band_number(band_number)
+    print(f"Updating POSSUM tile database table with 3d_pipeline_ingest_band{band_number} to {status}")
+    query = f"""
+        UPDATE possum.tile_3d_pipeline
+        SET "3d_pipeline_ingest_band{band_number}" = %s
+        WHERE tile_id = %s;
+    """
+    params = (status, tile_number)
+    execute_query(query, params)
+
+def update_3d_pipeline_val(tile_number, band_number, status):
+    """
+    Update the 'tile_3d_pipeline' table, setting either '3d_pipeline_val_band1' 
+    or '3d_pipeline_val_band2' with given status. Possible values:
         - WaitingForValidation (Job has finished running successfully, waiting for human validation)
         - Good/Bad (Currently has to be manually set after human validation)
+
+    Args:
+    tile_number (str): The tile number to update.
+    band_number (str): 1 or 2
+    status (str): The status to set in the respective column.
+    """
+    validate_band_number(band_number)
+    print(f"Updating POSSUM tile database table with 3d_pipeline_val_band{band_number} to {status}")
+    query = f"""
+        UPDATE possum.tile_3d_pipeline
+        SET "3d_pipeline_val_band{band_number}" = %s
+        WHERE tile_id = %s;
+    """
+    params = (status, tile_number)
+    execute_query(query, params)
+
+def update_3d_pipeline(tile_number, band_number, status):
+    """
+    Update the 'tile_3d_pipeline' table, setting either '3d_pipeline_band1' or '3d_pipeline_band2'
+    with given status. Possible values:
+        - Running (Job has been submitted and is currently running)
+        - WaitingForValidation (Job has finished running successfully, waiting for human validation)        
         - Failed (Job failed to run)
 
     Args:
     tile_number (str): The tile number to update.
-    band (str): The band of the tile.
+    band_number (str): 1 or 2
     status (str): The status to set in the respective column.
     """
-    validate_band_number(band)
-    column_name = "3d_pipeline_band2_status" if band == '2' else "3d_pipeline_band1_status"
-    print(f"Updating POSSUM tile database table with {column_name} to {status}")
+    validate_band_number(band_number)
+    print(f"Updating POSSUM tile database table with 3d_pipeline_band{band_number} to {status}")
     query = f"""
-        UPDATE possum.tile
-        SET "{column_name}" = %s
-        WHERE tile = %s;
+        UPDATE possum.tile_3d_pipeline
+        SET "3d_pipeline_band{band_number}" = %s
+        WHERE tile_id = %s;
     """
     params = (status, tile_number)
     execute_query(query, params)
@@ -194,6 +237,35 @@ def get_tiles_for_pipeline_run(band_number):
         WHERE observation.cube_state = 'COMPLETED' AND tile."{column_name}" IS NULL;
     """
     return execute_query(query)
+
+def get_tiles_for_ingest(band_number):
+    """
+    Get a list of 3D pipeline tile numbers that should be ready to be ingested.
+    i.e. tile.'3d_pipeline_band{band_number}_status' = 'Good' 
+    i.e.  '3d_pipeline_val' column is equal to "Good", meaning that it has been validated by a human.
+    and   '3d_pipeline_ingest' column is empty, meaning that it has not yet been tried to ingest.
+    
+    Args:
+    band_number (int): The band number (1 or 2) to check.
+    Google_API_token (str): The path to the Google API token JSON file.
+    
+    Returns:
+    list: A list of tile numbers that satisfy the conditions.
+    """
+    # Authenticate and grab the spreadsheet
+    gc = gspread.service_account(filename=Google_API_token)
+    # URL for POSSUM Pipeline Validation sheet
+    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k')
+
+    # Select the worksheet for the given band number
+    tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_number}')
+    tile_data = tile_sheet.get_all_values()
+    column_names = tile_data[0]
+    tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
+
+    # Find the tiles that satisfy the conditions
+    tiles_to_run = [row['tile_id'] for row in tile_table if ( (row['3d_pipeline_val'] == 'Good') and (row['3d_pipeline_ingest'] == '') )]
+    
 
 def update_partial_tile_1d_pipeline_status(field_id, tile_numbers, band_number, status):
     """

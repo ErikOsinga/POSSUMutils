@@ -151,7 +151,8 @@ def update_validation_spreadsheet(tile_number, band, Google_API_token, status, t
         # as of >v6.0.0 the .update function requires a list of lists
         tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
         print(f"Updated tile {tile_number} status to {status} in '3d_pipeline_ingest' column.")
-
+        # Also update the DB
+        db.update_3d_pipeline_ingest(tile_number, band_number, status)
     else:
         raise ValueError(f"Tile {tile_number} not found in the sheet.")
 
@@ -172,7 +173,7 @@ def check_CADC(tilenumber, band):
     CADC_session.login(certificate_file=CADC_cert_file)
 
     query=CADC_session.create_async("""SELECT observationID,Plane.productID,Observation.lastModified FROM caom2.Plane AS Plane 
-	JOIN caom2.Observation AS Observation ON Plane.obsID = Observation.obsID 
+    JOIN caom2.Observation AS Observation ON Plane.obsID = Observation.obsID 
     WHERE  (Observation.collection = 'POSSUM') AND (observationID NOT LIKE '%pilot1') """)
     query.run().wait()  
     query.raise_if_error()

@@ -113,7 +113,8 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
         # as of >v6.0.0 the .update function requires a list of lists
         tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
         print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
-        db.update_3d_pipeline_status(tile_number, band_number, status)
+        # Also update the DB
+        db.update_3d_pipeline(tile_number, band_number, status)
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 
@@ -152,10 +153,12 @@ def update_validation_spreadsheet(tile_number, band, Google_API_token, status):
     
     if tile_index is not None:
         # Update the status in the '3d_pipeline' column
-        col_letter = gspread.utils.rowcol_to_a1(1, column_names.index('3d_pipeline') + 1)[0]
+        col_letter = gspread.utils.rowcol_to_a1(1, column_names.index('3d_pipeline_val') + 1)[0]
         # as of >v6.0.0 the .update function requires a list of lists
         tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
-        print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
+        print(f"Updated tile {tile_number} status to {status} in '3d_pipeline_val' column.")
+        # Also update the DB
+        db.update_3d_pipeline_val(tile_number, band_number, status)
 
         # Find the validation file path
         psm_val = glob.glob(f"/arc/projects/CIRADA/polarimetry/pipeline_runs/{band}/tile{tilenumber}/*validation.html")
@@ -183,7 +186,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     tilenumber = args.tilenumber
     band = args.band
-
+ 
     # Get all tile numbers from the directories
     base_tile_dir_943 = "/arc/projects/CIRADA/polarimetry/ASKAP/Tiles/943MHz/"
     base_tile_dir_1367 = "/arc/projects/CIRADA/polarimetry/ASKAP/Tiles/1367MHz/"
