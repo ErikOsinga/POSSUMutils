@@ -5,8 +5,9 @@ import numpy as np
 from time import sleep
 import pandas as pd
 import util
-
 from skaha.session import Session
+from automation import database_queries as db
+
 session = Session()
 
 
@@ -65,6 +66,7 @@ def get_tiles_for_ingest(band_number, Google_API_token):
 
     # Find the tiles that satisfy the conditions
     tiles_to_run = [row['tile_id'] for row in tile_table if ( (row['3d_pipeline_val'] == 'Good') and (row['3d_pipeline_ingest'] == '') )]
+    db.get_tiles_for_ingest(band_number=band_number)
 
     return tiles_to_run
 
@@ -133,8 +135,8 @@ def update_status(tile_number, band, Google_API_token, status):
     ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k')
 
     # Select the worksheet for the given band number
-    band_number = util.get_band_number(band)
-    tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_number}')
+    band_no = util.get_band_number(band)
+    tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_no}')
     tile_data = tile_sheet.get_all_values()
     column_names = tile_data[0]
     tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
@@ -152,6 +154,8 @@ def update_status(tile_number, band, Google_API_token, status):
         # as of >v6.0.0 .update requires a list of lists
         tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
         print(f"Updated tile {tile_number} status to {status} in '3d_pipeline_ingest' column.")
+        # Also update the DB
+        db.update_3d_pipeline_ingest(tile_number, band_no, status)
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 

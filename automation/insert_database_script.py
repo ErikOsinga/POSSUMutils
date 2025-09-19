@@ -98,7 +98,10 @@ def insert_partial_tile_data():
         db.execute_query(sql, args, verbose=False)
 
 def create_observation_1d_relation_tables():
-    """Add additional columns to the observation table if they do not exist"""
+    """Create observation_1d_pipeline_band1 and observation_1d_pipeline_band2 tables.
+       These tables hold 1d_pipeline_validation and single_SB_1D_pipeline columns 
+       per observation from the Google spreadsheets. 
+    """
     add_column_sql = """
         CREATE TABLE IF NOT EXISTS possum.observation_1d_pipeline_band{} (
             name TEXT PRIMARY KEY,
@@ -114,10 +117,10 @@ def create_observation_1d_relation_tables():
     #POSSUM Pipeline Validation: Partial Tile Pipeline - regions - Band 1: 1d_pipeline_validation
     ps = GC.open_by_url(VALIDATION_SHEET)
     band_number = '1'
-    tile_sheet = ps.worksheet(f'Partial Tile Pipeline - regions - Band {band_number}')
-    tile_data = pd.DataFrame(tile_sheet.get_all_records())
+    obs_sheet = ps.worksheet(f'Partial Tile Pipeline - regions - Band {band_number}')
+    obs_data = pd.DataFrame(obs_sheet.get_all_records())
     # Drop repeated observation rows so don't have to reinsert and only take the last row
-    observation_unique = tile_data.drop_duplicates(subset='field_name', keep='last')
+    observation_unique = obs_data.drop_duplicates(subset='field_name', keep='last')
     for row in observation_unique.values:  # Skip header row
         sql = f"""
             INSERT INTO possum.observation_1d_pipeline_band{band_number}
@@ -135,15 +138,15 @@ def create_observation_1d_relation_tables():
         
     #POSSUM Status Sheet: Survey Fields - Band 1: single_SB_1D_pipeline
     ps = GC.open_by_url(STATUS_SHEET)
-    tile_sheet = ps.worksheet('Survey Fields - Band 1')
-    tile_data = tile_sheet.get_all_values()
-    for row in tile_data[1:]:  # Skip header row
+    obs_sheet = ps.worksheet('Survey Fields - Band 1')
+    obs_data = obs_sheet.get_all_values()
+    for row in obs_data[1:]:  # Skip header row
         upsert_observation_single_sb_1d_pipeline(row, band_number='1')
 
     #POSSUM Status Sheet: Survey Fields - Band 2: single_SB_1D_pipeline
-    tile_sheet = ps.worksheet('Survey Fields - Band 2')
-    tile_data = tile_sheet.get_all_values()
-    for row in tile_data[1:]:  # Skip header row
+    obs_sheet = ps.worksheet('Survey Fields - Band 2')
+    obs_data = obs_sheet.get_all_values()
+    for row in obs_data[1:]:  # Skip header row
         upsert_observation_single_sb_1d_pipeline(row, band_number='2')
 
 def upsert_observation_single_sb_1d_pipeline(row, band_number):
@@ -165,45 +168,57 @@ def upsert_observation_single_sb_1d_pipeline(row, band_number):
        row[19] # single_SB_1D_pipeline if the row already exists
     )
     db.execute_query(sql, args, verbose=False)
-
-def update_tile_table():
-    """Add additional columns to the tile table if they do not exist
-       and populate data from Google Sheets
+    
+def create_tile_3d_pipeline_table():
+    """Create tile_3d_pipeline to hold info per tile, based on Google spreadsheet columns:
+    - tile_id
+    - 3d_pipeline_band1, 3d_pipeline_band2 (status to check before running 3d pipeline)
+    - 3d_pipeline_val_band1, 3d_pipeline_val_band2 (status to check before running 3d ingest)
+    - 3d_pipeline_ingest_band1, 3d_pipeline_ingest_band2 (status to indicate whether or not 3d ingest has been run)    
     """
-    add_column_sql = """
-        ALTER TABLE possum.tile
-        ADD COLUMN IF NOT EXISTS "3d_pipeline_band1_status" TEXT,
-        ADD COLUMN IF NOT EXISTS "3d_pipeline_band2_status" TEXT;
+    sql = """
+        CREATE TABLE IF NOT EXISTS possum.tile_3d_pipeline (
+            tile_id BIGINT PRIMARY KEY,
+            "3d_pipeline_band1" TEXT,
+            "3d_pipeline_band2" TEXT,
+            "3d_pipeline_val_band1" TEXT,
+            "3d_pipeline_val_band2" TEXT,
+            "3d_pipeline_ingest_band1" TEXT,
+            "3d_pipeline_ingest_band2" TEXT
+        );
     """
-    db.execute_query(add_column_sql)
-    #POSSUM Status Sheet: Survey Tiles - Band 1: 3d_pipeline
+    db.execute_query(sql)
+    
+    #POSSUM Status Sheet: Survey Tiles - Band 1 (and 2): 3d_pipeline
     ps = GC.open_by_url(STATUS_SHEET)
-    tile_sheet = ps.worksheet('Survey Tiles - Band 1')
-    tile_data = tile_sheet.get_all_values()
-    for row in tile_data[1:]:  # Skip header row
-        set_tile_3d_pipeline(row, band_number='1')
-    #POSSUM Status Sheet: Survey Tiles - Band 2: 3d_pipeline
-    tile_sheet = ps.worksheet('Survey Tiles - Band 2')
-    tile_data = tile_sheet.get_all_values()
-    for row in tile_data[1:]:  # Skip header row
-        set_tile_3d_pipeline(row, band_number='2')
+    for band_number in ('1','2'):
+        tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_number}')
+        tile_data = tile_sheet.get_all_values()
+        for row in tile_data[1:]: #skip header row
+            sql = f"""
+                INSERT INTO possum.tile_3d_pipeline 
+                (tile_id, "3d_pipeline_band{band_number}")
+                VALUES (%s, %s)
+                ON CONFLICT(tile_id) DO UPDATE
+                SET "3d_pipeline_band{band_number}" = %s;
+            """
+            db.execute_query(sql, (row[0], row[10], row[10]), verbose=False)
 
-def set_tile_3d_pipeline(row, band_number):
-    """
-    Update 3d_pipeline_band{band_number} status in the database
-    """
-    if row[10] == '': # Skip empty cells
-        return
-    sql = f"""
-        UPDATE possum.tile
-        SET "3d_pipeline_band{band_number}_status" = %s
-        WHERE tile = %s;
-    """
-    args = (
-       row[10],  # 3d_pipeline
-       row[0]  # tile_id
-    )
-    db.execute_query(sql, args)
+    #POSSUM Pipeline Validation: Survey Tiles - Band 1: 3d_pipeline_val, 3d_pipeline_ingest
+    ps = GC.open_by_url(VALIDATION_SHEET)
+    band_number = '1' # band 2 is not available yet
+    tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_number}')
+    tile_data = tile_sheet.get_all_values()
+    for row in tile_data[1:]: #skip header row
+        sql = f"""
+            INSERT INTO possum.tile_3d_pipeline 
+            (tile_id, "3d_pipeline_val_band{band_number}", "3d_pipeline_ingest_band{band_number}")
+            VALUES (%s, %s, %s)
+            ON CONFLICT(tile_id) DO UPDATE SET 
+            "3d_pipeline_val_band{band_number}" = %s,
+            "3d_pipeline_ingest_band{band_number}" = %s;
+        """
+        db.execute_query(sql, (row[0], row[7], row[11],row[7], row[11]), verbose=False)
 
 if __name__ == "__main__":
     load_dotenv(dotenv_path='config.env')
@@ -215,4 +230,4 @@ if __name__ == "__main__":
     create_partial_tile_pipeline_tables()
     insert_partial_tile_data()
     create_observation_1d_relation_tables()
-    update_tile_table()
+    create_tile_3d_pipeline_table()
