@@ -79,10 +79,9 @@ def insert_partial_tile_data():
         sql = f"""
             INSERT INTO possum.partial_tile_1d_pipeline_band{band_number}
             (observation, sbid, tile1, tile2, tile3, tile4, type, number_sources, "1d_pipeline")
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            -- If row already exists, then update
-            ON CONFLICT (observation, sbid, tile1, tile2, tile3, tile4, type) DO UPDATE
-            SET "1d_pipeline" = %s
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            -- If row already exists, then don't overwrite
+            ON CONFLICT (observation, sbid, tile1, tile2, tile3, tile4, type) DO NOTHING;
         """
         args = (
            row[0],  # observation
@@ -93,80 +92,79 @@ def insert_partial_tile_data():
            row[5] if row[5].isdigit() else '',  # tile_4
            row[6],  # type
            row[7] if row[7].isdigit() else None,  # number_sources
-           row[8] if len(row) > 8 else None, # 1d_pipeline
-           row[9] if len(row) > 8 else None # 1d_pipeline for update if row already exists
+           row[8] if len(row) > 8 else None # 1d_pipeline
         )
-        db.execute_query(sql, args)
+        # We don't want to see thousands of insert statements
+        db.execute_query(sql, args, verbose=False)
 
 def create_observation_1d_relation_tables():
     """Add additional columns to the observation table if they do not exist"""
     add_column_sql = """
         CREATE TABLE IF NOT EXISTS possum.observation_1d_pipeline_band{} (
-            name PRIMARY KEY,
+            name TEXT PRIMARY KEY,
             sbid CHARACTER VARYING,
-            1d_pipeline_validation TEXT,
+            "1d_pipeline_validation" TEXT,
             single_SB_1D_pipeline TEXT
         );
     """
     # 1 table per band since the footprints are different
     db.execute_query(add_column_sql.format('1'))
     db.execute_query(add_column_sql.format('2'))
+    
+    #POSSUM Pipeline Validation: Partial Tile Pipeline - regions - Band 1: 1d_pipeline_validation
+    ps = GC.open_by_url(VALIDATION_SHEET)
+    band_number = '1'
+    tile_sheet = ps.worksheet(f'Partial Tile Pipeline - regions - Band {band_number}')
+    tile_data = pd.DataFrame(tile_sheet.get_all_records())
+    # Drop repeated observation rows so don't have to reinsert and only take the last row
+    observation_unique = tile_data.drop_duplicates(subset='field_name', keep='last')
+    for row in observation_unique.values:  # Skip header row
+        sql = f"""
+            INSERT INTO possum.observation_1d_pipeline_band{band_number}
+            (name, sbid, "1d_pipeline_validation")
+            VALUES (%s, %s, %s)
+            -- If row already exists, then don't overwrite
+            ON CONFLICT (name) DO NOTHING;
+       """
+        args = (
+           row[0],  # field_name
+           row[1],  # sbid
+           row[9] #1d_pipeline_validation
+        )
+        db.execute_query(sql, args, verbose=False)
+        
     #POSSUM Status Sheet: Survey Fields - Band 1: single_SB_1D_pipeline
     ps = GC.open_by_url(STATUS_SHEET)
     tile_sheet = ps.worksheet('Survey Fields - Band 1')
     tile_data = tile_sheet.get_all_values()
     for row in tile_data[1:]:  # Skip header row
-        set_observation_single_sb_1d_pipeline(row, band_number='1')
+        upsert_observation_single_sb_1d_pipeline(row, band_number='1')
 
     #POSSUM Status Sheet: Survey Fields - Band 2: single_SB_1D_pipeline
     tile_sheet = ps.worksheet('Survey Fields - Band 2')
     tile_data = tile_sheet.get_all_values()
     for row in tile_data[1:]:  # Skip header row
-        set_observation_single_sb_1d_pipeline(row, band_number='2')
+        upsert_observation_single_sb_1d_pipeline(row, band_number='2')
 
-    #POSSUM Pipeline Validation: Partial Tile Pipeline - regions - Band 1: 1d_pipeline_validation
-    ps = GC.open_by_url(VALIDATION_SHEET)
-    tile_sheet = ps.worksheet('Partial Tile Pipeline - regions - Band 1')
-    tile_data = pd.DataFrame(tile_sheet.get_all_records())
-    # Drop repeated observation rows so don't have to reinsert and only take the last row
-    observation_unique = tile_data.drop_duplicates(subset='field_name', keep='last')
-    band_number = '1'
-    for row in observation_unique[1:]:  # Skip header row
-        sql = f"""
-            INSERT possum.observation_1d_pipeline_band{band_number} o
-            (name, sbid, "1d_pipeline_validation")
-            VALUES (%, %, %)
-            -- If row already exists, then update
-            ON CONFLICT (name) DO UPDATE
-            SET "1d_pipeline_validation" = %s;
-       """
-        args = (
-           row[0],  # field_name
-           row[1],  # sbid
-           row[9], #1d_pipeline_validation
-           row[9] #1d_pipeline_validation for UPDATE
-        )
-        db.execute_query(sql, args)
-
-def set_observation_single_sb_1d_pipeline(row, band_number):
+def upsert_observation_single_sb_1d_pipeline(row, band_number):
     """
-    Set single_SB_1d_pipeline column in possum.observation_1d_pipeline_band{band_number} table.
+    Set possum.observation_1d_pipeline_band{band_number} table with single_SB_1D_pipeline 
+    value from the spreadsheet
     """
     sql = f"""
         INSERT INTO possum.observation_1d_pipeline_band{band_number}
         (name, sbid, single_SB_1D_pipeline)
-        VALUES (%s, %s, %s) 
-        -- If row already exists, then update
-        ON CONFLICT (name) DO UPDATE
-        SET "single_SB_1D_pipeline" = %s;
+        VALUES (%s, %s, %s)
+        ON CONFLICT (name) DO UPDATE 
+        SET single_SB_1D_pipeline = %s
     """
     args = (
-       row[0],  # name  
-       row[15], # sbid
-       row[19],  # single_SB_1D_pipeline
-       row[19]  # single_SB_1D_pipeline in case of UPDATE      
+       row[0], #name,
+       row[15], #sbid,
+       row[19], # single_SB_1D_pipeline
+       row[19] # single_SB_1D_pipeline if the row already exists
     )
-    db.execute_query(sql, args)
+    db.execute_query(sql, args, verbose=False)
 
 def update_tile_table():
     """Add additional columns to the tile table if they do not exist
