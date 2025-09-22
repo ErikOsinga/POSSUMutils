@@ -354,10 +354,9 @@ def get_observations_non_edge_rows(band_number):
             WHEN EXISTS (
                 SELECT 1
                 FROM possum.partial_tile_1d_pipeline_band{band_number} pt2
-                WHERE pt2.observation = pt.observation
-                AND (LOWER(pt2."1d_pipeline_band") != 'completed' OR LOWER(pt2.type) like '%crosses projection boundary%')
-                ) THEN false
-            WHEN ob."1d_pipeline_validation" IS NULL AND LOWER(pt."1d_pipeline_band") = 'completed'
+                WHERE pt2.observation = pt.observation AND LOWER(pt2.type) like '%crosses projection boundary%')
+            ) THEN false
+            WHEN LOWER(pt."1d_pipeline_band") = 'completed' AND ob."1d_pipeline_validation" IS NULL 
                 THEN true
             ELSE
                 false
