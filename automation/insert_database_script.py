@@ -225,7 +225,7 @@ def create_tile_3d_pipeline_table():
 
 if __name__ == "__main__":
     load_dotenv(dotenv_path='config.env')
-    google_api_token = os.getenv('GOOGLE_API_TOKEN_PATH')
+    google_api_token = os.getenv('POSSUM_STATUS_TOKEN')
     GC = gspread.service_account(filename=google_api_token)
     VALIDATION_SHEET = os.getenv('POSSUM_PIPELINE_VALIDATION_SHEET')
     STATUS_SHEET = os.getenv('POSSUM_STATUS_SHEET')

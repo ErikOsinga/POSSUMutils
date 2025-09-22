@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv
 from vos import Client
 import subprocess
 import gspread
@@ -73,8 +75,8 @@ def update_status(tile_number, band, Google_API_token, status):
 
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
-    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0')
-
+    ps = gc.open_by_url(os.getenv('POSSUM_STATUS_SHEET'))
+    
     # Select the worksheet for the given band number
     band_number = util.get_band_number(band)
     tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_number}')
@@ -96,7 +98,7 @@ def update_status(tile_number, band, Google_API_token, status):
         tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
         print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
         # Also update the DB
-        db.update_3d_pipeline_status(tile_number, band_number, status)
+        db.update_3d_pipeline(tile_number, band_number, status)
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 
@@ -104,7 +106,7 @@ def update_status(tile_number, band, Google_API_token, status):
 def launch_band1_3Dpipeline():
     band = "943MHz"
     # on p1
-    Google_API_token = "/home/erik/.ssh/psm_gspread_token.json"
+    Google_API_token = os.getenv('POSSUM_STATUS_TOKEN')
     
     # Check google sheet for band 1 tiles that have been ingested into CADC 
     # (and thus available on CANFAR) but not yet processed with 3D pipeline
@@ -143,4 +145,6 @@ def launch_band1_3Dpipeline():
         print("Found no tiles ready to be processed.")
 
 if __name__ == "__main__":
+    # load env for google spreadsheet constants
+    load_dotenv(dotenv_path='../automation/config.env')
     launch_band1_3Dpipeline()

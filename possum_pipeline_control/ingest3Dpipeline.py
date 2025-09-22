@@ -14,6 +14,7 @@ band       -- str -- either "943MHz" or "1367MHz" for band 1 or band 2 data
 
 import argparse
 import os
+from dotenv import load_dotenv
 from prefect import flow, task
 import gspread
 import numpy as np
@@ -122,7 +123,7 @@ def update_validation_spreadsheet(tile_number, band, Google_API_token, status, t
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
     # POSSUM Validation spreadsheet
-    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k')
+    ps = gc.open_by_url(os.getenv('POSSUM_PIPELINE_VALIDATION_SHEET'))
 
     # Select the worksheet for the given band number
     band_number = util.get_band_number(band)
@@ -227,7 +228,7 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
     
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
-    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0')
+    ps = gc.open_by_url(os.getenv('POSSUM_STATUS_SHEET'))
 
     # Select the worksheet for the given band number
     band_number = util.get_band_number(band)
@@ -250,7 +251,7 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
         tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
         print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
         # Also update the DB
-        db.update_3d_pipeline_status(tile_number, band_number, status)
+        db.update_3d_pipeline(tile_number, band_number, status)
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 
@@ -300,13 +301,13 @@ def do_ingest(tilenumber, band, test=False):
         print("_report.txt reports that ingestion failed")
 
     # Record the status in the POSSUM Validation spreadsheet
-    Google_API_token = "/arc/home/ErikOsinga/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
+    Google_API_token = os.getenv('POSSUM_VALIDATION_TOKEN')
     update_validation_spreadsheet(tilenumber, band, Google_API_token, status, test=test)
 
     if status == "Ingested":
         # If succesful, also record the date of ingestion in POSSUM status spreadsheet
         # Update the POSSUM status monitor google sheet (see also log_processing_status.py)
-        Google_API_token = "/arc/home/ErikOsinga/.ssh/psm_gspread_token.json"
+        Google_API_token = os.getenv('POSSUM_STATUS_TOKEN')
         update_status_spreadsheet(tilenumber, band, Google_API_token, date)
 
     else:
@@ -327,5 +328,8 @@ if __name__ == "__main__":
 
     # needs to be str for comparison
     tilenumber = str(tilenumber)
+    
+	# load env for google spreadsheet constants
+    load_dotenv(dotenv_path='../automation/config.env')
 
     do_ingest(tilenumber, band, test=test)

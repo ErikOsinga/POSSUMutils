@@ -1,6 +1,7 @@
 import os
 import argparse
 import glob
+from dotenv import load_dotenv
 import gspread
 import numpy as np
 import astropy.table as at
@@ -73,7 +74,7 @@ def update_status_spreadsheet(field_ID, SBid, band, Google_API_token, status, st
 
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
-    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0')
+    ps = gc.open_by_url(os.getenv('POSSUM_STATUS_SHEET'))
     
     # Select the worksheet for the given band number
     band_number = util.get_band_number(band)
@@ -154,6 +155,8 @@ def main(args):
     # Find the POSSUM pipeline log file for the given tilenumber
     log_files = sorted(glob.glob(f"{basedir}/*pipeline_config*_summary.log"))
 
+    # Load constants for Google spreadsheets
+    load_dotenv(dotenv_path='../automation/config.env')
     if len(log_files) > 1:
         log_file_path = log_files[-1]
 
@@ -184,7 +187,7 @@ def main(args):
 
     if status == "Completed":
         # Update the POSSUM Pipeline Status spreadsheet as well. A complete field has been processed!
-        Google_API_token = "/arc/home/ErikOsinga/.ssh/psm_gspread_token.json"
+        Google_API_token = os.getenv('POSSUM_STATUS_TOKEN')
         # put the status as PartialTiles - today's date (e.g. PartialTiles - 2025-03-22)
         status_to_put = f"PartialTiles - {np.datetime64('today', 'D')}"
 

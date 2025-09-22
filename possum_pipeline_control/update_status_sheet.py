@@ -1,4 +1,6 @@
+import os
 import argparse
+from dotenv import load_dotenv
 import gspread
 import astropy.table as at
 import numpy as np
@@ -35,7 +37,7 @@ def update_status(tile_number, band, Google_API_token, status):
 
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
-    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0')
+    ps = gc.open_by_url(os.getenv('POSSUM_STATUS_SHEET'))
 
     # Select the worksheet for the given band number
     band_number = util.get_band_number(band)
@@ -58,14 +60,16 @@ def update_status(tile_number, band, Google_API_token, status):
         tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
         print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
         # Also update the DB
-        db.update_3d_pipeline_status(tile_number, band_number, status)
+        db.update_3d_pipeline(tile_number, band_number, status)
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 
 
 if __name__ == "__main__":
+    # load env for google spreadsheet constants
+    load_dotenv(dotenv_path='../automation/config.env')    
     # on p1
-    Google_API_token = "/home/erik/.ssh/psm_gspread_token.json"
+    Google_API_token = os.getenv('POSSUM_STATUS_TOKEN')
 
     parser = argparse.ArgumentParser(description="Update status sheet 'manually'")
     parser.add_argument("tilenumber", type=int, help="The tile number to process")
