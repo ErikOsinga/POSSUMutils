@@ -225,47 +225,41 @@ def get_tiles_for_pipeline_run(band_number):
     list: A list of tile numbers that satisfy the conditions.
     """
     validate_band_number(band_number)
-    column_name = "3d_pipeline_band2_status" if band_number == 2 else "3d_pipeline_band1_status"
     print(f"Fetching tiles ready for 3D pipeline run for band {band_number} from the database.")
     query = f"""
-        SELECT DISTINCT tile.tile
-        FROM possum.tile
-        INNER JOIN possum.associated_tile
-        ON associated_tile.tile = tile.tile
-        INNER JOIN possum.observation
-        ON associated_tile.name = observation.name
-        WHERE observation.cube_state = 'COMPLETED' AND tile."{column_name}" IS NULL;
+        SELECT DISTINCT tile_id
+        FROM possum.tile_3d_pipeline tile_3d
+        INNER JOIN possum.associated_tile ON associated_tile.tile = tile_3d.tile_id
+        INNER JOIN possum.observation ON observation.name = associated_tile.name 
+        WHERE observation.cube_state = 'COMPLETED' 
+        AND (tile_3d."3d_pipeline_band{band_number}" IS NULL OR tile_3d."3d_pipeline_band{band_number}" = '')
+        ORDER BY tile_id
     """
     return execute_query(query)
 
 def get_tiles_for_ingest(band_number):
     """
     Get a list of 3D pipeline tile numbers that should be ready to be ingested.
-    i.e. tile.'3d_pipeline_band{band_number}_status' = 'Good' 
-    i.e.  '3d_pipeline_val' column is equal to "Good", meaning that it has been validated by a human.
-    and   '3d_pipeline_ingest' column is empty, meaning that it has not yet been tried to ingest.
+    i.e. tile_3d_pipeline.'3d_pipeline_val_band{band_number}' = 'Good' and 
+    tile_3d_pipeline.'3d_pipeline_ingest_band{band_number}' is NULL
     
     Args:
     band_number (int): The band number (1 or 2) to check.
-    Google_API_token (str): The path to the Google API token JSON file.
     
     Returns:
     list: A list of tile numbers that satisfy the conditions.
     """
-    # Authenticate and grab the spreadsheet
-    gc = gspread.service_account(filename=Google_API_token)
-    # URL for POSSUM Pipeline Validation sheet
-    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k')
-
-    # Select the worksheet for the given band number
-    tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_number}')
-    tile_data = tile_sheet.get_all_values()
-    column_names = tile_data[0]
-    tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
-
-    # Find the tiles that satisfy the conditions
-    tiles_to_run = [row['tile_id'] for row in tile_table if ( (row['3d_pipeline_val'] == 'Good') and (row['3d_pipeline_ingest'] == '') )]
-    
+    validate_band_number(band_number)
+    print(f"Fetching tiles ready for 3D pipeline run for band {band_number} from the database.")
+    query = f"""
+        SELECT DISTINCT tile_id
+        FROM possum.tile_3d_pipeline tile_3d
+        WHERE LOWER(tile_3d."3d_pipeline_val_band{band_number}") = 'good' AND
+        (tile_3d."3d_pipeline_ingest_band{band_number} IS NULL OR 
+        tile_3d."3d_pipeline_ingest band{band_number}" = '')
+        ORDER BY tile_id
+    """
+    return execute_query(query)
 
 def update_partial_tile_1d_pipeline_status(field_id, tile_numbers, band_number, status):
     """

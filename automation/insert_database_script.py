@@ -76,26 +76,29 @@ def insert_partial_tile_data():
     band_number = 1
 
     for row in tile_data[1:]:  # Skip header row
-        sql = f"""
+        insert_row_into_partial_tile_table(row, band_number)
+
+def insert_row_into_partial_tile_table(row, band_number):
+    sql = f"""
             INSERT INTO possum.partial_tile_1d_pipeline_band{band_number}
             (observation, sbid, tile1, tile2, tile3, tile4, type, number_sources, "1d_pipeline")
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             -- If row already exists, then don't overwrite
             ON CONFLICT (observation, sbid, tile1, tile2, tile3, tile4, type) DO NOTHING;
         """
-        args = (
-           row[0],  # observation
-           row[1],  # sbid
-           row[2] if row[2].isdigit() else '',  # tile_1
-           row[3] if row[3].isdigit() else '',  # tile_2
-           row[4] if row[4].isdigit() else '',  # tile_3
-           row[5] if row[5].isdigit() else '',  # tile_4
-           row[6],  # type
-           row[7] if row[7].isdigit() else None,  # number_sources
-           row[8] if len(row) > 8 else None # 1d_pipeline
-        )
-        # We don't want to see thousands of insert statements
-        db.execute_query(sql, args, verbose=False)
+    args = (
+       row[0],  # observation
+       row[1],  # sbid
+       row[2] if row[2].isdigit() else '',  # tile_1
+       row[3] if row[3].isdigit() else '',  # tile_2
+       row[4] if row[4].isdigit() else '',  # tile_3
+       row[5] if row[5].isdigit() else '',  # tile_4
+       row[6],  # type
+       row[7] if row[7].isdigit() else None,  # number_sources
+       row[8] if len(row) > 8 else None # 1d_pipeline
+    )
+    # We don't want to see thousands of insert statements
+    db.execute_query(sql, args, verbose=False)
 
 def create_observation_1d_relation_tables():
     """Create observation_1d_pipeline_band1 and observation_1d_pipeline_band2 tables.
