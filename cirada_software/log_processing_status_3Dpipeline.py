@@ -2,6 +2,7 @@ import argparse
 import glob
 import os
 import csv
+from dotenv import load_dotenv
 import gspread
 import numpy as np
 import astropy.table as at
@@ -91,7 +92,7 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
     
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
-    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0')
+    ps = gc.open_by_url(os.getenv('POSSUM_STATUS_SHEET'))
 
     # Select the worksheet for the given band number
     band_number = util.get_band_number(band)
@@ -135,7 +136,7 @@ def update_validation_spreadsheet(tile_number, band, Google_API_token, status):
     
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
-    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k')
+    ps = gc.open_by_url(os.getenv('POSSUM_PIPELINE_VALIDATION_SHEET'))
 
     # Select the worksheet for the given band number
     band_number = util.get_band_number(band)
@@ -223,9 +224,12 @@ if __name__ == "__main__":
     # Update the simple CANFAR status CSV file
     csv_file_path = "/arc/projects/CIRADA/polarimetry/pipeline_runs/pipeline_status.csv"
     update_status_csv(tilenumber, status, band, csv_file_path, all_tiles)
-
+    
+    # Load constants for google spreadsheet
+    load_dotenv(dotenv_path='../automation/config.env')
     # Update the POSSUM status monitor google sheet
-    Google_API_token = "/arc/home/ErikOsinga/.ssh/psm_gspread_token.json"
+    Google_API_token = os.getenv('POSSUM_STATUS_SHEET')
+
     # Make sure it's clear that the status is only fully complete if 3D pipeline outputs have been ingested
     if status == "Completed":
         status = "WaitingForValidation"

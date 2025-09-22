@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 import os
+from dotenv import load_dotenv
 import gspread
 import numpy as np
 import subprocess
@@ -36,10 +37,10 @@ def get_ready_fields(band):
         '1' if band == '943MHz', otherwise '2'.
     """
     # POSSUM Status Monitor
-    Google_API_token = "/home/erik/.ssh/psm_gspread_token.json"
+    Google_API_token = os.getenv('POSSUM_STATUS_TOKEN')
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
-    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0')
+    ps = gc.open_by_url(os.getenv('POSSUM_STATUS_SHEET'))
     
     # Select the worksheet for the given band number
     band_number = '1' if band == '943MHz' else '2'
@@ -77,9 +78,11 @@ def check_validation_sheet_integrity(band_number=1, verbose=False):
     # check for each row if it is present exactly once, irrespetive of the number of sources
     Google_API_token = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
     # Authenticate and grab the spreadsheet
-    gc = gspread.service_account(filename=Google_API_token)
+    gc = gspread.service_account(filename=Google_API_token)    
+    # load env for google spreadsheet constants
+    load_dotenv(dotenv_path='../automation/config.env')
     # "POSSUM Pipeline Validation" sheet (maintained by Erik)
-    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k')
+    ps = gc.open_by_url(os.getenv('POSSUM_PIPELINE_VALIDATION_SHEET'))
 
     # Select the worksheet for the given band number
     tile_sheet = ps.worksheet(f'Partial Tile Pipeline - regions - Band {band_number}')
@@ -409,9 +412,11 @@ if __name__ == "__main__":
     # band = args.band
     
     band = "943MHz" # hardcode for now
-
+    
+    # load env for google spreadsheet constants
+    load_dotenv(dotenv_path='../automation/config.env')
     # Update the POSSUM Pipeline Status spreadsheet as well. A complete field is being processed!
-    Google_API_token = "/home/erik/.ssh/psm_gspread_token.json"
+    Google_API_token = os.getenv('POSSUM_STATUS_SHEET')
     # put the status as PartialTiles - Running
     
     ready_table, full_table = get_ready_fields(band)

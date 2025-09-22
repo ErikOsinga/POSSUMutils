@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv
 from vos import Client
 import gspread
 import astropy.table as at
@@ -56,7 +58,7 @@ def get_tiles_for_ingest(band_number, Google_API_token):
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
     # URL for POSSUM Pipeline Validation sheet
-    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k')
+    ps = gc.open_by_url(os.getenv('POSSUM_PIPELINE_VALIDATION_SHEET'))
 
     # Select the worksheet for the given band number
     tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_number}')
@@ -132,7 +134,7 @@ def update_status(tile_number, band, Google_API_token, status):
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
     # URL for POSSUM Pipeline Validation sheet
-    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k')
+    ps = gc.open_by_url(os.getenv('POSSUM_PIPELINE_VALIDATION_SHEET'))
 
     # Select the worksheet for the given band number
     band_no = util.get_band_number(band)
@@ -166,7 +168,7 @@ def ingest_3Dpipeline(band_number=1):
         band = "1367MHz"
 
     # on p1, API token for POSSUM Pipeline Validation sheet
-    Google_API_token = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
+    Google_API_token = os.getenv('POSSUM_VALIDATION_TOKEN')
 
     # Check google Validation sheet for band 1 tiles that have been processed AND validated
     tile_numbers = get_tiles_for_ingest(band_number=band_number, Google_API_token=Google_API_token)
@@ -208,7 +210,9 @@ def ingest_3Dpipeline(band_number=1):
 if __name__ == "__main__":
     # Band number 1 (943MHz) or 2 ("1367MHz")
     band_number = 1
-
+    
+    # load env for google spreadsheet constants
+    load_dotenv(dotenv_path='../automation/config.env')
 
     ## Assumes this script is called by run_3D_pipeline_intermittently.py
     ingest_3Dpipeline(band_number=band_number)
