@@ -143,11 +143,13 @@ def update_1d_pipeline_validation_status(field_name, sbid, band_number, status):
     print("Updating POSSUM observation table with 1D pipeline summary plot status")
     validate_band_number(band_number)
     query = f"""
-        UPDATE possum.observation_1d_pipeline_band{band_number}
-        SET 1d_pipeline_validation = %s
-        WHERE name = %s AND sbid = %s;
+        INSERT INTO possum.observation_1d_pipeline_band{band_number}
+        (name, sbid, "1d_pipeline_validation")
+        VALUES (%s, %s, %s)
+        ON CONFLICT (name, sbid) DO UPDATE possum.observation_1d_pipeline_band{band_number}
+        SET "1d_pipeline_validation" = %s;
     """
-    params = (status, field_name, sbid)
+    params = (field_name, sbid, status, status)
     results = execute_query(query, params)
     rows_num = len(results)
     if rows_num > 0:
@@ -172,11 +174,13 @@ def update_single_sb_1d_pipeline_status(field_name, sbid, band_number, status):
     validate_band_number(band_number)
     print(f"Updating POSSUM observation_1d_pipeline_band{band_number} table with 'single_SB_1D_pipeline' status")
     query = f"""
-        UPDATE possum.observation_1d_pipeline_band{band_number}
-        SET single_SB_1D_pipeline = %s
-        WHERE name = %s AND sbid = %s;
+        INSERT INTO possum.observation_1d_pipeline_band{band_number}
+        (name, sbid, single_sb_1d_pipeline)
+        VALUES (%s, %s, %s)
+        ON CONFLICT (name, sbid) DO UPDATE possum.observation_1d_pipeline_band{band_number}
+        SET single_sb_1d_pipeline = %s;
     """
-    params = (status, field_name, sbid)
+    params = (field_name, sbid, status, status)
     execute_query(query, params)
 
 def find_boundary_issues(sbid, observation):
