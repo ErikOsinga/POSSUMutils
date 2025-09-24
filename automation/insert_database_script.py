@@ -20,13 +20,13 @@ def create_partial_tile_pipeline_tables():
     """
     sql = """
         CREATE TABLE IF NOT EXISTS possum.partial_tile_1d_pipeline_band{} (
-            id SERIAL PRIMARY KEY,
+            id BIGSERIAL PRIMARY KEY,
             observation TEXT,
-            sbid CHARACTER VARYING, -- Not using INT because we need to allow '' instead of NULL to enable Unique constraint
-            tile1 CHARACTER VARYING, -- Not using INT because we need to allow '' instead of NULL to enable Unique constraint
-            tile2 CHARACTER VARYING, -- Not using INT because we need to allow '' instead of NULL to enable Unique constraint
-            tile3 CHARACTER VARYING, -- Not using INT because we need to allow '' instead of NULL to enable Unique constraint
-            tile4 CHARACTER VARYING, -- Not using INT because we need to allow '' instead of NULL to enable Unique constraint
+            sbid CHARACTER VARYING,
+            tile1 BIGINT,
+            tile2 BIGINT,
+            tile3 BIGINT,
+            tile4 BIGINT,
             type TEXT,
             number_sources INT,
             "1d_pipeline" TEXT,
@@ -35,36 +35,46 @@ def create_partial_tile_pipeline_tables():
             -- none of the tile is the same, except for empty values
             -- Only block rows where two tile values are equal and at least one of them is not ''
                 NOT (
-                    (tile1 <> '' AND LOWER(tile1) = LOWER(tile2)) OR
-                    (tile1 <> '' AND LOWER(tile1) = LOWER(tile3)) OR
-                    (tile1 <> '' AND LOWER(tile1) = LOWER(tile4)) OR
-                    (tile2 <> '' AND LOWER(tile2) = LOWER(tile3)) OR
-                    (tile2 <> '' AND LOWER(tile2) = LOWER(tile4)) OR
-                    (tile3 <> '' AND LOWER(tile3) = LOWER(tile4))
+                    (tile1 IS NOT NULL AND tile1 = tile2) OR
+                    (tile1 IS NOT NULL AND tile1 = tile3) OR
+                    (tile1 IS NOT NULL AND tile1 = tile4) OR
+                    (tile2 IS NOT NULL AND tile2 = tile3) OR
+                    (tile2 IS NOT NULL AND tile2 = tile4) OR
+                    (tile3 IS NOT NULL AND tile3 = tile4)
                 )
             ),
             CHECK (
             -- if 4 tile numbers are present, type == corner or type==corner - crosses projection boundary!
                 NOT(
-                    tile1 != '' AND tile2 != '' AND tile3 != '' AND tile4 != ''
+                    tile1 IS NOT NULL AND tile2 IS NOT NULL AND tile3 IS NOT NULL AND tile4 IS NOT NULL
                 ) OR LOWER(type) IN ('corner', 'corner - crosses projection boundary!')
             ),
             CHECK (
             -- if 2 tile numbers are present (the first two are not null, the last two are null), type==edge or type==edge - crosses projection boundary!
                 NOT(
-                    tile1 != '' AND tile2 != '' AND tile3 = '' AND tile4 = ''
+                    tile1 IS NOT NULL AND tile2 IS NOT NULL AND tile3 IS NULL AND tile4 IS NULL
                 ) OR LOWER(type) IN ('edge', 'edge - crosses projection boundary!')
             ),
             CHECK (
             -- if 1 tile number is present type == center
                NOT(
-                   tile1 != '' AND tile2 = '' AND tile3 = '' AND tile4 = ''
+                   tile1 IS NOT NULL AND tile2 IS NULL AND tile3 IS NULL AND tile4 IS NULL
                ) OR LOWER(type) = 'center'
             ));
+            -- This will make sure the unique constraint works with NULL tile values
+            CREATE UNIQUE INDEX IF NOT EXISTS unique_partial_tile_row 
+            ON possum.partial_tile_1d_pipeline_band{} (
+                COALESCE(observation, ''),
+                COALESCE(sbid, ''),
+                COALESCE(tile1, -1),
+                COALESCE(tile2, -1),
+                COALESCE(tile3, -1),
+                COALESCE(tile4, -1),
+                COALESCE(type, ''));
     """
     # Create 2 separate tables for each band 1 and band 2
-    db.execute_query(sql.format('1'))
-    db.execute_query(sql.format('2'))
+    db.execute_query(sql.format('1', '1'))
+    db.execute_query(sql.format('2', '2'))
 
 def insert_partial_tile_data():
     """Stream the Google Sheet into the database table
@@ -89,10 +99,10 @@ def insert_row_into_partial_tile_table(row, band_number):
     args = (
        row[0],  # observation
        row[1],  # sbid
-       row[2] if row[2].isdigit() else '',  # tile_1
-       row[3] if row[3].isdigit() else '',  # tile_2
-       row[4] if row[4].isdigit() else '',  # tile_3
-       row[5] if row[5].isdigit() else '',  # tile_4
+       row[2] if row[2].isdigit() else None,  # tile_1
+       row[3] if row[3].isdigit() else None,  # tile_2
+       row[4] if row[4].isdigit() else None,  # tile_3
+       row[5] if row[5].isdigit() else None,  # tile_4
        row[6],  # type
        row[7] if row[7].isdigit() else None,  # number_sources
        row[8] if len(row) > 8 else None # 1d_pipeline
@@ -110,7 +120,8 @@ def create_observation_1d_relation_tables():
             name TEXT PRIMARY KEY,
             sbid CHARACTER VARYING,
             "1d_pipeline_validation" TEXT,
-            single_SB_1D_pipeline TEXT
+            single_SB_1D_pipeline TEXT,
+            comments TEXT
         );
     """
     # 1 table per band since the footprints are different
@@ -181,7 +192,7 @@ def create_tile_3d_pipeline_table():
     """
     sql = """
         CREATE TABLE IF NOT EXISTS possum.tile_3d_pipeline (
-            tile_id BIGINT PRIMARY KEY,
+            tile_id BIGSERIAL PRIMARY KEY,
             "3d_pipeline_band1" TEXT,
             "3d_pipeline_band2" TEXT,
             "3d_pipeline_val_band1" TEXT,
