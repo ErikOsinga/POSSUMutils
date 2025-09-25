@@ -25,7 +25,7 @@ from time import sleep
 # important to grab _run() because run() is wrapped in sys.exit()
 from possum2caom2.composable import _run as possum_run # type: ignore
 from automation import database_queries as db
-import util
+from . import util
 
 # 14 (grouped) products for the 3D pipeline
 all_3dproducts = [ 

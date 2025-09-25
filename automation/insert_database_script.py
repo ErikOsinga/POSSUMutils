@@ -6,7 +6,7 @@ import os
 import gspread
 import pandas as pd
 from dotenv import load_dotenv
-import database_queries as db
+from . import database_queries as db
 
 GC = None
 VALIDATION_SHEET = None
@@ -15,7 +15,7 @@ STATUS_SHEET = None
 def create_partial_tile_pipeline_tables():
     """
     Create the partial_tile_1d_pipeline tables in the database if it does not exist.
-    Prevent duplicates by adding unique constraints 
+    Prevent duplicates by adding unique constraints
     (similar to how update_partialtile_google_sheet does check_validation_sheet_integrity).
     """
     sql = """
@@ -62,7 +62,7 @@ def create_partial_tile_pipeline_tables():
                ) OR LOWER(type) = 'center'
             ));
             -- This will make sure the unique constraint works with NULL tile values
-            CREATE UNIQUE INDEX IF NOT EXISTS unique_partial_tile_row 
+            CREATE UNIQUE INDEX IF NOT EXISTS unique_partial_tile_row
             ON possum.partial_tile_1d_pipeline_band{} (
                 COALESCE(observation, ''),
                 COALESCE(sbid, ''),
@@ -112,8 +112,8 @@ def insert_row_into_partial_tile_table(row, band_number):
 
 def create_observation_1d_relation_tables():
     """Create observation_1d_pipeline_band1 and observation_1d_pipeline_band2 tables.
-       These tables hold 1d_pipeline_validation and single_SB_1D_pipeline columns 
-       per observation from the Google spreadsheets. 
+       These tables hold 1d_pipeline_validation and single_SB_1D_pipeline columns
+       per observation from the Google spreadsheets.
     """
     add_column_sql = """
         CREATE TABLE IF NOT EXISTS possum.observation_1d_pipeline_band{} (
@@ -127,7 +127,7 @@ def create_observation_1d_relation_tables():
     # 1 table per band since the footprints are different
     db.execute_query(add_column_sql.format('1'))
     db.execute_query(add_column_sql.format('2'))
-    
+
     #POSSUM Pipeline Validation: Partial Tile Pipeline - regions - Band 1: 1d_pipeline_validation
     ps = GC.open_by_url(VALIDATION_SHEET)
     band_number = '1'
@@ -149,7 +149,7 @@ def create_observation_1d_relation_tables():
            row[9] #1d_pipeline_validation
         )
         db.execute_query(sql, args, verbose=False)
-        
+
     #POSSUM Status Sheet: Survey Fields - Band 1: single_SB_1D_pipeline
     ps = GC.open_by_url(STATUS_SHEET)
     obs_sheet = ps.worksheet('Survey Fields - Band 1')
@@ -165,14 +165,14 @@ def create_observation_1d_relation_tables():
 
 def upsert_observation_single_sb_1d_pipeline(row, band_number):
     """
-    Set possum.observation_1d_pipeline_band{band_number} table with single_SB_1D_pipeline 
+    Set possum.observation_1d_pipeline_band{band_number} table with single_SB_1D_pipeline
     value from the spreadsheet
     """
     sql = f"""
         INSERT INTO possum.observation_1d_pipeline_band{band_number}
         (name, sbid, single_SB_1D_pipeline)
         VALUES (%s, %s, %s)
-        ON CONFLICT (name) DO UPDATE 
+        ON CONFLICT (name) DO UPDATE
         SET single_SB_1D_pipeline = %s
     """
     args = (
@@ -182,39 +182,45 @@ def upsert_observation_single_sb_1d_pipeline(row, band_number):
        row[19] # single_SB_1D_pipeline if the row already exists
     )
     db.execute_query(sql, args, verbose=False)
-    
-def create_tile_3d_pipeline_table():
-    """Create tile_3d_pipeline to hold info per tile, based on Google spreadsheet columns:
+
+def create_tile_3d_pipeline_tables():
+    """Create tile_3d_pipeline_band{band_number} to hold info per tile, based on Google spreadsheet columns:
     - tile_id
-    - 3d_pipeline_band1, 3d_pipeline_band2 (status to check before running 3d pipeline)
-    - 3d_pipeline_val_band1, 3d_pipeline_val_band2 (status to check before running 3d ingest)
-    - 3d_pipeline_ingest_band1, 3d_pipeline_ingest_band2 (status to indicate whether or not 3d ingest has been run)    
+    - 3d_pipeline (status to check before running 3d pipeline)
+    - 3d_pipeline_val (status to check before running 3d ingest)
+    - 3d_pipeline_ingest (status to indicate whether or not 3d ingest has been run)
+    - 3d_val_link (validation link for validator)
+    - 3d_pipeline_validator (person who validates)
+    - 3d_val_comments (comments from the validator)
     """
-    sql = """
-        CREATE TABLE IF NOT EXISTS possum.tile_3d_pipeline (
-            tile_id BIGSERIAL PRIMARY KEY,
-            "3d_pipeline_band1" TEXT,
-            "3d_pipeline_band2" TEXT,
-            "3d_pipeline_val_band1" TEXT,
-            "3d_pipeline_val_band2" TEXT,
-            "3d_pipeline_ingest_band1" TEXT,
-            "3d_pipeline_ingest_band2" TEXT
-        );
+    for band_number in (1,2):
+        sql = f"""
+            CREATE TABLE IF NOT EXISTS possum.tile_3d_pipeline_band{band_number} (
+                tile_id BIGSERIAL PRIMARY KEY,
+                "3d_pipeline" TEXT,
+                "3d_pipeline_val" TEXT,
+                "3d_pipeline_ingest" TEXT,
+                "3d_val_link" TEXT,
+                "3d_pipeline_validator" TEXT,
+                "3d_val_comments" TEXT);
+            """
+        db.execute_query(sql)
+
+def insert_3d_pipeline_data_from_spreadsheet():
     """
-    db.execute_query(sql)
-    
-    #POSSUM Status Sheet: Survey Tiles - Band 1 (and 2): 3d_pipeline
+    POSSUM Status Sheet: Survey Tiles - Band 1 (and 2): 3d_pipeline
+    """
     ps = GC.open_by_url(STATUS_SHEET)
     for band_number in ('1','2'):
         tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_number}')
         tile_data = tile_sheet.get_all_values()
         for row in tile_data[1:]: #skip header row
             sql = f"""
-                INSERT INTO possum.tile_3d_pipeline 
-                (tile_id, "3d_pipeline_band{band_number}")
+                INSERT INTO possum.tile_3d_pipeline_band{band_number}
+                (tile_id, "3d_pipeline")
                 VALUES (%s, %s)
                 ON CONFLICT(tile_id) DO UPDATE
-                SET "3d_pipeline_band{band_number}" = %s;
+                SET "3d_pipeline" = %s;
             """
             db.execute_query(sql, (row[0], row[10], row[10]), verbose=False)
 
@@ -225,17 +231,57 @@ def create_tile_3d_pipeline_table():
     tile_data = tile_sheet.get_all_values()
     for row in tile_data[1:]: #skip header row
         sql = f"""
-            INSERT INTO possum.tile_3d_pipeline 
-            (tile_id, "3d_pipeline_val_band{band_number}", "3d_pipeline_ingest_band{band_number}")
-            VALUES (%s, %s, %s)
-            ON CONFLICT(tile_id) DO UPDATE SET 
-            "3d_pipeline_val_band{band_number}" = %s,
-            "3d_pipeline_ingest_band{band_number}" = %s;
+            INSERT INTO possum.tile_3d_pipeline_band{band_number}
+            (tile_id, "3d_pipeline_val", "3d_val_link", "3d_pipeline_validator", "3d_val_comments", "3d_pipeline_ingest")
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT(tile_id) DO UPDATE SET
+            "3d_pipeline_val" = %s,
+            "3d_val_link" = %s,
+            "3d_pipeline_validator" = %s,
+            "3d_val_comments" = %s,
+            "3d_pipeline_ingest" = %s;
         """
-        db.execute_query(sql, (row[0], row[7], row[11],row[7], row[11]), verbose=False)
+        db.execute_query(sql, (row[0], row[7], row[8], row[9], row[10], row[11],
+                               row[7], row[8], row[9], row[10], row[11]), verbose=False)
+
+### TEST METHODS ###
+
+def insert_3d_pipeline_test_data(tile_id, _3d_pipeline, val, ingest):
+    """
+    Insert test data into tile_3d_pipeline_band1 table
+    """
+    sql = """
+        INSERT INTO possum.tile_3d_pipeline_band1
+        (tile_id, "3d_pipeline", "3d_pipeline_val", "3d_pipeline_ingest")
+        VALUES(%s, %s, %s, %s)
+    """
+    db.execute_test_query(sql, (tile_id, _3d_pipeline, val, ingest), verbose=True)
+
+def create_test_schema():
+    """
+    Create possum schema for tests
+    """
+    sql = "CREATE SCHEMA IF NOT EXISTS possum;"
+    db.execute_test_query(sql, None, True)
+
+def drop_test_schema():
+    """
+    Drop possum schema in test DB
+    """
+    sql = "DROP SCHEMA IF EXISTS possum CASCADE;"
+    db.execute_test_query(sql, None, True)
+
+def drop_test_tables():
+    """
+    Drop all tables in test DB
+    """
+    tables = ['tile_3d_pipeline_band1', 'tile_3d_pipeline_band2', 'observation_1d_pipeline_band1', 'partial_tile_1d_pipeline_band1']
+    for table in tables:
+        sql = f"DROP TABLE IF EXISTS possum.{table} CASCADE;"
+        db.execute_test_query(sql, None, True)
 
 if __name__ == "__main__":
-    load_dotenv(dotenv_path='config.env')
+    load_dotenv(dotenv_path='automation/config.env')
     google_api_token = os.getenv('POSSUM_STATUS_TOKEN')
     GC = gspread.service_account(filename=google_api_token)
     VALIDATION_SHEET = os.getenv('POSSUM_PIPELINE_VALIDATION_SHEET')
@@ -244,4 +290,5 @@ if __name__ == "__main__":
     create_partial_tile_pipeline_tables()
     insert_partial_tile_data()
     create_observation_1d_relation_tables()
-    create_tile_3d_pipeline_table()
+    create_tile_3d_pipeline_tables()
+    insert_3d_pipeline_data_from_spreadsheet()

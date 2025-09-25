@@ -1,12 +1,9 @@
 import os
 from dotenv import load_dotenv
 from vos import Client
-import gspread
-import astropy.table as at
-import numpy as np
 from time import sleep
 import pandas as pd
-import util
+from . import util
 from skaha.session import Session
 from automation import database_queries as db
 
@@ -20,7 +17,7 @@ be ingested.
 Should be executed on p1
 
 
-If the "3d_pipeline_val" column is marked as "Good", we can launch an ingest job. 
+If the "3d_pipeline_val" column is marked as "Good", we can launch an ingest job.
     In that case, the status of 3d_pipeline_ingest will be changed to IngestRunning
 
 
@@ -41,36 +38,21 @@ def get_open_sessions():
 
     return df_sessions
 
-def get_tiles_for_ingest(band_number, Google_API_token):
+def get_tiles_for_ingest(band_number):
     """
     Get a list of 3D pipeline tile numbers that should be ready to be ingested.
-    
+
     i.e.  '3d_pipeline_val' column is equal to "Good", meaning that it has been validated by a human.
     and   '3d_pipeline_ingest' column is empty, meaning that it has not yet been tried to ingest.
-    
+
     Args:
     band_number (int): The band number (1 or 2) to check.
-    Google_API_token (str): The path to the Google API token JSON file.
-    
+
     Returns:
     list: A list of tile numbers that satisfy the conditions.
     """
-    # Authenticate and grab the spreadsheet
-    gc = gspread.service_account(filename=Google_API_token)
-    # URL for POSSUM Pipeline Validation sheet
-    ps = gc.open_by_url(os.getenv('POSSUM_PIPELINE_VALIDATION_SHEET'))
-
-    # Select the worksheet for the given band number
-    tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_number}')
-    tile_data = tile_sheet.get_all_values()
-    column_names = tile_data[0]
-    tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
-
     # Find the tiles that satisfy the conditions
-    tiles_to_run = [row['tile_id'] for row in tile_table if ( (row['3d_pipeline_val'] == 'Good') and (row['3d_pipeline_ingest'] == '') )]
-    db.get_tiles_for_ingest(band_number=band_number)
-
-    return tiles_to_run
+    return db.get_tiles_for_ingest(band_number=band_number)
 
 def get_canfar_tiles(band_number):
     client = Client()
@@ -114,52 +96,21 @@ def launch_ingest(tilenumber, band):
     )
 
     print("Check sessions at https://ws-uv.canfar.net/skaha/v0/session")
-    print(f"Check logs at https://ws-uv.canfar.net/skaha/v0/session/{session_id[0]}?view=logs")    
+    print(f"Check logs at https://ws-uv.canfar.net/skaha/v0/session/{session_id[0]}?view=logs")
 
     return
-    
-def update_status(tile_number, band, Google_API_token, status):
+
+def update_status(tile_number, band, status):
     """
-    Update the status of the specified tile in the Google Sheet.
-    
+    Update the status of the specified tile in the database.
+
     Args:
     tile_number (str): The tile number to update.
     band (str): The band of the tile.
-    Google_API_token (str): The path to the Google API token JSON file.
-    status (str): The status to set in the '3d_pipeline' column.
+    status (str): The status to set in the '3d_pipeline_ingest' column.
     """
-    # Make sure its not int
-    tile_number = str(tile_number)
-
-    # Authenticate and grab the spreadsheet
-    gc = gspread.service_account(filename=Google_API_token)
-    # URL for POSSUM Pipeline Validation sheet
-    ps = gc.open_by_url(os.getenv('POSSUM_PIPELINE_VALIDATION_SHEET'))
-
-    # Select the worksheet for the given band number
     band_no = util.get_band_number(band)
-    tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_no}')
-    tile_data = tile_sheet.get_all_values()
-    column_names = tile_data[0]
-    tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
-
-    # Find the row index for the specified tile number
-    tile_index = None
-    for idx, row in enumerate(tile_table):
-        if row['tile_id'] == tile_number:
-            tile_index = idx + 2  # +2 because gspread index is 1-based and we skip the header row
-            break
-    
-    if tile_index is not None:
-        # Update the status in the '3d_pipeline' column
-        col_letter = gspread.utils.rowcol_to_a1(1, column_names.index('3d_pipeline_ingest') + 1)[0]
-        # as of >v6.0.0 .update requires a list of lists
-        tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
-        print(f"Updated tile {tile_number} status to {status} in '3d_pipeline_ingest' column.")
-        # Also update the DB
-        db.update_3d_pipeline_ingest(tile_number, band_no, status)
-    else:
-        print(f"Tile {tile_number} not found in the sheet.")
+    return db.update_3d_pipeline_ingest(tile_number, band_no, status)
 
 def ingest_3Dpipeline(band_number=1):
     if band_number == 1:
@@ -171,7 +122,7 @@ def ingest_3Dpipeline(band_number=1):
     Google_API_token = os.getenv('POSSUM_VALIDATION_TOKEN')
 
     # Check google Validation sheet for band 1 tiles that have been processed AND validated
-    tile_numbers = get_tiles_for_ingest(band_number=band_number, Google_API_token=Google_API_token)
+    tile_numbers = get_tiles_for_ingest(band_number=band_number)
 
     # Check whether tile indeed available on CANFAR (should be)
     canfar_tilenumbers = get_canfar_tiles(band_number=band_number)
@@ -198,10 +149,12 @@ def ingest_3Dpipeline(band_number=1):
 
             # Launch the pipeline
             launch_ingest(tilenumber, band)
-            
+
             # Update the status of 3d_pipeline_ingest to "IngestRunning"
-            update_status(tilenumber, band, Google_API_token, "IngestRunning")
-            
+            row_count = update_status(tilenumber, band, "IngestRunning")
+            if row_count == 0:
+                print(f"Tile {tilenumber} not found in the sheet.")
+
         else:
             print("No tiles are available on both CADC and CANFAR.")
     else:
@@ -210,7 +163,7 @@ def ingest_3Dpipeline(band_number=1):
 if __name__ == "__main__":
     # Band number 1 (943MHz) or 2 ("1367MHz")
     band_number = 1
-    
+
     # load env for google spreadsheet constants
     load_dotenv(dotenv_path='../automation/config.env')
 

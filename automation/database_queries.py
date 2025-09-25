@@ -5,7 +5,71 @@ import os
 import psycopg2
 from dotenv import load_dotenv
 
-def execute_query(query, params=None, verbose=True):
+def execute_test_query(query, params=None, verbose=True):
+    """
+    For tests only
+    """
+    return execute_query(query, params, verbose, True)
+    
+def get_database_parameters(test=False):
+    """
+    Get database parameters from env file (test.env for test, config.env otherwise)
+    """
+    if test:
+        load_dotenv(dotenv_path='automation/tests/test.env')
+    else:
+        # Get database connection details from config.env file
+        load_dotenv(dotenv_path='automation/config.env')
+
+    return {
+        'dbname': os.getenv('DATABASE_NAME'),
+        'user': os.getenv('DATABASE_USER'),
+        'password': os.getenv('DATABASE_PASSWORD'),
+        'host': os.getenv('DATABASE_HOST'),
+        'port': os.getenv('DATABASE_PORT')
+    }	
+
+def execute_update_query(query, params=None, verbose=True, test=False):
+    """
+    Execute an update SQL query and return the number of rows affected.
+
+    Args:
+    query (str): The SQL query to execute.
+    params (tuple): Optional parameters for the SQL query.
+
+    Returns:
+    list: The number of rows affected.
+    """
+    conn_params = get_database_parameters(test)
+
+    try:
+        # Connect to the database
+        conn = psycopg2.connect(**conn_params)
+        cursor = conn.cursor()
+
+        # Execute the query
+        if verbose:
+            if params:
+                print(f"Executing database query: {query % params}")
+            else:
+                print(f"Executing database query: {query}")
+        cursor.execute(query, params)
+        conn.commit()        
+        rows_affected = cursor.rowcount
+        if verbose:
+            print(f"{rows_affected} rows affected.")
+        return rows_affected
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+    finally:
+        # Close the cursor and connection
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+def execute_query(query, params=None, verbose=True, test=False):
     """
     Execute a SQL query and return the results.
 
@@ -16,15 +80,7 @@ def execute_query(query, params=None, verbose=True):
     Returns:
     list: The results of the query.
     """
-    # Get database connection details from config.env file
-    load_dotenv(dotenv_path='config.env')
-    conn_params = {
-        'dbname': os.getenv('DATABASE_NAME'),
-        'user': os.getenv('DATABASE_USER'),
-        'password': os.getenv('DATABASE_PASSWORD'),
-        'host': os.getenv('DATABASE_HOST'),
-        'port': os.getenv('DATABASE_PORT')
-    }
+    conn_params = get_database_parameters(test)
 
     try:
         # Connect to the database
@@ -43,12 +99,9 @@ def execute_query(query, params=None, verbose=True):
         results = []
         if cursor.description is not None:
             results = cursor.fetchall()
-
-        # Commit changes if it's an insert/update
-        if query.strip().lower().startswith(('insert', 'update', 'create', 'alter')):
+        else:
             conn.commit()
-
-        return results
+        return results    
     except Exception as e:
         print(f"An error occurred: {e}")
         return None
@@ -61,8 +114,8 @@ def execute_query(query, params=None, verbose=True):
 
 def update_3d_pipeline_ingest(tile_number, band_number, status):
     """
-    Update the 'tile_3d_pipeline' table, setting either '3d_pipeline_ingest_band1' 
-    or '3d_pipeline_ingest_band2' with given status. Possible values:
+    Update the 'tile_3d_pipeline_band{band_number}' table, setting '3d_pipeline_ingest'
+    with given status. Possible values:
         - Ingested
         - IngestFailed
         _ IngestRunning
@@ -71,21 +124,23 @@ def update_3d_pipeline_ingest(tile_number, band_number, status):
     tile_number (str): The tile number to update.
     band_number (str): 1 or 2
     status (str): The status to set in the respective column.
+
+    Return: 0 if tile was not found, 1 if executed
     """
     validate_band_number(band_number)
-    print(f"Updating POSSUM tile database table with 3d_pipeline_ingest_band{band_number} to {status}")
+    print(f"Updating POSSUM tile database table for band{band_number} with 3d_pipeline_ingest to {status}")
     query = f"""
-        UPDATE possum.tile_3d_pipeline
-        SET "3d_pipeline_ingest_band{band_number}" = %s
+        UPDATE possum.tile_3d_pipeline_band{band_number}
+        SET "3d_pipeline_ingest" = %s
         WHERE tile_id = %s;
     """
     params = (status, tile_number)
-    execute_query(query, params)
+    return execute_update_query(query, params)
 
-def update_3d_pipeline_val(tile_number, band_number, status):
+def update_3d_pipeline_val(tile_number, band_number, status, val_link):
     """
-    Update the 'tile_3d_pipeline' table, setting either '3d_pipeline_val_band1' 
-    or '3d_pipeline_val_band2' with given status. Possible values:
+    Update the 'tile_3d_pipeline_band{band_number}' table, setting '3d_pipeline_val'
+    with given status, and '3d_val_link' with validation link. Possible status values:
         - WaitingForValidation (Job has finished running successfully, waiting for human validation)
         - Good/Bad (Currently has to be manually set after human validation)
 
@@ -93,23 +148,25 @@ def update_3d_pipeline_val(tile_number, band_number, status):
     tile_number (str): The tile number to update.
     band_number (str): 1 or 2
     status (str): The status to set in the respective column.
+    val_link (str): Validation link
     """
     validate_band_number(band_number)
-    print(f"Updating POSSUM tile database table with 3d_pipeline_val_band{band_number} to {status}")
+    print(f"Updating POSSUM tile database table for band{band_number} with 3d_pipeline_val to {status}")
+    print(f"Updating POSSUM tile database table for band{band_number} with 3d_val_link to {val_link}")
     query = f"""
-        UPDATE possum.tile_3d_pipeline
-        SET "3d_pipeline_val_band{band_number}" = %s
+        UPDATE possum.tile_3d_pipeline_band{band_number}
+        SET "3d_pipeline_val" = %s, "3d_val_link" = %s
         WHERE tile_id = %s;
     """
-    params = (status, tile_number)
-    execute_query(query, params)
+    params = (status, tile_number, val_link)
+    return execute_update_query(query, params)
 
 def update_3d_pipeline(tile_number, band_number, status):
     """
-    Update the 'tile_3d_pipeline' table, setting either '3d_pipeline_band1' or '3d_pipeline_band2'
+    Update the 'tile_3d_pipeline_band{band_number}' table, setting '3d_pipeline'
     with given status. Possible values:
         - Running (Job has been submitted and is currently running)
-        - WaitingForValidation (Job has finished running successfully, waiting for human validation)        
+        - WaitingForValidation (Job has finished running successfully, waiting for human validation)
         - Failed (Job failed to run)
 
     Args:
@@ -118,14 +175,14 @@ def update_3d_pipeline(tile_number, band_number, status):
     status (str): The status to set in the respective column.
     """
     validate_band_number(band_number)
-    print(f"Updating POSSUM tile database table with 3d_pipeline_band{band_number} to {status}")
+    print(f"Updating POSSUM tile database table for band {band_number} with 3d_pipeline to {status}")
     query = f"""
-        UPDATE possum.tile_3d_pipeline
-        SET "3d_pipeline_band{band_number}" = %s
+        UPDATE possum.tile_3d_pipeline_band{band_number}
+        SET "3d_pipeline" = %s
         WHERE tile_id = %s;
     """
     params = (status, tile_number)
-    execute_query(query, params)
+    return execute_update_query(query, params)
 
 def update_1d_pipeline_validation_status(field_name, sbid, band_number, status):
     """
@@ -150,8 +207,7 @@ def update_1d_pipeline_validation_status(field_name, sbid, band_number, status):
         SET "1d_pipeline_validation" = %s;
     """
     params = (field_name, sbid, status, status)
-    results = execute_query(query, params)
-    rows_num = len(results)
+    rows_num = execute_update_query(query, params)
     if rows_num > 0:
         print(f"""Updated all {rows_num} rows for field {field_name} and SBID {sbid}
               to status '{status}' in
@@ -181,7 +237,7 @@ def update_single_sb_1d_pipeline_status(field_name, sbid, band_number, status):
         SET single_sb_1d_pipeline = %s;
     """
     params = (field_name, sbid, status, status)
-    execute_query(query, params)
+    return execute_update_query(query, params)
 
 def find_boundary_issues(sbid, observation):
     """
@@ -218,7 +274,7 @@ def get_tiles_for_pipeline_run(band_number):
     Get a list of tile numbers that should be ready to be processed by the 3D pipeline
 
     In the database, this is when:
-    observation.cube_state = 'COMPLETED' and tile.3d_pipeline_band{band_number}_status = [null]
+    observation.cube_state = 'COMPLETED' and tile.3d_pipeline = [null]
     In POSSUM pipeline status sheet, this is the equivalent of:
     'aus_src' column is not empty and '3d_pipeline' column is empty for the given band number.
 
@@ -232,11 +288,11 @@ def get_tiles_for_pipeline_run(band_number):
     print(f"Fetching tiles ready for 3D pipeline run for band {band_number} from the database.")
     query = f"""
         SELECT DISTINCT tile_id
-        FROM possum.tile_3d_pipeline tile_3d
+        FROM possum.tile_3d_pipeline_band{band_number} tile_3d
         INNER JOIN possum.associated_tile ON associated_tile.tile = tile_3d.tile_id
-        INNER JOIN possum.observation ON observation.name = associated_tile.name 
-        WHERE observation.cube_state = 'COMPLETED' 
-        AND (tile_3d."3d_pipeline_band{band_number}" IS NULL OR tile_3d."3d_pipeline_band{band_number}" = '')
+        INNER JOIN possum.observation ON observation.name = associated_tile.name
+        WHERE observation.cube_state = 'COMPLETED'
+        AND (tile_3d."3d_pipeline" IS NULL OR tile_3d."3d_pipeline" = '')
         ORDER BY tile_id
     """
     return execute_query(query)
@@ -244,12 +300,12 @@ def get_tiles_for_pipeline_run(band_number):
 def get_tiles_for_ingest(band_number):
     """
     Get a list of 3D pipeline tile numbers that should be ready to be ingested.
-    i.e. tile_3d_pipeline.'3d_pipeline_val_band{band_number}' = 'Good' and 
-    tile_3d_pipeline.'3d_pipeline_ingest_band{band_number}' is NULL
-    
+    i.e. tile_3d_pipeline_band1.'3d_pipeline_val' = 'Good' and
+    tile_3d_pipeline_band1.'3d_pipeline_ingest' is NULL
+
     Args:
     band_number (int): The band number (1 or 2) to check.
-    
+
     Returns:
     list: A list of tile numbers that satisfy the conditions.
     """
@@ -257,13 +313,15 @@ def get_tiles_for_ingest(band_number):
     print(f"Fetching tiles ready for 3D pipeline run for band {band_number} from the database.")
     query = f"""
         SELECT DISTINCT tile_id
-        FROM possum.tile_3d_pipeline tile_3d
-        WHERE LOWER(tile_3d."3d_pipeline_val_band{band_number}") = 'good' AND
-        (tile_3d."3d_pipeline_ingest_band{band_number} IS NULL OR 
-        tile_3d."3d_pipeline_ingest band{band_number}" = '')
+        FROM possum.tile_3d_pipeline_band{band_number} tile_3d
+        WHERE LOWER(tile_3d."3d_pipeline_val") = 'good' AND
+        (tile_3d."3d_pipeline_ingest" IS NULL OR
+        tile_3d."3d_pipeline_ingest" = '')
         ORDER BY tile_id
     """
-    return execute_query(query)
+    results = execute_query(query)
+    # flatten tile ids into an array
+    return [row[0] for row in results]
 
 def update_partial_tile_1d_pipeline_status(field_id, tile_numbers, band_number, status):
     """
@@ -284,11 +342,11 @@ def update_partial_tile_1d_pipeline_status(field_id, tile_numbers, band_number, 
         WHERE field_ID = %s AND tile1 = %s AND tile2 = %s AND tile3 = %s AND tile4 = %s;
     """
     params = (status, field_id, t1, t2, t3, t4)
-    results = execute_query(query, params)
-    if len(results) > 0:
+    row_num = execute_update_query(query, params)
+    if row_num > 0:
         print(f"Updated row with tiles {tile_numbers} status to {status} in '1d_pipeline' column.")
     else:
-        print(f"Field {field_id} with tiles {tile_numbers} not found in the sheet.")
+        print(f"Field {field_id} with tiles {tile_numbers} not found in the database d.")
 
 def get_partial_tiles_for_1d_pipeline_run(band_number):
     """
@@ -360,7 +418,7 @@ def get_observations_non_edge_rows(band_number):
                 FROM possum.partial_tile_1d_pipeline_band{band_number} pt2
                 WHERE pt2.observation = pt.observation AND LOWER(pt2.type) like '%crosses projection boundary%')
             ) THEN false
-            WHEN LOWER(pt."1d_pipeline_band") = 'completed' AND ob."1d_pipeline_validation" IS NULL 
+            WHEN LOWER(pt."1d_pipeline_band") = 'completed' AND ob."1d_pipeline_validation" IS NULL
                 THEN true
             ELSE
                 false
@@ -370,3 +428,16 @@ def get_observations_non_edge_rows(band_number):
         GROUP BY pt.observation, pt.sbid, ob."1d_pipeline_validation", pt."1d_pipeline_band";
     """
     return execute_query(sql)
+
+#### TEST METHODS ###
+
+def get_3d_tile_for_tests(tile_id, band_number):
+    """
+    Utility method to get 3d tile information for tests
+    Args: 
+    - tile_id: tile number
+    - band_number: 1 or 2
+    """
+    sql = f"""SELECT tile_id, "3d_pipeline_val", "3d_val_link", "3d_pipeline_ingest"
+              from possum.tile_3d_pipeline_band{band_number} WHERE tile_id = {tile_id}"""
+    return execute_test_query(sql)
