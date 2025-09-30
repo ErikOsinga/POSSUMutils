@@ -34,6 +34,35 @@ into time-blocked directories.
 @author: Erik Osinga
 """
 
+def get_tiles_for_pipeline_run(band_number, Google_API_token):
+    """
+    Get a list of tile numbers that should be ready to be processed by the 3D pipeline 
+    
+    i.e.  'aus_src' column is not empty and '3d_pipeline' column is empty for the given band number.
+    
+    Args:
+    band_number (int): The band number (1 or 2) to check.
+    Google_API_token (str): The path to the Google API token JSON file.
+    
+    Returns:
+    list: A list of tile numbers that satisfy the conditions.
+    """
+    # Authenticate and grab the spreadsheet
+    gc = gspread.service_account(filename=Google_API_token)
+    # Cameron's survey overview
+    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0')
+
+    # Select the worksheet for the given band number
+    tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_number}')
+    tile_data = tile_sheet.get_all_values()
+    column_names = tile_data[0]
+    tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
+
+    # Find the tiles that satisfy the conditions
+    tiles_to_run = [row['tile_id'] for row in tile_table if row['aus_src'] != '' and row['3d_pipeline'] == '']
+
+    return tiles_to_run
+
 def get_canfar_tiles(band_number):
     client = Client()
     # force=True to not use cache
@@ -98,7 +127,9 @@ def update_status(tile_number, band, Google_API_token, status):
         tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
         print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
         # Also update the DB
-        db.update_3d_pipeline(tile_number, band_number, status)
+        conn = db.get_database_connection(test=False)
+        db.update_3d_pipeline(tile_number, band_number, status, conn)
+        conn.close()
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 
@@ -110,7 +141,10 @@ def launch_band1_3Dpipeline():
     
     # Check google sheet for band 1 tiles that have been ingested into CADC 
     # (and thus available on CANFAR) but not yet processed with 3D pipeline
-    tile_numbers = db.get_tiles_for_pipeline_run(band_number=1)
+    conn = db.get_database_connection(test=False)
+    # db.get_tiles_for_pipeline_run has been written for the SQL equivalent
+    # but we don't need to use it yet
+    tile_numbers = get_tiles_for_pipeline_run(band_number=1, Google_API_token=Google_API_token)
     canfar_tilenumbers = get_canfar_tiles(band_number=1)
     sleep(1)
 
