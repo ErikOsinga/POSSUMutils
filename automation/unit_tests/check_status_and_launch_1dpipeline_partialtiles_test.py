@@ -114,7 +114,7 @@ class CheckStatusAndLaunch1DPipelinePartialTiles(unittest.TestCase):
         assert previous_status[0][0] != new_status[0][0]
         assert new_status[0][0] == 'Running'
 
-        # Test with null in tiles
+        # Test with None in tiles
         field = 'EMU_1136-60'
         tilenumbers = ['12345', None, None, None]
         band_number = '1'
@@ -123,3 +123,13 @@ class CheckStatusAndLaunch1DPipelinePartialTiles(unittest.TestCase):
         new_status = db_query.get_1d_pipeline_status(field, tilenumbers, band_number, self.conn)
         assert previous_status[0][0] != new_status[0][0]
         assert new_status[0][0] == 'Running'
+        
+        # Test with empty tile number
+        field = 'EMU_1136-60'
+        tilenumbers = ['12345', '', '', '']
+        band_number = '1'
+        previous_status = db_query.get_1d_pipeline_status(field, tilenumbers, band_number, self.conn)
+        db_query.update_partial_tile_1d_pipeline_status(field, tilenumbers, band_number, "Completed", self.conn)
+        new_status = db_query.get_1d_pipeline_status(field, tilenumbers, band_number, self.conn)
+        assert previous_status[0][0] != new_status[0][0]
+        assert new_status[0][0] == 'Completed'
