@@ -1,6 +1,5 @@
 
 import unittest
-from possum_pipeline_control import check_status_and_launch_1Dpipeline_PartialTiles as check_status
 from automation import (insert_database_script as db, database_queries as db_query)
 
 class CheckStatusAndLaunch2DPipelinev2Test(unittest.TestCase):
