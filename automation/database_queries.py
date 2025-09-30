@@ -5,18 +5,22 @@ import os
 import psycopg2
 from dotenv import load_dotenv
 
-def execute_test_query(query, params=None, verbose=True):
+
+def get_database_connection(test) :
     """
-    For tests only
+    Initiate a database connection.
+    Args:
+    - test: True if this should connect to the test database set up in test.env
     """
-    return execute_query(query, params, verbose, True)
-    
+    conn_params = get_database_parameters(test)
+    return psycopg2.connect(**conn_params)
+
 def get_database_parameters(test=False):
     """
     Get database parameters from env file (test.env for test, config.env otherwise)
     """
     if test:
-        load_dotenv(dotenv_path='automation/tests/test.env')
+        load_dotenv(dotenv_path='automation/unit_tests/test.env')
     else:
         # Get database connection details from config.env file
         load_dotenv(dotenv_path='automation/config.env')
@@ -27,9 +31,9 @@ def get_database_parameters(test=False):
         'password': os.getenv('DATABASE_PASSWORD'),
         'host': os.getenv('DATABASE_HOST'),
         'port': os.getenv('DATABASE_PORT')
-    }	
+    }
 
-def execute_update_query(query, params=None, verbose=True, test=False):
+def execute_update_query(query, conn, params=None, verbose=True):
     """
     Execute an update SQL query and return the number of rows affected.
 
@@ -40,36 +44,28 @@ def execute_update_query(query, params=None, verbose=True, test=False):
     Returns:
     list: The number of rows affected.
     """
-    conn_params = get_database_parameters(test)
-
+    cursor = conn.cursor()
+    rows_affected = 0
     try:
-        # Connect to the database
-        conn = psycopg2.connect(**conn_params)
-        cursor = conn.cursor()
-
         # Execute the query
         if verbose:
+            print(f"Executing database query: {query}")
             if params:
-                print(f"Executing database query: {query % params}")
-            else:
-                print(f"Executing database query: {query}")
+                print(f"With parameters: {params}")
         cursor.execute(query, params)
-        conn.commit()        
+        conn.commit()
         rows_affected = cursor.rowcount
         if verbose:
             print(f"{rows_affected} rows affected.")
-        return rows_affected
     except Exception as e:
         print(f"An error occurred: {e}")
-        return None
     finally:
-        # Close the cursor and connection
+        # Close the cursor
         if cursor:
             cursor.close()
-        if conn:
-            conn.close()
+    return rows_affected
 
-def execute_query(query, params=None, verbose=True, test=False):
+def execute_query(query, database_connection, params=None, verbose=True):
     """
     Execute a SQL query and return the results.
 
@@ -80,39 +76,32 @@ def execute_query(query, params=None, verbose=True, test=False):
     Returns:
     list: The results of the query.
     """
-    conn_params = get_database_parameters(test)
+    cursor = database_connection.cursor()
+    results = []
 
     try:
-        # Connect to the database
-        conn = psycopg2.connect(**conn_params)
-        cursor = conn.cursor()
-
         # Execute the query
         if verbose:
             if params:
-                print(f"Executing database query: {query % params}")
+                print(f"Executing database query: {query} with {params}")
             else:
                 print(f"Executing database query: {query}")
         cursor.execute(query, params)
 
         # Fetch all results
-        results = []
         if cursor.description is not None:
             results = cursor.fetchall()
         else:
-            conn.commit()
-        return results    
+            database_connection.commit()
     except Exception as e:
         print(f"An error occurred: {e}")
-        return None
     finally:
-        # Close the cursor and connection
+        # Close the cursor
         if cursor:
             cursor.close()
-        if conn:
-            conn.close()
+    return results
 
-def update_3d_pipeline_ingest(tile_number, band_number, status):
+def update_3d_pipeline_ingest(tile_number, band_number, status, conn):
     """
     Update the 'tile_3d_pipeline_band{band_number}' table, setting '3d_pipeline_ingest'
     with given status. Possible values:
@@ -135,9 +124,9 @@ def update_3d_pipeline_ingest(tile_number, band_number, status):
         WHERE tile_id = %s;
     """
     params = (status, tile_number)
-    return execute_update_query(query, params)
+    return execute_update_query(query, conn, params)
 
-def update_3d_pipeline_val(tile_number, band_number, status, val_link):
+def update_3d_pipeline_val(tile_number, band_number, status, val_link, conn):
     """
     Update the 'tile_3d_pipeline_band{band_number}' table, setting '3d_pipeline_val'
     with given status, and '3d_val_link' with validation link. Possible status values:
@@ -159,9 +148,9 @@ def update_3d_pipeline_val(tile_number, band_number, status, val_link):
         WHERE tile_id = %s;
     """
     params = (status, tile_number, val_link)
-    return execute_update_query(query, params)
+    return execute_update_query(query, conn, params)
 
-def update_3d_pipeline(tile_number, band_number, status):
+def update_3d_pipeline(tile_number, band_number, status, conn):
     """
     Update the 'tile_3d_pipeline_band{band_number}' table, setting '3d_pipeline'
     with given status. Possible values:
@@ -182,9 +171,9 @@ def update_3d_pipeline(tile_number, band_number, status):
         WHERE tile_id = %s;
     """
     params = (status, tile_number)
-    return execute_update_query(query, params)
+    return execute_update_query(query, conn, params)
 
-def update_1d_pipeline_validation_status(field_name, sbid, band_number, status):
+def update_1d_pipeline_validation_status(field_name, sbid, band_number, status, conn):
     """
     Update the 1d_pipeline_validation status column in the observation_1d_pipeline_band{band_number} table.
     This is to replace updated POSSUM pipeline validation Google sheet: Partial Tile Pipeline - regions - Band 1,
@@ -201,21 +190,15 @@ def update_1d_pipeline_validation_status(field_name, sbid, band_number, status):
     validate_band_number(band_number)
     query = f"""
         INSERT INTO possum.observation_1d_pipeline_band{band_number}
-        (name, sbid, "1d_pipeline_validation")
+        (name, sbid, "1d_pipeline_validation") -- IN CASE the entry doesn't exist yet
         VALUES (%s, %s, %s)
-        ON CONFLICT (name, sbid) DO UPDATE possum.observation_1d_pipeline_band{band_number}
+        ON CONFLICT (name) DO UPDATE
         SET "1d_pipeline_validation" = %s;
     """
     params = (field_name, sbid, status, status)
-    rows_num = execute_update_query(query, params)
-    if rows_num > 0:
-        print(f"""Updated all {rows_num} rows for field {field_name} and SBID {sbid}
-              to status '{status}' in
-              observation_1d_pipeline_band{band_number}.1d_pipeline_validation' column.""")
-    else:
-        print(f"No rows found for field {field_name} and SBID {sbid}.")
+    return execute_update_query(query, conn, params)
 
-def update_single_sb_1d_pipeline_status(field_name, sbid, band_number, status):
+def update_single_sb_1d_pipeline_status(field_name, sbid, band_number, status, conn):
     """
     Update the single_1d_pipeline_validation{band_number} column in the observation table.
     This is to the equivalent to POSSUM pipeline status sheet: Survey Fields - Band {band_number}
@@ -233,13 +216,13 @@ def update_single_sb_1d_pipeline_status(field_name, sbid, band_number, status):
         INSERT INTO possum.observation_1d_pipeline_band{band_number}
         (name, sbid, single_sb_1d_pipeline)
         VALUES (%s, %s, %s)
-        ON CONFLICT (name, sbid) DO UPDATE possum.observation_1d_pipeline_band{band_number}
+        ON CONFLICT (name) DO UPDATE
         SET single_sb_1d_pipeline = %s;
     """
     params = (field_name, sbid, status, status)
-    return execute_update_query(query, params)
+    return execute_update_query(query, conn, params)
 
-def find_boundary_issues(sbid, observation):
+def find_boundary_issues(sbid, observation, conn):
     """
     Check if there are any entries in partial_tile_1d_pipeline for the given sbid and observation
     where type indicates it crosses a projection boundary.
@@ -254,7 +237,7 @@ def find_boundary_issues(sbid, observation):
         ) AS match_found;
     """
     params = (sbid, observation)
-    results = execute_query(query, params)
+    results = execute_query(query, conn, params)
     issues_found = results[0][0]
     if issues_found is True:
         print("Boundary issues found.")
@@ -266,10 +249,10 @@ def validate_band_number(band_number):
     """
     Making sure band number is valid
     """
-    if band_number not in ["1", "2"]:
+    if str(band_number) not in ["1", "2"]:
         raise ValueError("band_number must be either 1 or 2")
 
-def get_tiles_for_pipeline_run(band_number):
+def get_tiles_for_pipeline_run(band_number, conn):
     """
     Get a list of tile numbers that should be ready to be processed by the 3D pipeline
 
@@ -295,9 +278,9 @@ def get_tiles_for_pipeline_run(band_number):
         AND (tile_3d."3d_pipeline" IS NULL OR tile_3d."3d_pipeline" = '')
         ORDER BY tile_id
     """
-    return execute_query(query)
+    return execute_query(query, conn)
 
-def get_tiles_for_ingest(band_number):
+def get_tiles_for_ingest(band_number, conn):
     """
     Get a list of 3D pipeline tile numbers that should be ready to be ingested.
     i.e. tile_3d_pipeline_band1.'3d_pipeline_val' = 'Good' and
@@ -319,36 +302,45 @@ def get_tiles_for_ingest(band_number):
         tile_3d."3d_pipeline_ingest" = '')
         ORDER BY tile_id
     """
-    results = execute_query(query)
+    results = execute_query(query, conn)
     # flatten tile ids into an array
     return [row[0] for row in results]
 
-def update_partial_tile_1d_pipeline_status(field_id, tile_numbers, band_number, status):
+def update_partial_tile_1d_pipeline_status(field_name, tile_numbers, band_number, status, conn):
     """
     Update 1d_pipeline in partial_tile_1d_pipeline_band{band_number} table for a set of tiles.
     This replaces the 1d_pipeline column in the POSSUM pipeline validation Google sheet:
     Partial Tile Pipeline - regions - Band {band_number}
 
     Args:
-    field_ID (str): The field ID.
+    field_name (str): The field ID with 'EMU_' or 'WALLABY_' prefix.
     tile_numbers (tuple): The tile numbers to update.
+    band_number: '1' or '2'
     status (str): The new validation status to set.
     """
     print(f"Updating POSSUM partial_tile_1d_pipeline_band{band_number}.1d_pipeline in the database")
     t1, t2, t3, t4 = tile_numbers
     query = f"""
         UPDATE possum.partial_tile_1d_pipeline_band{band_number}
-        SET 1d_pipeline = %s
-        WHERE field_ID = %s AND tile1 = %s AND tile2 = %s AND tile3 = %s AND tile4 = %s;
-    """
-    params = (status, field_id, t1, t2, t3, t4)
-    row_num = execute_update_query(query, params)
+        SET "1d_pipeline" = %s
+        WHERE observation = %s"""
+
+    params = [status, field_name]  # Initial params
+    # Check for NULLS in tile numbers and make sure the query says IS NULL and not = NULL so it works
+    for i, tile in enumerate([t1, t2, t3, t4], start=1):
+        if tile is None or tile == '':  # If tile is None, use IS NULL
+            query += f" AND tile{i} IS NULL"
+        else:  # Otherwise, use equality
+            query += f" AND tile{i} = %s"
+            params.append(tile)
+
+    row_num = execute_update_query(query, conn, params)
     if row_num > 0:
         print(f"Updated row with tiles {tile_numbers} status to {status} in '1d_pipeline' column.")
     else:
-        print(f"Field {field_id} with tiles {tile_numbers} not found in the database d.")
+        print(f"Field {field_name} with tiles {tile_numbers} not found in the database d.")
 
-def get_partial_tiles_for_1d_pipeline_run(band_number):
+def get_partial_tiles_for_1d_pipeline_run(band_number, conn):
     """
     Get a list of partial tiles that should be ready to be processed by the 1D pipeline
     In the database, this is when:
@@ -368,13 +360,13 @@ def get_partial_tiles_for_1d_pipeline_run(band_number):
     query = f"""
         SELECT pt.observation, pt.sbid, pt.tile1, pt.tile2, pt.tile3, pt.tile4
         FROM possum.partial_tile_1d_pipeline_band{band_number} pt
-        WHERE pt.sbid IS NOT NULL
+        WHERE pt.sbid IS NOT NULL AND pt.sbid != ''
           AND pt.number_sources IS NOT NULL
-          AND pt."1d_pipeline" IS NULL;
+          AND (pt."1d_pipeline" IS NULL or pt."1d_pipeline" = '');
     """
-    return execute_query(query)
+    return execute_query(query, conn)
 
-def get_observations_with_complete_partial_tiles(band_number):
+def get_observations_with_complete_partial_tiles(band_number, conn):
     """
     For each observation, check if all '1d_pipeline' is "Completed" and 1d_pipeline_validation' is empty
     Return rows of: (observation, sbid, all_complete)
@@ -390,7 +382,7 @@ def get_observations_with_complete_partial_tiles(band_number):
                 WHERE pt2.observation = pt.observation
                 AND LOWER(pt2."1d_pipeline") != 'completed'
                 ) THEN false
-            WHEN ob."1d_pipeline_validation" IS NULL AND LOWER(pt."1d_pipeline") = 'completed'
+            WHEN (ob."1d_pipeline_validation" IS NULL OR ob."1d_pipeline_validation" = '') AND LOWER(pt."1d_pipeline") = 'completed'
                 THEN true
             ELSE
                 false
@@ -399,45 +391,75 @@ def get_observations_with_complete_partial_tiles(band_number):
         WHERE ob.name = pt.observation
         GROUP BY pt.observation, pt.sbid, ob."1d_pipeline_validation", pt."1d_pipeline";
     """
-    return execute_query(sql)
+    return execute_query(sql, conn)
 
-def get_observations_non_edge_rows(band_number):
+def get_observations_non_edge_rows(band_number, conn):
     """
     For each observation, check if all '1d_pipeline' is "Completed" and 1d_pipeline_validation' is empty,
-    and if any partial tile type is an edge case (includes "crosses projection boundary").
+    except if any partial tile type is an edge case (includes "crosses projection boundary").
     Return rows of: (observation, sbid, non_edge_complete)
     for which non_edge_complete is True if all partial tiles for that observation and sbid
     have '1d_pipeline' marked as "Completed" and '1d_pipeline_validation' for the observation is NULL
-    and it does not contain a partial tile that has "crosses projection boundary" in its type.
+    disregarding those that have "crosses projection boundary" in its type.
     """
     sql = f"""
         SELECT pt.observation, pt.sbid,
-        CASE
-            WHEN EXISTS (
-                SELECT 1
-                FROM possum.partial_tile_1d_pipeline_band{band_number} pt2
-                WHERE pt2.observation = pt.observation AND LOWER(pt2.type) like '%crosses projection boundary%')
-            ) THEN false
-            WHEN LOWER(pt."1d_pipeline_band") = 'completed' AND ob."1d_pipeline_validation" IS NULL
-                THEN true
-            ELSE
-                false
-        END AS all_complete
-        FROM possum.partial_tile_1d_pipeline_band{band_number} pt, possum.observation_1d_pipeline_band{band_number} ob
-        WHERE ob.name = pt.observation
-        GROUP BY pt.observation, pt.sbid, ob."1d_pipeline_validation", pt."1d_pipeline_band";
+            CASE
+               WHEN EXISTS (
+                   SELECT 1
+                   FROM possum.partial_tile_1d_pipeline_band{band_number} pt_inner
+                   JOIN possum.observation_1d_pipeline_band{band_number} ob_inner
+                       ON ob_inner.name = pt_inner.observation
+                   WHERE LOWER(pt_inner.type) NOT LIKE '%crosses projection boundary%' 
+                   AND LOWER(pt_inner."1d_pipeline") = 'completed'
+                   AND (ob_inner."1d_pipeline_validation" IS NULL OR ob_inner."1d_pipeline_validation" = '')
+                   AND pt_inner.observation = pt.observation  -- Ensure we match the outer observation
+               )
+               THEN true
+               ELSE false
+           END AS all_complete
+        FROM possum.partial_tile_1d_pipeline_band{band_number} pt;
     """
-    return execute_query(sql)
+    return execute_query(sql, conn)
 
 #### TEST METHODS ###
 
-def get_3d_tile_for_tests(tile_id, band_number):
+def get_3d_tile_data(tile_id, band_number, conn):
     """
-    Utility method to get 3d tile information for tests
-    Args: 
+    Utility method to get 3d tile information (useful for tests)
+    Args:
     - tile_id: tile number
     - band_number: 1 or 2
     """
     sql = f"""SELECT tile_id, "3d_pipeline_val", "3d_val_link", "3d_pipeline_ingest"
               from possum.tile_3d_pipeline_band{band_number} WHERE tile_id = {tile_id}"""
-    return execute_test_query(sql)
+    return execute_query(sql, conn)
+
+def get_1d_pipeline_validation_status(field_name, band_number, conn):
+    """
+    Handy method to get 1d_pipeline_validation status (useful for tests):
+    """
+    sql = f"""
+        SELECT "1d_pipeline_validation" FROM possum.observation_1d_pipeline_band{band_number}
+        WHERE name = '{field_name}';
+        """
+    return execute_query(sql, conn)
+
+def get_1d_pipeline_status(field_name, tilenumbers, band_number, conn):
+    """
+    Handy method to get 1d_pipeline status (useful for tests):
+    """
+    sql = f"""
+        SELECT "1d_pipeline" FROM possum.partial_tile_1d_pipeline_band{band_number}
+        WHERE observation = '{field_name}'
+        """
+    params = []  # Initial params
+    # Check for NULLS in tile numbers and make sure the query says IS NULL and not = NULL so it works
+    for i, tile in enumerate(tilenumbers, start=1):
+        if tile is None or tile == '':  # If tile is None, use IS NULL
+            sql += f" AND tile{i} IS NULL"
+        else:  # Otherwise, use equality
+            sql += f" AND tile{i} = %s"
+            params.append(tile)
+
+    return execute_query(sql, conn, params)

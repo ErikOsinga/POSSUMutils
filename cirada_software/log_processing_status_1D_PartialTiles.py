@@ -49,7 +49,10 @@ def update_partial_tile_1d_pipeline(field_ID, tile_numbers, band, status):
     """
     fieldname = util.get_full_field_name(field_ID, band)
     band_number = util.get_band_number(band)
-    db.update_partial_tile_1d_pipeline_status(fieldname, tile_numbers, band_number, status)
+    
+    conn = db.get_database_connection(test=False)
+    db.update_partial_tile_1d_pipeline_status(fieldname, tile_numbers, band_number, status, conn)
+    conn.close()
     ## TODO: validation in case all tiles have been completed
      
     # # Find the validation file path

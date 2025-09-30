@@ -5,7 +5,7 @@ import gspread
 import astropy.table as at
 import numpy as np
 from automation import database_queries as db
-from . import util
+from possum_pipeline_control import util
 
 """
 Updates the POSSUM tile ! 3d pipeline ! status (google sheet) to a specific value input by user
