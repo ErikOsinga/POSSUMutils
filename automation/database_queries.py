@@ -252,7 +252,7 @@ def validate_band_number(band_number):
     if str(band_number) not in ["1", "2"]:
         raise ValueError("band_number must be either 1 or 2")
 
-def get_tiles_for_pipeline_run(band_number, conn):
+def get_tiles_for_pipeline_run(conn, band_number):
     """
     Get a list of tile numbers that should be ready to be processed by the 3D pipeline
 
@@ -431,7 +431,7 @@ def get_3d_tile_data(tile_id, band_number, conn):
     - tile_id: tile number
     - band_number: 1 or 2
     """
-    sql = f"""SELECT tile_id, "3d_pipeline_val", "3d_val_link", "3d_pipeline_ingest"
+    sql = f"""SELECT tile_id, "3d_pipeline_val", "3d_val_link", "3d_pipeline_ingest", "3d_pipeline"
               from possum.tile_3d_pipeline_band{band_number} WHERE tile_id = {tile_id}"""
     return execute_query(sql, conn)
 
