@@ -7,7 +7,7 @@ import astropy.table as at
 import numpy as np
 from time import sleep
 from automation import database_queries as db
-from . import util
+from possum_pipeline_control import util
 
 """
 Checks POSSUM tile status (Cameron's survey overview google sheet) if 3D pipeline can be started.
