@@ -77,14 +77,6 @@ class CheckStatusAndLaunch1DPipelinePartialTiles(unittest.TestCase):
         (
          field_IDs, tile1, tile2, tile3, tile4, SBids, fields_to_validate, field_to_validate_boundaryissues
         ) = check_status.get_tiles_for_pipeline_run(self.conn, band_number=1)
-        print (field_IDs)
-        print (tile1)
-        print (tile2)
-        print (tile3)
-        print (tile4)
-        print (SBids)
-        print (fields_to_validate)
-        print (field_to_validate_boundaryissues)
         assert field_IDs == ['1748-64', '1759-69', '1759-69', '1759-69', '1759-69', '1136-64', '1136-64', '1136-62']
         assert tile1 == ['11791', '11726', '11791', '11726', '11791', '11487', '11487', '11490']
         assert tile2 == ['11792', '11727', '11852', '11727', '11792', '11565', '11488', '11491']
@@ -104,7 +96,7 @@ class CheckStatusAndLaunch1DPipelinePartialTiles(unittest.TestCase):
         status = "Running"
         row_num = db_query.update_1d_pipeline_validation_status(field, sbid, band_number, status, self.conn)
         assert row_num == 1
-
+        # Make sure the update works
         results = db_query.get_1d_pipeline_validation_status(field, band_number, self.conn)
         new_status = results[0][0]
         assert new_status == status
