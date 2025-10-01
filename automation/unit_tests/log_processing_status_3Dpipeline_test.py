@@ -1,0 +1,60 @@
+"""
+Test cirada_software: log_processing_status_3Dpipeline.py
+"""
+import unittest
+from automation import database_queries as db_query
+from automation import insert_database_script as db_insert
+
+class LogProcessingStatus3DPipelineTest(unittest.TestCase):
+    def setUp(self):
+        self.conn = db_query.get_database_connection(test=True)
+        db_insert.create_test_schema(self.conn)
+        db_insert.create_tile_3d_pipeline_tables(self.conn)
+
+        _3d_data = [
+            ('1239', None, '', None),
+            ('1240', '', None, ''),
+            ('1241', 'Failed', '', ''),
+            ('1242', 'Running', None, None)
+        ]
+        for row in _3d_data:
+            db_insert.insert_3d_pipeline_test_data(row[0], row[1], row[2], row[3], self.conn)
+
+    def tearDown(self):
+        db_insert.drop_test_tables(self.conn)
+        db_insert.drop_test_schema(self.conn)
+        self.conn.close()
+
+    def test_update_status_spreadsheet(self):
+        """
+        Test update_status_spreadsheet
+        """
+        tile_number = 1240
+        band_number = "1"
+        status = "WaitingForValidation"
+        row_num = db_query.update_3d_pipeline(tile_number, band_number, status, self.conn)
+        assert row_num == 1
+        result = db_query.get_3d_tile_data(tile_number, band_number, self.conn)
+        assert result[0][4] == "WaitingForValidation" #3d_pipeline
+
+    def test_update_validation_spreadsheet(self):
+        """
+        Test update_validation_spreadsheet
+        """
+        tile_number = 1240
+        band_number = "1"
+        status = "WaitingForValidation"
+        # Test with legit link
+        validation_link = "https://ws-uv.canfar.net/arc/files/projects/CIRADA/polarimetry/pipeline_runs/943MHz/tile1240/PSM_943MHz_20asec_1353+0823_5258_p3d_v1_validation.html"
+        rows_updated = db_query.update_3d_pipeline_val(tile_number, band_number, status, validation_link, self.conn)
+        assert rows_updated == 1
+        result = db_query.get_3d_tile_data(tile_number, band_number, self.conn)
+        assert result[0][1] == "WaitingForValidation" # 1d_pipeline_validation
+        assert result[0][2] == validation_link # 1d_val_link
+
+        # Test with non-link link
+        validation_link = "MultipleHTMLFiles"
+        rows_updated = db_query.update_3d_pipeline_val(tile_number, band_number, status, validation_link, self.conn)
+        assert rows_updated == 1
+        result = db_query.get_3d_tile_data(tile_number, band_number, self.conn)
+        assert result[0][2] == validation_link # 1d_val_link
