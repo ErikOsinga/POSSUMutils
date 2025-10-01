@@ -1,8 +1,5 @@
 import argparse
 import glob
-import gspread
-import numpy as np
-import astropy.table as at
 import ast
 from automation import database_queries as db
 from possum_pipeline_control import util
@@ -37,7 +34,7 @@ def check_pipeline_complete(log_file_path):
     else:
         return "Failed"
 
-def update_partial_tile_1d_pipeline(field_ID, tile_numbers, band, status):
+def update_partial_tile_1d_pipeline(field_ID, tile_numbers, band, status, conn):
     """
     Update the status of the specified tile in the partial_tile_1d_pipeline database table.
     
@@ -48,11 +45,8 @@ def update_partial_tile_1d_pipeline(field_ID, tile_numbers, band, status):
     status (str): The status to set in the '1d_pipeline' column.
     """
     fieldname = util.get_full_field_name(field_ID, band)
-    band_number = util.get_band_number(band)
-    
-    conn = db.get_database_connection(test=False)
+    band_number = util.get_band_number(band)    
     db.update_partial_tile_1d_pipeline_status(fieldname, tile_numbers, band_number, status, conn)
-    conn.close()
     ## TODO: validation in case all tiles have been completed
      
     # # Find the validation file path
@@ -137,5 +131,7 @@ if __name__ == "__main__":
     print(f"Tilenumbers {tilestr} status: {status}, band: {band}")
 
     # Update the POSSUM partial_tile_1d_pipeline database table
-    update_partial_tile_1d_pipeline(field_ID, tilenumbers, band, status)
+    conn = db.get_database_connection(test=False)
+    update_partial_tile_1d_pipeline(field_ID, tilenumbers, band, status, conn)
+    conn.close()
     
