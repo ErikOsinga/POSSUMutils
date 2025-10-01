@@ -119,8 +119,9 @@ def ingest_3Dpipeline(band_number=1):
         band = "1367MHz"
 
     # Check database for band 1 tiles that have been processed AND validated
-    conn = db.get_database_connection()
-    tile_numbers = get_tiles_for_ingest(band_number, conn)
+    conn = db.get_database_connection(test=False)
+    tile_numbers = get_tiles_for_ingest(band_number, conn)    
+    conn.close()
 
     # Check whether tile indeed available on CANFAR (should be)
     canfar_tilenumbers = get_canfar_tiles(band_number=band_number)
@@ -149,7 +150,9 @@ def ingest_3Dpipeline(band_number=1):
             launch_ingest(tilenumber, band)
 
             # Update the status of 3d_pipeline_ingest to "IngestRunning"
+            conn = db.get_database_connection(test=False)
             row_count = update_status(tilenumber, band, "IngestRunning", conn)
+            conn.close()
             if row_count == 0:
                 print(f"Tile {tilenumber} not found in the sheet.")
 
@@ -157,8 +160,6 @@ def ingest_3Dpipeline(band_number=1):
             print("No tiles are available on both CADC and CANFAR.")
     else:
         print("Found no tiles ready to be processed.")
-    # close database connection
-    conn.close()
 
 if __name__ == "__main__":
     # Band number 1 (943MHz) or 2 ("1367MHz")
