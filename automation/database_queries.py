@@ -222,17 +222,17 @@ def update_single_sb_1d_pipeline_status(field_name, sbid, band_number, status, c
     params = (field_name, sbid, status, status)
     return execute_update_query(query, conn, params)
 
-def find_boundary_issues(sbid, observation, conn):
+def find_boundary_issues(sbid, observation, band_number, conn):
     """
     Check if there are any entries in partial_tile_1d_pipeline for the given sbid and observation
     where type indicates it crosses a projection boundary.
     This is to identify potential issues with tiles that cross projection boundaries.
     """
     print(f"Checking for projection boundary issues for SBID: {sbid}, Observation: {observation}")
-    query = """
+    query = f"""
         SELECT EXISTS (
             SELECT 1
-            FROM possum.partial_tile_1d_pipeline
+            FROM possum.partial_tile_1d_pipeline_band{band_number}
             WHERE sbid = %s AND observation = %s AND LOWER(type) like '%%crosses projection boundary%%'
         ) AS match_found;
     """
@@ -441,6 +441,16 @@ def get_1d_pipeline_validation_status(field_name, band_number, conn):
     """
     sql = f"""
         SELECT "1d_pipeline_validation" FROM possum.observation_1d_pipeline_band{band_number}
+        WHERE name = '{field_name}';
+        """
+    return execute_query(sql, conn)
+
+def get_single_sb_1d_pipeline_status(field_name, band_number, conn):
+    """
+    Handy method to get single_sb_1d_pipeline status (useful for tests):
+    """
+    sql = f"""
+        SELECT single_sb_1d_pipeline FROM possum.observation_1d_pipeline_band{band_number}
         WHERE name = '{field_name}';
         """
     return execute_query(sql, conn)

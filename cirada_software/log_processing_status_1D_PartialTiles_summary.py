@@ -43,21 +43,35 @@ def check_pipeline_complete(log_file_path):
     else:
         return "Failed"
 
-def safe_update_cells(sheet, cells, max_retries=5):
-    for attempt in range(max_retries):
-        try:
-            sheet.update_cells(cells)
-            return True
-        except Exception as e:
-            # Check for rate limit error
-            if "429" in str(e):
-                sleep_time = (2 ** attempt) + random.uniform(0, 1)
-                print(f"Rate limit hit; retrying in {sleep_time:.2f} seconds...")
-                sleep(sleep_time)
-            else:
-                raise e
-    return False
+def update_validation_spreadsheet(field_ID, SBid, band, status, conn):
+    """
+    Update the status of the specified tile in the VALIDATION Google Sheet.
 
+    Args:
+    field_id         : the field id
+    SBid             : the SB number
+    band (str): The band of the tile.
+    Google_API_token (str): The path to the Google API token JSON file.
+    status (str): The status to set in the 'status_column' column.
+    status_column: The column to update in the Google Sheet.
+
+    """
+    print("Updating POSSUM pipeline validation database with summary plot status")
+
+    band_number = util.get_band_number(band)
+    full_field_name = util.get_full_field_name(field_ID, band)
+    rows_to_update = db.update_1d_pipeline_validation_status(full_field_name, SBid, band_number, status, conn)
+    if rows_to_update == 0:
+        print(f"No rows found for field {full_field_name} and SBID {SBid}")
+        return False
+    elif rows_to_update > 0:
+        print(f"Updated all {rows_to_update} rows for field {full_field_name} and SBID {SBid} to status '{status}' in '1d_pipeline_validation' column.")
+    else:
+        print("Failed to update the database.")
+    # Check if there are boundary issues for this field and SBID
+    boundary_issue = db.find_boundary_issues(SBid, full_field_name, band_number, conn)
+
+    return boundary_issue
 
 def update_status_spreadsheet(field_ID, SBid, band, Google_API_token, status, status_column):
     """
@@ -82,7 +96,7 @@ def update_status_spreadsheet(field_ID, SBid, band, Google_API_token, status, st
     tile_data = tile_sheet.get_all_values()
     column_names = tile_data[0]
     tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
-    full_field_name = util.get_full_field_name(field_ID, band)    
+    full_field_name = util.get_full_field_name(field_ID, band)
 
     # Update all rows belonging to field and sbid
     rows_to_update = [
@@ -93,10 +107,12 @@ def update_status_spreadsheet(field_ID, SBid, band, Google_API_token, status, st
     if rows_to_update:
         print(f"Updating POSSUM Status Monitor with 1D pipeline status for field {full_field_name} and SBID {SBid}")
         col_letter = gspread.utils.rowcol_to_a1(1, column_names.index(status_column) + 1)[0]
+        conn = db.get_database_connection(test=False)
         for row_index in rows_to_update:
             sleep(2) # 60 writes per minute only
             tile_sheet.update(range_name=f'{col_letter}{row_index}', values=[[status]])
-            db.update_single_sb_1d_pipeline_status(full_field_name, SBid, band_number, status)
+            db.update_single_sb_1d_pipeline_status(full_field_name, SBid, band_number, status, conn)
+        conn.close()
         print(f"Updated all {len(rows_to_update)} rows for field {full_field_name} and SBID {SBid} to status '{status}' in '{status_column}' column.")
     else:
         print(f"No rows found for field {full_field_name} and SBID {SBid}.")
@@ -179,11 +195,11 @@ def main(args):
     print(f"field {field_ID} sbid {SB_num} summary plot status: {status}, band: {band}")
 
     # Update the POSSUM Validation database table
-    band_number = util.get_band_number(band)
-    full_field_name = util.get_full_field_name(field_ID, band)
-    db.update_1d_pipeline_validation_status(full_field_name, SB_num, band_number, status)
-    # Check if there are boundary issues for this field and SBID
-    has_boundary_issue = db.find_boundary_issues(SB_num, full_field_name)
+    t1 = task(update_validation_spreadsheet, name="update_validation_spreadsheet")
+    # execute tasks serially such that logging is preserved (instead of .submit)
+    conn = db.get_database_connection(test=False)
+    has_boundary_issue = t1(field_ID, SB_num, band, status, conn)
+    conn.close()
 
     if status == "Completed":
         # Update the POSSUM Pipeline Status spreadsheet as well. A complete field has been processed!
