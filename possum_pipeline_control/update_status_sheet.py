@@ -60,7 +60,9 @@ def update_status(tile_number, band, Google_API_token, status):
         tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
         print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
         # Also update the DB
-        db.update_3d_pipeline(tile_number, band_number, status)
+        conn = db.get_database_connection(test=False)
+        db.update_3d_pipeline(tile_number, band_number, status, conn)
+        conn.close()
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 
