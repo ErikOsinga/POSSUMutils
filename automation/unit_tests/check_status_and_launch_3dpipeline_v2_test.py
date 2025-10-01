@@ -1,9 +1,10 @@
-
+"""
+Test possum_pipeline_control: check_status_and_launch_3Dpipeline_v2.py
+"""
 import unittest
 from automation import (insert_database_script as db, database_queries as db_query)
 
-class CheckStatusAndLaunch2DPipelinev2Test(unittest.TestCase):
-
+class CheckStatusAndLaunch3DPipelinev2Test(unittest.TestCase):
     def setUp(self):
         self.conn = db_query.get_database_connection(test=True)
         db.create_test_schema(self.conn)   
