@@ -147,7 +147,7 @@ def update_3d_pipeline_val(tile_number, band_number, status, val_link, conn):
         SET "3d_pipeline_val" = %s, "3d_val_link" = %s
         WHERE tile_id = %s;
     """
-    params = (status, tile_number, val_link)
+    params = (status, val_link, tile_number)
     return execute_update_query(query, conn, params)
 
 def update_3d_pipeline(tile_number, band_number, status, conn):
