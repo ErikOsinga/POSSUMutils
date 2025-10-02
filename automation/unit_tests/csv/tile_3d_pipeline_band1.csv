@@ -1,0 +1,13 @@
+tile_id,3d_pipeline,3d_pipeline_val,3d_pipeline_ingest
+321,WaitingForValidation,Good,Ingested
+421,WaitingForValidation,Good,IngestFailed
+532,WaitingForValidation,Good,IngestRunning
+1234,WaitingForValidation,Good,
+1235,WaitingForValidation,Good,
+1236,WaitingForValidation,,
+1237,WaitingForValidation,,
+1238,WaitingForValidation,Bad,
+1239,,,
+1240,,,
+1241,Failed,,
+1242,Running,,

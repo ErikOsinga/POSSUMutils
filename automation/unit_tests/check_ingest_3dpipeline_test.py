@@ -1,47 +1,14 @@
 """
 Test possum_pipeline_control: check_ingest_3Dpipeline.py
 """
-import unittest
 from possum_pipeline_control import check_ingest_3Dpipeline
-from automation import insert_database_script as db
 from automation import database_queries as db_query
+from automation.unit_tests._3dpipeline_base_test import _3DPipelineBaseTest
 
-class CheckIngest3dPipeline(unittest.TestCase):
-
-    def setUp(self):
-        self.conn = db_query.get_database_connection(True)
-        db.create_test_schema(self.conn)
-        db.create_tile_3d_pipeline_tables(self.conn)
-
-        _3d_data = [
-            # ingested
-            ('321', 'WaitingForValidation', 'Good', 'Ingested'),
-            # ingest failed
-            ('421', 'WaitingForValidation', 'Good', 'IngestFailed'),
-            # ingest running
-            ('532', 'WaitingForValidation', 'Good', 'IngestRunning'),
-            # ready to ingest
-            ('1234', 'WaitingForValidation', 'Good', ''),
-            ('1235', 'WaitingForValidation', 'Good', None),
-            # validated but not ready to ingest
-            ('1236', 'WaitingForValidation', '', ''),
-            ('1237', 'WaitingForValidation', None, None),
-            # validated but not going to be ingested
-            ('1238', 'WaitingForValidation', 'Bad', None),
-            # not yet validated
-            ('1239', None, '', None),
-            ('1240', '', None, ''),
-            ('1241', 'Failed', '', ''),
-            ('1242', 'Running', None, None)
-        ]
-        for row in _3d_data:
-            db.insert_3d_pipeline_test_data(row[0], row[1], row[2], row[3], self.conn)
-
-    def tearDown(self):
-        db.drop_test_tables(self.conn)
-        db.drop_test_schema(self.conn)
-        self.conn.close()
-
+class CheckIngest3dPipeline(_3DPipelineBaseTest):
+    """
+    Setup and tearDown is done in the _3DPipelineBaseTest class.
+    """
     def test_get_tiles_for_ingest(self):
         """
         Based on the original code:
@@ -58,12 +25,10 @@ class CheckIngest3dPipeline(unittest.TestCase):
         """
         num_rows = check_ingest_3Dpipeline.update_status(tile_number=1235, band='943MHz', status='Ingested', conn=self.conn)
         assert num_rows == 1 #succesful update
-		#Check if the value was updated
+        #Check if the value was updated
         results = db_query.get_3d_tile_data(1235, '1', self.conn)
         assert len(results) == 1
         assert results[0][3] == 'Ingested'
 
         num_rows = check_ingest_3Dpipeline.update_status(tile_number=000, band='943MHz', status='Ingested', conn=self.conn)
         assert num_rows == 0 #tile not found
-
-

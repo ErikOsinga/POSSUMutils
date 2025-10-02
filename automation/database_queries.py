@@ -44,25 +44,21 @@ def execute_update_query(query, conn, params=None, verbose=True):
     Returns:
     list: The number of rows affected.
     """
-    cursor = conn.cursor()
     rows_affected = 0
     try:
-        # Execute the query
-        if verbose:
-            print(f"Executing database query: {query}")
-            if params:
-                print(f"With parameters: {params}")
-        cursor.execute(query, params)
-        conn.commit()
-        rows_affected = cursor.rowcount
-        if verbose:
-            print(f"{rows_affected} rows affected.")
+        with conn.cursor() as cursor:
+            # Execute the query
+            if verbose:
+                print(f"Executing database query: {query}")
+                if params:
+                    print(f"With parameters: {params}")
+            cursor.execute(query, params)
+            conn.commit()
+            rows_affected = cursor.rowcount
+            if verbose:
+                print(f"{rows_affected} rows affected.")
     except Exception as e:
         print(f"An error occurred: {e}")
-    finally:
-        # Close the cursor
-        if cursor:
-            cursor.close()
     return rows_affected
 
 def execute_query(query, database_connection, params=None, verbose=True):
@@ -76,29 +72,23 @@ def execute_query(query, database_connection, params=None, verbose=True):
     Returns:
     list: The results of the query.
     """
-    cursor = database_connection.cursor()
     results = []
-
     try:
-        # Execute the query
-        if verbose:
-            if params:
-                print(f"Executing database query: {query} with {params}")
+        with database_connection.cursor() as cursor:
+            # Execute the query
+            if verbose:
+                if params:
+                    print(f"Executing database query: {query} with {params}")
+                else:
+                    print(f"Executing database query: {query}")
+            cursor.execute(query, params)
+            # Fetch all results
+            if cursor.description is not None:
+                results = cursor.fetchall() # select query
             else:
-                print(f"Executing database query: {query}")
-        cursor.execute(query, params)
-
-        # Fetch all results
-        if cursor.description is not None:
-            results = cursor.fetchall()
-        else:
-            database_connection.commit()
+                database_connection.commit() # insert, delete, create, alter , update
     except Exception as e:
         print(f"An error occurred: {e}")
-    finally:
-        # Close the cursor
-        if cursor:
-            cursor.close()
     return results
 
 def update_3d_pipeline_ingest(tile_number, band_number, status, conn):
@@ -275,7 +265,7 @@ def get_tiles_for_pipeline_run(conn, band_number):
         INNER JOIN possum.associated_tile ON associated_tile.tile = tile_3d.tile_id
         INNER JOIN possum.observation ON observation.name = associated_tile.name
         WHERE observation.cube_state = 'COMPLETED'
-        AND (tile_3d."3d_pipeline" IS NULL OR tile_3d."3d_pipeline" = '')
+        AND (tile_3d."3d_pipeline" IS NULL OR TRIM(tile_3d."3d_pipeline") = '')
         ORDER BY tile_id
     """
     return execute_query(query, conn)
@@ -299,7 +289,7 @@ def get_tiles_for_ingest(band_number, conn):
         FROM possum.tile_3d_pipeline_band{band_number} tile_3d
         WHERE LOWER(tile_3d."3d_pipeline_val") = 'good' AND
         (tile_3d."3d_pipeline_ingest" IS NULL OR
-        tile_3d."3d_pipeline_ingest" = '')
+        TRIM(tile_3d."3d_pipeline_ingest") = '')
         ORDER BY tile_id
     """
     results = execute_query(query, conn)
@@ -328,7 +318,7 @@ def update_partial_tile_1d_pipeline_status(field_name, tile_numbers, band_number
     params = [status, field_name]  # Initial params
     # Check for NULLS in tile numbers and make sure the query says IS NULL and not = NULL so it works
     for i, tile in enumerate([t1, t2, t3, t4], start=1):
-        if tile is None or tile == '':  # If tile is None, use IS NULL
+        if tile is None or tile.strip() == '':  # If tile is None, use IS NULL
             query += f" AND tile{i} IS NULL"
         else:  # Otherwise, use equality
             query += f" AND tile{i} = %s"
@@ -360,9 +350,9 @@ def get_partial_tiles_for_1d_pipeline_run(band_number, conn):
     query = f"""
         SELECT pt.observation, pt.sbid, pt.tile1, pt.tile2, pt.tile3, pt.tile4
         FROM possum.partial_tile_1d_pipeline_band{band_number} pt
-        WHERE pt.sbid IS NOT NULL AND pt.sbid != ''
+        WHERE pt.sbid IS NOT NULL AND TRIM(pt.sbid) != ''
           AND pt.number_sources IS NOT NULL
-          AND (pt."1d_pipeline" IS NULL or pt."1d_pipeline" = '');
+          AND (pt."1d_pipeline" IS NULL or TRIM(pt."1d_pipeline") = '');
     """
     return execute_query(query, conn)
 
@@ -382,7 +372,7 @@ def get_observations_with_complete_partial_tiles(band_number, conn):
                 WHERE pt2.observation = pt.observation
                 AND LOWER(pt2."1d_pipeline") != 'completed'
                 ) THEN false
-            WHEN (ob."1d_pipeline_validation" IS NULL OR ob."1d_pipeline_validation" = '') AND LOWER(pt."1d_pipeline") = 'completed'
+            WHEN (ob."1d_pipeline_validation" IS NULL OR TRIM(ob."1d_pipeline_validation") = '') AND LOWER(pt."1d_pipeline") = 'completed'
                 THEN true
             ELSE
                 false
@@ -410,9 +400,9 @@ def get_observations_non_edge_rows(band_number, conn):
                    FROM possum.partial_tile_1d_pipeline_band{band_number} pt_inner
                    JOIN possum.observation_1d_pipeline_band{band_number} ob_inner
                        ON ob_inner.name = pt_inner.observation
-                   WHERE LOWER(pt_inner.type) NOT LIKE '%crosses projection boundary%' 
+                   WHERE LOWER(pt_inner.type) NOT LIKE '%crosses projection boundary%'
                    AND LOWER(pt_inner."1d_pipeline") = 'completed'
-                   AND (ob_inner."1d_pipeline_validation" IS NULL OR ob_inner."1d_pipeline_validation" = '')
+                   AND (ob_inner."1d_pipeline_validation" IS NULL OR TRIM(ob_inner."1d_pipeline_validation") = '')
                    AND pt_inner.observation = pt.observation  -- Ensure we match the outer observation
                )
                THEN true
@@ -466,7 +456,7 @@ def get_1d_pipeline_status(field_name, tilenumbers, band_number, conn):
     params = []  # Initial params
     # Check for NULLS in tile numbers and make sure the query says IS NULL and not = NULL so it works
     for i, tile in enumerate(tilenumbers, start=1):
-        if tile is None or tile == '':  # If tile is None, use IS NULL
+        if tile is None or tile.strip() == '':  # If tile is None, use IS NULL
             sql += f" AND tile{i} IS NULL"
         else:  # Otherwise, use equality
             sql += f" AND tile{i} = %s"

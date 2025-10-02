@@ -1,30 +1,13 @@
 """
 Test cirada_software: log_processing_status_3Dpipeline.py
 """
-import unittest
 from automation import database_queries as db_query
-from automation import insert_database_script as db_insert
+from automation.unit_tests._3dpipeline_base_test import _3DPipelineBaseTest
 
-class LogProcessingStatus3DPipelineTest(unittest.TestCase):
-    def setUp(self):
-        self.conn = db_query.get_database_connection(test=True)
-        db_insert.create_test_schema(self.conn)
-        db_insert.create_tile_3d_pipeline_tables(self.conn)
-
-        _3d_data = [
-            ('1239', None, '', None),
-            ('1240', '', None, ''),
-            ('1241', 'Failed', '', ''),
-            ('1242', 'Running', None, None)
-        ]
-        for row in _3d_data:
-            db_insert.insert_3d_pipeline_test_data(row[0], row[1], row[2], row[3], self.conn)
-
-    def tearDown(self):
-        db_insert.drop_test_tables(self.conn)
-        db_insert.drop_test_schema(self.conn)
-        self.conn.close()
-
+class LogProcessingStatus3DPipelineTest(_3DPipelineBaseTest):
+    """
+    Setup and tearDown is done in the 3DPipelineBaseTest class.
+    """
     def test_update_status_spreadsheet(self):
         """
         Test update_status_spreadsheet
