@@ -1,37 +1,14 @@
 """
 Test possum_pipeline_control: Ingest3Dpipeline.py
 """
-import unittest
 from datetime import date
 from possum_pipeline_control import ingest3Dpipeline
-from automation import (insert_database_script as db, database_queries as db_query)
-
-class Ingest3DPipelineTest(unittest.TestCase):
+from automation import database_queries as db_query
+from automation.unit_tests._3dpipeline_base_test import _3DPipelineBaseTest
+class Ingest3DPipelineTest(_3DPipelineBaseTest):
     """
-    Test possum_pipeline_control: ingest3Dpipeline.py
+    Setup and tearDown is done in the 3DPipelineBaseTest class.
     """
-
-    def setUp(self):
-        self.conn = db_query.get_database_connection(test=True)
-        db.create_test_schema(self.conn)
-        db.create_tile_3d_pipeline_tables(self.conn)
-        _3d_data = [
-            ('1239', None, '', None),
-            ('1240', '', None, ''),
-            ('1241', 'WaitingForValidation', '', ''),
-            ('1242', 'Running', None, 'IngestRunning')
-        ]
-        for row in _3d_data:
-            db.insert_3d_pipeline_test_data(tile_id=row[0], _3d_pipeline=row[1],
-                                            val=row[2], ingest=row[3], conn=self.conn)
-
-    def tearDown(self):
-        if self.conn:
-            db.drop_test_tables(self.conn)
-            db.drop_test_schema(self.conn)
-            self.conn.close()
-            self.conn = None
-
     def test_update_validation_spreadsheet(self):
         """
         Test updating 3d_pipeline_ingest status in ingest3dpipeline
@@ -41,13 +18,13 @@ class Ingest3DPipelineTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             ingest3Dpipeline.update_validation_spreadsheet.fn(tilenumber, "943MHz", 'Ingested', test_flag=False, conn=self.conn)
         ingest_status = db_query.get_3d_tile_data(tilenumber, '1', self.conn)[0][3]
-        assert(ingest_status == '') # Status should not be updated
-        
+        assert(ingest_status == '') # 3d_pipeline_ingest
+
         # Status is IngestRunning
         tilenumber = '1242'
         ingest3Dpipeline.update_validation_spreadsheet.fn(tilenumber, "943MHz", 'Ingested', test_flag=False, conn=self.conn)
         ingest_status = db_query.get_3d_tile_data(tilenumber, '1', self.conn)[0][3]
-        assert(ingest_status == 'Ingested') # Status should be updated
+        assert(ingest_status == 'Ingested') # 3d_pipeline_ingest
 
     def test_update_status_spreadsheet(self):
         """
@@ -57,7 +34,7 @@ class Ingest3DPipelineTest(unittest.TestCase):
         timestamp = date(2025, 7, 15).isoformat()
         row_num = db_query.update_3d_pipeline(tilenumber, "1", timestamp, self.conn)
         assert row_num == 1
-        
+
         # Verify it's successful
         status = db_query.get_3d_tile_data(tilenumber, '1', self.conn)[0][4]
-        assert status == timestamp
+        assert status == timestamp #3d_pipeline
