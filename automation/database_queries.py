@@ -91,104 +91,42 @@ def execute_query(query, database_connection, params=None, verbose=True):
         print(f"An error occurred: {e}")
     return results
 
-def update_3d_pipeline_ingest(tile_number, band_number, status, conn):
+def update_3d_pipeline_table(tile_number, band_number, status, column_name, conn):
     """
-    Update the 'tile_3d_pipeline_band{band_number}' table, setting '3d_pipeline_ingest'
-    with given status. Possible values:
+    Update the 'tile_3d_pipeline_band{band_number}' table with given column name.
+    Possible values for '3d_pipeline_ingest':
         - Ingested
         - IngestFailed
         _ IngestRunning
-
-    Args:
-    tile_number (str): The tile number to update.
-    band_number (str): 1 or 2
-    status (str): The status to set in the respective column.
-
-    Return: 0 if tile was not found, 1 if executed
-    """
-    validate_band_number(band_number)
-    print(f"Updating POSSUM tile database table for band{band_number} with 3d_pipeline_ingest to {status}")
-    query = f"""
-        UPDATE possum.tile_3d_pipeline_band{band_number}
-        SET "3d_pipeline_ingest" = %s
-        WHERE tile_id = %s;
-    """
-    params = (status, tile_number)
-    return execute_update_query(query, conn, params)
-
-def update_3d_pipeline_val(tile_number, band_number, status, val_link, conn):
-    """
-    Update the 'tile_3d_pipeline_band{band_number}' table, setting '3d_pipeline_val'
-    with given status, and '3d_val_link' with validation link. Possible status values:
+    Possible values for '3d_pipeline_val':
         - WaitingForValidation (Job has finished running successfully, waiting for human validation)
         - Good/Bad (Currently has to be manually set after human validation)
-
-    Args:
-    tile_number (str): The tile number to update.
-    band_number (str): 1 or 2
-    status (str): The status to set in the respective column.
-    val_link (str): Validation link
-    """
-    validate_band_number(band_number)
-    print(f"Updating POSSUM tile database table for band{band_number} with 3d_pipeline_val to {status}")
-    print(f"Updating POSSUM tile database table for band{band_number} with 3d_val_link to {val_link}")
-    query = f"""
-        UPDATE possum.tile_3d_pipeline_band{band_number}
-        SET "3d_pipeline_val" = %s, "3d_val_link" = %s
-        WHERE tile_id = %s;
-    """
-    params = (status, val_link, tile_number)
-    return execute_update_query(query, conn, params)
-
-def update_3d_pipeline(tile_number, band_number, status, conn):
-    """
-    Update the 'tile_3d_pipeline_band{band_number}' table, setting '3d_pipeline'
-    with given status. Possible values:
+    Possible values for '3d_pipeline':
         - Running (Job has been submitted and is currently running)
         - WaitingForValidation (Job has finished running successfully, waiting for human validation)
-        - Failed (Job failed to run)
+        - Failed (Job failed to run)     
+        - A timestamp when the job has completed.   
 
     Args:
     tile_number (str): The tile number to update.
     band_number (str): 1 or 2
     status (str): The status to set in the respective column.
+    column_name (str) : The column to set.
+    conn: Database connection
+
+    Return: 0 if tile was not found, 1 if successful
     """
     validate_band_number(band_number)
-    print(f"Updating POSSUM tile database table for band {band_number} with 3d_pipeline to {status}")
+    print(f"Updating POSSUM tile database table for band{band_number} with {column_name} to {status}")
     query = f"""
         UPDATE possum.tile_3d_pipeline_band{band_number}
-        SET "3d_pipeline" = %s
+        SET "{column_name}" = %s
         WHERE tile_id = %s;
     """
     params = (status, tile_number)
     return execute_update_query(query, conn, params)
 
-def update_1d_pipeline_validation_status(field_name, sbid, band_number, status, conn):
-    """
-    Update the 1d_pipeline_validation status column in the observation_1d_pipeline_band{band_number} table.
-    This is to replace updated POSSUM pipeline validation Google sheet: Partial Tile Pipeline - regions - Band 1,
-    1d_pipeline_validation column.
-
-    Args:
-    field_name       : observation.field_name
-    sbid             : observation.sbid
-    band_number      : '1' (only 1 is supported currently)
-    status (str): The status to set in the 'status_column' column.
-
-    """
-    print("Updating POSSUM observation table with 1D pipeline summary plot status")
-    validate_band_number(band_number)
-    query = f"""
-        INSERT INTO possum.observation_1d_pipeline_band{band_number}
-        (name, sbid, "1d_pipeline_validation") -- IN CASE the entry doesn't exist yet
-        VALUES (%s, %s, %s)
-        ON CONFLICT (name) DO UPDATE
-        SET "1d_pipeline_validation" = %s;
-    """
-    params = (field_name, sbid, status, status)
-    return execute_update_query(query, conn, params)
-
-def update_single_sb_1d_pipeline_status(field_name, sbid, band_number, status, conn):
+def update_1d_pipeline_table(field_name, sbid, band_number, status, column_name, conn):
     """
     Update the single_1d_pipeline_validation{band_number} column in the observation table.
     This is to the equivalent to POSSUM pipeline status sheet: Survey Fields - Band {band_number}
@@ -198,16 +136,17 @@ def update_single_sb_1d_pipeline_status(field_name, sbid, band_number, status, c
     sbid             : observation.sbid
     band_number      : '1' or '2'
     status (str): The status to set in the 'status_column' column.
+    column_name.     : The column to set
 
     """
     validate_band_number(band_number)
-    print(f"Updating POSSUM observation_1d_pipeline_band{band_number} table with 'single_SB_1D_pipeline' status")
+    print(f"Updating POSSUM observation_1d_pipeline_band{band_number} table with {column_name} status")
     query = f"""
         INSERT INTO possum.observation_1d_pipeline_band{band_number}
-        (name, sbid, single_sb_1d_pipeline)
+        (name, sbid, "{column_name}")
         VALUES (%s, %s, %s)
         ON CONFLICT (name) DO UPDATE
-        SET single_sb_1d_pipeline = %s;
+        SET "{column_name}" = %s;
     """
     params = (field_name, sbid, status, status)
     return execute_update_query(query, conn, params)

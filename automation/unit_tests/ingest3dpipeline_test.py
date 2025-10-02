@@ -32,7 +32,7 @@ class Ingest3DPipelineTest(_3DPipelineBaseTest):
         """
         tilenumber = '1239'
         timestamp = date(2025, 7, 15).isoformat()
-        row_num = db_query.update_3d_pipeline(tilenumber, "1", timestamp, self.conn)
+        row_num = db_query.update_3d_pipeline_table(tilenumber, "1", timestamp, "3d_pipeline", self.conn)
         assert row_num == 1
 
         # Verify it's successful

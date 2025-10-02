@@ -53,14 +53,13 @@ def update_validation_spreadsheet(field_ID, SBid, band, status, conn):
     band (str): The band of the tile.
     Google_API_token (str): The path to the Google API token JSON file.
     status (str): The status to set in the 'status_column' column.
-    status_column: The column to update in the Google Sheet.
 
     """
     print("Updating POSSUM pipeline validation database with summary plot status")
 
     band_number = util.get_band_number(band)
     full_field_name = util.get_full_field_name(field_ID, band)
-    rows_to_update = db.update_1d_pipeline_validation_status(full_field_name, SBid, band_number, status, conn)
+    rows_to_update = db.update_1d_pipeline_table(full_field_name, SBid, band_number, status, "1d_pipeline_validation", conn)
     if rows_to_update == 0:
         print(f"No rows found for field {full_field_name} and SBID {SBid}")
         return False
@@ -111,7 +110,7 @@ def update_status_spreadsheet(field_ID, SBid, band, Google_API_token, status, st
         for row_index in rows_to_update:
             sleep(2) # 60 writes per minute only
             tile_sheet.update(range_name=f'{col_letter}{row_index}', values=[[status]])
-            db.update_single_sb_1d_pipeline_status(full_field_name, SBid, band_number, status, conn)
+            db.update_1d_pipeline_table(full_field_name, SBid, band_number, status, "single_sb_1d_pipeline", conn)
         conn.close()
         print(f"Updated all {len(rows_to_update)} rows for field {full_field_name} and SBID {SBid} to status '{status}' in '{status_column}' column.")
     else:

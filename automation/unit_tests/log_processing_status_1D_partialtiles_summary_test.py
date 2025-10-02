@@ -50,7 +50,7 @@ class LogProcessingStatus1DPartialTilesSummaryTest(PartialTile1DBaseTest):
         status = "Failed"
         full_field_name = util.get_full_field_name(field_ID, band)
         band_number = util.get_band_number(band)
-        row_num = db_query.update_single_sb_1d_pipeline_status(full_field_name, SBid, band_number, status, self.conn)
+        row_num = db_query.update_1d_pipeline_table(full_field_name, SBid, band_number, status, "single_sb_1d_pipeline", self.conn)
         # Verify successful
         assert row_num == 1
         status = db_query.get_single_sb_1d_pipeline_status(full_field_name, "1", self.conn)[0][0]

@@ -116,7 +116,7 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
         print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
         # Also update the DB
         conn = db.get_database_connection(test=False)
-        db.update_3d_pipeline(tile_number, band_number, status, conn)
+        db.update_3d_pipeline_table(tile_number, band_number, status, "3d_pipeline", conn)
         conn.close()
     else:
         print(f"Tile {tile_number} not found in the sheet.")
@@ -143,7 +143,8 @@ def update_validation_spreadsheet(tile_number, band, status):
         validation_link = "HTMLFileNotFound"
     # execute query
     conn = db.get_database_connection(test=False)
-    rows_updated = db.update_3d_pipeline_val(tile_number, band_number, status, validation_link, conn)
+    rows_updated = db.update_3d_pipeline_table(tile_number, band_number, status, "3d_pipeline_val", conn)
+    db.update_3d_pipeline_table(tile_number, band_number, validation_link, "3d_val_link", conn)
     conn.close()
     if rows_updated <= 0:
         print(f"Tile {tile_number} not found in the sheet.")

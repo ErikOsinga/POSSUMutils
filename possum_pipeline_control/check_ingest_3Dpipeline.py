@@ -110,7 +110,7 @@ def update_status(tile_number, band, status, conn):
     status (str): The status to set in the '3d_pipeline_ingest' column.
     """
     band_no = util.get_band_number(band)
-    return db.update_3d_pipeline_ingest(tile_number, band_no, status, conn)
+    return db.update_3d_pipeline_table(tile_number, band_no, status, '3d_pipeline_ingest', conn)
 
 def ingest_3Dpipeline(band_number=1):
     if band_number == 1:
