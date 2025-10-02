@@ -127,7 +127,7 @@ def update_validation_spreadsheet(tile_number, band_str, status, test_flag, conn
             print(f"Testing enabled. Current status of tile {tile_number} is {row[0][3]}")
 
         # Update the status in the '3d_pipeline_ingest' column
-        row_num = db.update_3d_pipeline_ingest(tile_number, band_number, status, conn)
+        row_num = db.update_3d_pipeline_table(tile_number, band_number, status, "3d_pipeline_ingest", conn)
         if row_num > 0:
             print(f"Updated tile {tile_number} status to {status} in '3d_pipeline_ingest' column.")
         else:
@@ -228,7 +228,7 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
         print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
         # Also update the DB
         conn = db.get_database_connection(test=False)
-        db.update_3d_pipeline(tile_number, band_number, status, conn)
+        db.update_3d_pipeline_table(tile_number, band_number, status, "3d_pipeline", conn)
         conn.close()
     else:
         print(f"Tile {tile_number} not found in the sheet.")

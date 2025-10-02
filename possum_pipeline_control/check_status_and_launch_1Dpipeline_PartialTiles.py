@@ -264,7 +264,7 @@ def update_validation_status(field_name, sbid, band_number, status):
     """
     print("Updating partial tile status in the POSSUM pipeline validation sheet.")
     conn = db.get_database_connection(test=False)
-    row_num = db.update_1d_pipeline_validation_status(field_name, sbid, band_number, "Running", conn)
+    row_num = db.update_1d_pipeline_table(field_name, sbid, band_number, "Running", "1d_pipeline_validation", conn)
     conn.close()
 
     if row_num > 0:

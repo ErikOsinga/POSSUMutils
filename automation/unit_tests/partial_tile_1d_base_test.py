@@ -36,9 +36,9 @@ class PartialTile1DBaseTest(unittest.TestCase, ABC):
             next(reader)
             for row in reader:
                 # name, sbid, 1d_pipeline_validation
-                db_query.update_1d_pipeline_validation_status(row[0], row[1], '1', row[2], self.conn)
+                db_query.update_1d_pipeline_table(row[0], row[1], '1', row[2], "1d_pipeline_validation", self.conn)
                 # name, sbid, single_sb_1d_pipeline
-                db_query.update_single_sb_1d_pipeline_status(row[0], row[1], '1', row[3], self.conn)
+                db_query.update_1d_pipeline_table(row[0], row[1], '1', row[3], "single_sb_1d_pipeline", self.conn)
 
     def tearDown(self):
         if self.conn:
