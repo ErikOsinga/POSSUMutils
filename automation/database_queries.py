@@ -120,11 +120,10 @@ def update_3d_pipeline_table(tile_number, band_number, status, column_name, conn
     print(f"Updating POSSUM tile database table for band{band_number} with {column_name} to {status}")
     query = f"""
         UPDATE possum.tile_3d_pipeline_band{band_number}
-        SET "{column_name}" = %s
-        WHERE tile_id = %s;
+        SET "{column_name}" = '{status}'
+        WHERE tile_id = '{tile_number}';
     """
-    params = (status, tile_number)
-    return execute_update_query(query, conn, params)
+    return execute_update_query(query, conn)
 
 def update_1d_pipeline_table(field_name, sbid, band_number, status, column_name, conn):
     """
@@ -144,12 +143,11 @@ def update_1d_pipeline_table(field_name, sbid, band_number, status, column_name,
     query = f"""
         INSERT INTO possum.observation_1d_pipeline_band{band_number}
         (name, sbid, "{column_name}")
-        VALUES (%s, %s, %s)
+        VALUES ('{field_name}', '{sbid}', '{status}')
         ON CONFLICT (name) DO UPDATE
-        SET "{column_name}" = %s;
+        SET "{column_name}" = '{status}';
     """
-    params = (field_name, sbid, status, status)
-    return execute_update_query(query, conn, params)
+    return execute_update_query(query, conn)
 
 def find_boundary_issues(sbid, observation, band_number, conn):
     """
@@ -162,11 +160,10 @@ def find_boundary_issues(sbid, observation, band_number, conn):
         SELECT EXISTS (
             SELECT 1
             FROM possum.partial_tile_1d_pipeline_band{band_number}
-            WHERE sbid = %s AND observation = %s AND LOWER(type) like '%%crosses projection boundary%%'
+            WHERE sbid = '{sbid}' AND observation = '{observation}' AND LOWER(type) like '%%crosses projection boundary%%'
         ) AS match_found;
     """
-    params = (sbid, observation)
-    results = execute_query(query, conn, params)
+    results = execute_query(query, conn)
     issues_found = results[0][0]
     if issues_found is True:
         print("Boundary issues found.")
@@ -251,19 +248,17 @@ def update_partial_tile_1d_pipeline_status(field_name, tile_numbers, band_number
     t1, t2, t3, t4 = tile_numbers
     query = f"""
         UPDATE possum.partial_tile_1d_pipeline_band{band_number}
-        SET "1d_pipeline" = %s
-        WHERE observation = %s"""
-
-    params = [status, field_name]  # Initial params
+        SET "1d_pipeline" = '{status}'
+        WHERE observation = '{field_name}'"""
+    
     # Check for NULLS in tile numbers and make sure the query says IS NULL and not = NULL so it works
     for i, tile in enumerate([t1, t2, t3, t4], start=1):
         if tile is None or tile.strip() == '':  # If tile is None, use IS NULL
             query += f" AND tile{i} IS NULL"
         else:  # Otherwise, use equality
-            query += f" AND tile{i} = %s"
-            params.append(tile)
+            query += f" AND tile{i} = '{tile}'"
 
-    row_num = execute_update_query(query, conn, params)
+    row_num = execute_update_query(query, conn)
     if row_num > 0:
         print(f"Updated row with tiles {tile_numbers} status to {status} in '1d_pipeline' column.")
     else:
@@ -392,13 +387,11 @@ def get_1d_pipeline_status(field_name, tilenumbers, band_number, conn):
         SELECT "1d_pipeline" FROM possum.partial_tile_1d_pipeline_band{band_number}
         WHERE observation = '{field_name}'
         """
-    params = []  # Initial params
     # Check for NULLS in tile numbers and make sure the query says IS NULL and not = NULL so it works
     for i, tile in enumerate(tilenumbers, start=1):
         if tile is None or tile.strip() == '':  # If tile is None, use IS NULL
             sql += f" AND tile{i} IS NULL"
         else:  # Otherwise, use equality
-            sql += f" AND tile{i} = %s"
-            params.append(tile)
+            sql += f" AND tile{i} = '{tile}'"
 
-    return execute_query(sql, conn, params)
+    return execute_query(sql, conn)
