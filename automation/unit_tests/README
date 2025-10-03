@@ -14,5 +14,10 @@ So you need to make sure this database is not going to be used elsewhere.
 
 How to run the tests:
 =====================
-In the root directory (POSSUMutils), run: 
+In the root directory (POSSUMutils), to run individual test: 
+
 python3 -m unittest <automation.unit_tests.test-file-name>
+
+OR, to run all tests:
+ 
+python -m unittest discover
