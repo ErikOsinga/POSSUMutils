@@ -288,7 +288,7 @@ if __name__ == "__main__":
     load_dotenv(dotenv_path='automation/config.env')
     google_api_token = os.getenv('POSSUM_STATUS_TOKEN')
     GC = gspread.service_account(filename=google_api_token)
-    VALIDATION_SHEET = os.getenv('POSSUM_PIPELINE_VALIDATION_SHEET')
+    VALIDATION_SHEET = 'https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k'
     STATUS_SHEET = os.getenv('POSSUM_STATUS_SHEET')
 
     connection = db.get_database_connection(test=False)

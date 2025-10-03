@@ -65,54 +65,6 @@ def launch_pipeline_command(fieldname, SBID):
     print(f"Executing command: {command}")
     subprocess.run(command, shell=True, check=True)
 
-def check_validation_sheet_integrity(band_number=1, verbose=False):
-    """
-    Check if each field+sbid+tile combination is present in the sheet exactly once. 
-    This should be the case, but sometimes I have seen identical rows with different 'number_sources'
-     
-    """
-    # grab google sheet POSSUM validation
-
-    # on p1, token for accessing Erik's google sheets 
-    # consider chmod 600 <file> to prevent access
-    # check for each row if it is present exactly once, irrespetive of the number of sources
-    Google_API_token = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
-    # Authenticate and grab the spreadsheet
-    gc = gspread.service_account(filename=Google_API_token)    
-    # load env for google spreadsheet constants
-    load_dotenv(dotenv_path='../automation/config.env')
-    # "POSSUM Pipeline Validation" sheet (maintained by Erik)
-    ps = gc.open_by_url(os.getenv('POSSUM_PIPELINE_VALIDATION_SHEET'))
-
-    # Select the worksheet for the given band number
-    tile_sheet = ps.worksheet(f'Partial Tile Pipeline - regions - Band {band_number}')
-    tile_data = tile_sheet.get_all_values()
-    column_names = tile_data[0]
-    tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
-
-    sheet_is_ok = True
-    for i, row in enumerate(tile_table):
-        field_name, sbid, tile1, tile2, tile3, tile4, region_type, num_sources, pstatus, vstatus = row
-        mask = (tile_table['field_name'] == field_name) & (tile_table['sbid'] == sbid) & \
-                (tile_table['tile1'] == tile1) & (tile_table['tile2'] == tile2) & \
-                (tile_table['tile3'] == tile3) & (tile_table['tile4'] == tile4) & \
-                (tile_table['type'] == region_type) # & (tile_table['number_sources'] == num_sources)
-        
-        if np.sum(mask) == 1:
-            continue
-        elif np.sum(mask) == 0:
-            print(f"row index={i} not found in google sheet") # shouldnt happpen
-            sheet_is_ok = False
-        else:
-            print(f"Found row index={i} multiple times in Google Sheet. In location (index) {np.where(mask)[0]}")
-            sheet_is_ok = False
-            # raise ValueError(f"Somehow found this row multiple times in Google Sheet, check rows {np.where(mask)[0]}")
-    
-    if sheet_is_ok:
-        print("Google Sheet is OK. No duplicate rows found.")
-    else:
-        print("Google Sheet is NOT OK. Duplicate rows found.")
-
 def extract_date(entry):
     # Remove extra whitespace
     entry = entry.strip()
