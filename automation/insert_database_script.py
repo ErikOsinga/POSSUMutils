@@ -125,6 +125,7 @@ def create_observation_1d_relation_tables(db_conn):
     """
     # 1 table per band since the footprints are different
     db.execute_query(add_column_sql.format('1'), db_conn, None, verbose=True)
+    db.execute_query(add_column_sql.format('2'), db_conn, None, verbose=True)
 
 def insert_observation_1d_data_from_spreadsheet(db_conn):
     """
