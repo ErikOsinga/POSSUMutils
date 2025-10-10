@@ -1,3 +1,4 @@
+astropy
 gspread
 pandas
 psycopg2
