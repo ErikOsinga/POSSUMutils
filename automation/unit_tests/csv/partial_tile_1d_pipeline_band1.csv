@@ -1,0 +1,36 @@
+observation,sbid,tile1,tile2,tile3,tile4,type,number_sources,1d_pipeline
+EMU_1748-64,54926,11726,11727,11791,11792,corner - crosses projection boundary!,, 
+EMU_1748-64,54926,11791,11792,11852,11853,corner - crosses projection boundary!,1000, 
+EMU_1759-69,46955,11726,11791,,,edge - crosses projection boundary!,, 
+EMU_1759-69,46955,11726,11727,,,edge - crosses projection boundary!,999, 
+EMU_1759-69,46955,11791,11852,,,edge - crosses projection boundary!,982, 
+EMU_1759-69,46955,11726,11727,11791,11792,corner - crosses projection boundary!,12, 
+EMU_1759-69,46955,11791,11792,11852,11853,corner - crosses projection boundary!,24, 
+EMU_1701-64,46980,11791,11852,,,edge - crosses projection boundary!,, 
+EMU_1136-64,46948,11487,11565,,,edge - crosses projection boundary!,123, 
+EMU_1136-64,46948,11487,11488,,,edge - crosses projection boundary!,45, 
+EMU_1136-62,46946,11490,11491,11492,11493,corner - crosses projection boundary!,77, 
+EMU_1136-62,46946,11491,11492,11493,11494,corner,640,Completed
+EMU_1136-61,46950,11500,,,,center,12,Completed
+EMU_1136-61,46950,11500,11501,11502,11503,corner,55,Completed
+EMU_1136-60,52000,12345,,,,center,20,Completed
+EMU_0626-09B,61077,6754,,,,center,26,Completed
+EMU_0626-09B,61077,6755,,,,center,59,Completed
+EMU_0626-09B,61077,6881,,,,center,316,Completed
+EMU_0626-09B,61077,6882,,,,center,838,Completed
+EMU_0626-09B,61077,6883,,,,center,411,Completed
+EMU_0626-09B,61077,7009,,,,center,27,Completed
+EMU_0626-09B,61077,7010,,,,center,772,Completed
+EMU_0626-09B,61077,7011,,,,center,1713,Completed
+EMU_0626-09B,61077,7137,,,,center,1133,Completed
+EMU_0626-09B,61077,7138,,,,center,1953,Completed
+EMU_0626-09B,61077,7139,,,,center,633,Completed
+EMU_0626-09B,61077,7265,,,,center,69,Completed
+EMU_0626-09B,61077,7266,,,,center,1799,Completed
+EMU_0626-09B,61077,7267,,,,center,1806,Completed
+EMU_0626-09B,61077,7393,,,,center,474,Completed
+EMU_0626-09B,61077,7394,,,,center,573,Completed
+EMU_0626-09B,61077,7395,,,,center,55,Completed
+EMU_0626-09B,61077,6754,6881,,,edge,6,Completed
+EMU_0626-09B,61077,6754,6882,,,edge,4,Completed
+EMU_0626-09B,61077,6755,6882,,,edge,17,Completed

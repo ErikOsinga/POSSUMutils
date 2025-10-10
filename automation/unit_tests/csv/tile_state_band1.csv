@@ -1,0 +1,13 @@
+tile_id,3d_pipeline,3d_pipeline_val,3d_pipeline_ingest
+321,2025-04-16 22:39:42,Good,Ingested
+421,,Good,IngestFailed
+532,,Good,IngestRunning
+1234,,Good,
+1235,,Good,
+1236,,WaitingForValidation,
+1237,,WaitingForValidation,
+1238,,Bad,
+1239,,,
+1240,Running,,
+1241,,Failed,
+1242,,Good,IngestRunning
