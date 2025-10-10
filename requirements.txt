@@ -1,2 +1,3 @@
 gspread
 psycopg2
+python-dotenv
