@@ -29,10 +29,9 @@ class CheckStatusAndLaunch1DPipelinePartialTiles(PartialTile1DBaseTest):
         regardless of tile number
         """
         field = 'EMU_1748-64'
-        sbid = 54926
         band_number = 1
         status = "Running"
-        row_num = db_query.update_1d_pipeline_table(field, sbid, band_number, status, '1d_pipeline_validation', self.conn)
+        row_num = db_query.update_1d_pipeline_table(field, band_number, status, '1d_pipeline_validation', self.conn)
         assert row_num == 1
         # Make sure the update works
         results = db_query.get_1d_pipeline_validation_status(field, band_number, self.conn)

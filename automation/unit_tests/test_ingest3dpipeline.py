@@ -37,4 +37,4 @@ class Ingest3DPipelineTest(_3DPipelineBaseTest):
 
         # Verify it's successful
         status = db_query.get_3d_tile_data(tilenumber, '1', self.conn)[0][4]
-        assert status == timestamp #3d_pipeline
+        assert status.date().isoformat() == timestamp #3d_pipeline

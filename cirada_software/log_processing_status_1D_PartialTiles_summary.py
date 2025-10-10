@@ -7,9 +7,7 @@ import numpy as np
 import astropy.table as at
 import ast
 from time import sleep
-import random
 from prefect import flow, task
-from gspread import Cell
 from automation import database_queries as db
 from possum_pipeline_control import util
 
@@ -59,7 +57,7 @@ def update_validation_spreadsheet(field_ID, SBid, band, status, conn):
 
     band_number = util.get_band_number(band)
     full_field_name = util.get_full_field_name(field_ID, band)
-    rows_to_update = db.update_1d_pipeline_table(full_field_name, SBid, band_number, status, "1d_pipeline_validation", conn)
+    rows_to_update = db.update_1d_pipeline_table(full_field_name, band_number, status, "1d_pipeline_validation", conn)
     if rows_to_update == 0:
         print(f"No rows found for field {full_field_name} and SBID {SBid}")
         return False
@@ -110,7 +108,7 @@ def update_status_spreadsheet(field_ID, SBid, band, Google_API_token, status, st
         for row_index in rows_to_update:
             sleep(2) # 60 writes per minute only
             tile_sheet.update(range_name=f'{col_letter}{row_index}', values=[[status]])
-            db.update_1d_pipeline_table(full_field_name, SBid, band_number, status, "single_sb_1d_pipeline", conn)
+            db.update_1d_pipeline_table(full_field_name, band_number, status, "single_sb_1d_pipeline", conn)
         conn.close()
         print(f"Updated all {len(rows_to_update)} rows for field {full_field_name} and SBID {SBid} to status '{status}' in '{status_column}' column.")
     else:

@@ -23,7 +23,10 @@ import astroquery.cadc as cadc
 import datetime
 from time import sleep
 # important to grab _run() because run() is wrapped in sys.exit()
-from possum2caom2.composable import _run as possum_run # type: ignore
+try:
+    from possum2caom2.composable import _run as possum_run # type: ignore
+except ImportError:
+    possum_run = None
 from automation import database_queries as db
 from possum_pipeline_control import util
 
@@ -184,7 +187,7 @@ def check_CADC(tilenumber, band):
     return True, date
 
 @task
-def update_status_spreadsheet(tile_number, band, Google_API_token, status):
+def update_status_spreadsheet(tile_number, band, Google_API_token, date):
     """
     Update the status of the specified tile in the Google Sheet.
     
@@ -192,7 +195,7 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
     tile_number (str): The tile number to update.
     band (str): The band of the tile.
     Google_API_token (str): The path to the Google API token JSON file.
-    status (str): The status to set in the '3d_pipeline' column.
+    date (str): The timestamp to set in the '3d_pipeline' column.
 
     ## Note the STATUS spreadsheet only has the '3d_pipeline' column. 
     ## the VALIDATION spreadsheet has more details.
@@ -224,11 +227,11 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
         # Update the status in the '3d_pipeline' column
         col_letter = gspread.utils.rowcol_to_a1(1, column_names.index('3d_pipeline') + 1)[0]
         # as of >v6.0.0 the .update function requires a list of lists
-        tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
-        print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
+        tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[date]])
+        print(f"Updated tile {tile_number} status to {date} in '3d_pipeline' column.")
         # Also update the DB
         conn = db.get_database_connection(test=False)
-        db.update_3d_pipeline_table(tile_number, band_number, status, "3d_pipeline", conn)
+        db.update_3d_pipeline_table(tile_number, band_number, date, "3d_pipeline", conn)
         conn.close()
     else:
         print(f"Tile {tile_number} not found in the sheet.")

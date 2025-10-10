@@ -15,10 +15,10 @@ class LogProcessingStatus3DPipelineTest(_3DPipelineBaseTest):
         tile_number = 1240
         band_number = "1"
         status = "WaitingForValidation"
-        row_num = db_query.update_3d_pipeline_table(tile_number, band_number, status, "3d_pipeline", self.conn)
+        row_num = db_query.update_3d_pipeline_table(tile_number, band_number, status, "3d_pipeline_val", self.conn)
         assert row_num == 1
         result = db_query.get_3d_tile_data(tile_number, band_number, self.conn)
-        assert result[0][4] == "WaitingForValidation" #3d_pipeline
+        assert result[0][1] == "WaitingForValidation" #3d_pipeline
 
     def test_update_validation_spreadsheet(self):
         """
