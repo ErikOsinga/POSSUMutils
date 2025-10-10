@@ -62,7 +62,7 @@ def get_results_per_field_sbid_skip_edges(band_number, conn, verbose=False):
 
     # Group the table by 'field_name' and 'sbid'
     for row in rows:
-        results[(row[0], row[1])] = row[2]
+        results[(row[0], util.get_sbid_num(row[1]))] = row[2]
         if verbose:
             status = "all conditions met" if row[2] is True else "conditions not met"
             print(f"Field '{row[0]}', SBID '{row[1]}': after filtering edges, conditions are {status}.")
@@ -81,7 +81,7 @@ def get_results_per_field_sbid(conn, band_number='1', verbose=False):
     results = db.get_observations_with_complete_partial_tiles(band_number, conn)
     field_sbid_dict = {}
     for row in results:
-        field_sbid_dict[(row[0], row[1])] = row[2]
+        field_sbid_dict[(row[0], util.get_sbid_num(row[1]))] = row[2]
         if verbose:
             status = "all conditions met" if row[2] is True else "conditions not met"
             print(f"""Field '{row[0]}', SBID '{row[1]}' has 1d_pipeline_validation=''
@@ -122,7 +122,7 @@ def get_tiles_for_pipeline_run(db_conn, band_number):
     if rows:
         for row in rows:
             fields_to_run.append(remove_prefix(row[0]))
-            SBids_to_run.append(row[1])
+            SBids_to_run.append(util.get_sbid_num(row[1]))
             tile1_to_run.append(str(row[2]) if row[2] else '')
             tile2_to_run.append(str(row[3]) if row[3] else '')
             tile3_to_run.append(str(row[4]) if row[4] else '')
@@ -264,12 +264,12 @@ def update_validation_status(field_name, sbid, band_number, status):
     """
     print("Updating partial tile status in the POSSUM pipeline validation sheet.")
     conn = db.get_database_connection(test=False)
-    row_num = db.update_1d_pipeline_table(field_name, sbid, band_number, "Running", "1d_pipeline_validation", conn)
+    row_num = db.update_1d_pipeline_table(field_name, band_number, "Running", "1d_pipeline_validation", conn)
     conn.close()
 
     if row_num > 0:
         print(f"Updated all {row_num} rows for field {field_name} and SBID {sbid} "
-              f"to status '{status}' in observation_1d_pipeline_band{band_number}.1d_pipeline_validation' column.")
+              f"to status '{status}' in observation_state_band{band_number}.1d_pipeline_validation' column.")
     else:
         print(f"No rows found for field {field_name} and SBID {sbid}.")
     return row_num

@@ -14,3 +14,11 @@ def get_full_field_name(field_ID, band):
     """
     fieldname = "EMU_" if band == '943MHz' else 'WALLABY_'  # TODO: verify WALLABY_ fieldname
     return f"{fieldname}{field_ID}"
+
+def get_sbid_num(sbid):
+    """
+    Remove ASKAP- prefix from sbid if present
+    """
+    if sbid.startswith('ASKAP-'):
+        return sbid.replace('ASKAP-', '')
+    return sbid

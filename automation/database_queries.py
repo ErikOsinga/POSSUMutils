@@ -93,18 +93,17 @@ def execute_query(query, database_connection, params=None, verbose=True):
 
 def update_3d_pipeline_table(tile_number, band_number, status, column_name, conn):
     """
-    Update the 'tile_3d_pipeline_band{band_number}' table with given column name.
+    Update the 'tile_state_band{band_number}' table with given column name.
     Possible values for '3d_pipeline_ingest':
         - Ingested
         - IngestFailed
         _ IngestRunning
     Possible values for '3d_pipeline_val':
+        - Running (Job has been submitted and is currently running)
+        - Failed (Job failed to run)
         - WaitingForValidation (Job has finished running successfully, waiting for human validation)
         - Good/Bad (Currently has to be manually set after human validation)
     Possible values for '3d_pipeline':
-        - Running (Job has been submitted and is currently running)
-        - WaitingForValidation (Job has finished running successfully, waiting for human validation)
-        - Failed (Job failed to run)     
         - A timestamp when the job has completed.   
 
     Args:
@@ -119,31 +118,30 @@ def update_3d_pipeline_table(tile_number, band_number, status, column_name, conn
     validate_band_number(band_number)
     print(f"Updating POSSUM tile database table for band{band_number} with {column_name} to {status}")
     query = f"""
-        UPDATE possum.tile_3d_pipeline_band{band_number}
+        UPDATE possum.tile_state_band{band_number}
         SET "{column_name}" = '{status}'
         WHERE tile_id = '{tile_number}';
     """
     return execute_update_query(query, conn)
 
-def update_1d_pipeline_table(field_name, sbid, band_number, status, column_name, conn):
+def update_1d_pipeline_table(field_name, band_number, status, column_name, conn):
     """
     Update the single_1d_pipeline_validation{band_number} column in the observation table.
     This is to the equivalent to POSSUM pipeline status sheet: Survey Fields - Band {band_number}
 
     Args:
     field_name       : observation.field_name
-    sbid             : observation.sbid
     band_number      : '1' or '2'
     status (str): The status to set in the 'status_column' column.
     column_name.     : The column to set
 
     """
     validate_band_number(band_number)
-    print(f"Updating POSSUM observation_1d_pipeline_band{band_number} table with {column_name} status")
+    print(f"Updating POSSUM observation_state_band{band_number} table with {column_name} status")
     query = f"""
-        INSERT INTO possum.observation_1d_pipeline_band{band_number}
-        (name, sbid, "{column_name}")
-        VALUES ('{field_name}', '{sbid}', '{status}')
+        INSERT INTO possum.observation_state_band{band_number}
+        (name, "{column_name}")
+        VALUES ('{field_name}', '{status}')
         ON CONFLICT (name) DO UPDATE
         SET "{column_name}" = '{status}';
     """
@@ -160,7 +158,7 @@ def find_boundary_issues(sbid, observation, band_number, conn):
         SELECT EXISTS (
             SELECT 1
             FROM possum.partial_tile_1d_pipeline_band{band_number}
-            WHERE sbid = '{sbid}' AND observation = '{observation}' AND LOWER(type) like '%%crosses projection boundary%%'
+            WHERE observation = '{observation}' AND LOWER(type) like '%%crosses projection boundary%%'
         ) AS match_found;
     """
     results = execute_query(query, conn)
@@ -183,7 +181,7 @@ def get_tiles_for_pipeline_run(conn, band_number):
     Get a list of tile numbers that should be ready to be processed by the 3D pipeline
 
     In the database, this is when:
-    observation.cube_state = 'COMPLETED' and tile.3d_pipeline = [null]
+    observation.cube_state = 'COMPLETED' and tile.3d_pipeline_val = [null]
     In POSSUM pipeline status sheet, this is the equivalent of:
     'aus_src' column is not empty and '3d_pipeline' column is empty for the given band number.
 
@@ -197,11 +195,11 @@ def get_tiles_for_pipeline_run(conn, band_number):
     print(f"Fetching tiles ready for 3D pipeline run for band {band_number} from the database.")
     query = f"""
         SELECT DISTINCT tile_id
-        FROM possum.tile_3d_pipeline_band{band_number} tile_3d
+        FROM possum.tile_state_band{band_number} tile_3d
         INNER JOIN possum.associated_tile ON associated_tile.tile = tile_3d.tile_id
         INNER JOIN possum.observation ON observation.name = associated_tile.name
         WHERE observation.cube_state = 'COMPLETED'
-        AND (tile_3d."3d_pipeline" IS NULL OR TRIM(tile_3d."3d_pipeline") = '')
+        AND (tile_3d."3d_pipeline_val" IS NULL OR TRIM(tile_3d."3d_pipeline_val") = '')
         ORDER BY tile_id
     """
     return execute_query(query, conn)
@@ -209,8 +207,8 @@ def get_tiles_for_pipeline_run(conn, band_number):
 def get_tiles_for_ingest(band_number, conn):
     """
     Get a list of 3D pipeline tile numbers that should be ready to be ingested.
-    i.e. tile_3d_pipeline_band1.'3d_pipeline_val' = 'Good' and
-    tile_3d_pipeline_band1.'3d_pipeline_ingest' is NULL
+    i.e. tile_state_band1.'3d_pipeline_val' = 'Good' and
+    tile_state_band1.'3d_pipeline_ingest' is NULL
 
     Args:
     band_number (int): The band number (1 or 2) to check.
@@ -222,7 +220,7 @@ def get_tiles_for_ingest(band_number, conn):
     print(f"Fetching tiles ready for 3D pipeline run for band {band_number} from the database.")
     query = f"""
         SELECT DISTINCT tile_id
-        FROM possum.tile_3d_pipeline_band{band_number} tile_3d
+        FROM possum.tile_state_band{band_number} tile_3d
         WHERE LOWER(tile_3d."3d_pipeline_val") = 'good' AND
         (tile_3d."3d_pipeline_ingest" IS NULL OR
         TRIM(tile_3d."3d_pipeline_ingest") = '')
@@ -282,11 +280,13 @@ def get_partial_tiles_for_1d_pipeline_run(band_number, conn):
     print(f"""Fetching partial tiles ready for 1D pipeline run for band {band_number}
           from the database.""")
     query = f"""
-        SELECT pt.observation, pt.sbid, pt.tile1, pt.tile2, pt.tile3, pt.tile4
-        FROM possum.partial_tile_1d_pipeline_band{band_number} pt
-        WHERE pt.sbid IS NOT NULL AND TRIM(pt.sbid) != ''
+        SELECT pt.observation, ob.sbid, pt.tile1, pt.tile2, pt.tile3, pt.tile4
+        FROM possum.partial_tile_1d_pipeline_band{band_number} pt,
+        possum.observation ob
+        WHERE ob.sbid IS NOT NULL AND TRIM(ob.sbid) != ''
+          AND ob.name = pt.observation
           AND pt.number_sources IS NOT NULL
-          AND (pt."1d_pipeline" IS NULL or TRIM(pt."1d_pipeline") = '');
+          AND (pt."1d_pipeline" IS NULL or TRIM(pt."1d_pipeline") = '');          
     """
     return execute_query(query, conn)
 
@@ -298,7 +298,7 @@ def get_observations_with_complete_partial_tiles(band_number, conn):
     have '1d_pipeline' marked as "Completed" and '1d_pipeline_validation' for the observation is NULL
     """
     sql = f"""
-        SELECT pt.observation, pt.sbid,
+        SELECT pt.observation, ob1.sbid,
         CASE
             WHEN EXISTS (
                 SELECT 1
@@ -311,9 +311,9 @@ def get_observations_with_complete_partial_tiles(band_number, conn):
             ELSE
                 false
         END AS all_complete
-        FROM possum.partial_tile_1d_pipeline_band{band_number} pt, possum.observation_1d_pipeline_band{band_number} ob
-        WHERE ob.name = pt.observation
-        GROUP BY pt.observation, pt.sbid, ob."1d_pipeline_validation", pt."1d_pipeline";
+        FROM possum.partial_tile_1d_pipeline_band{band_number} pt, possum.observation_state_band{band_number} ob, possum.observation as ob1
+        WHERE ob.name = pt.observation and ob1.name = ob.name
+        GROUP BY pt.observation, ob1.sbid, ob."1d_pipeline_validation", pt."1d_pipeline";
     """
     return execute_query(sql, conn)
 
@@ -327,12 +327,12 @@ def get_observations_non_edge_rows(band_number, conn):
     disregarding those that have "crosses projection boundary" in its type.
     """
     sql = f"""
-        SELECT pt.observation, pt.sbid,
+        SELECT pt.observation, ob.sbid,
             CASE
                WHEN EXISTS (
                    SELECT 1
                    FROM possum.partial_tile_1d_pipeline_band{band_number} pt_inner
-                   JOIN possum.observation_1d_pipeline_band{band_number} ob_inner
+                   JOIN possum.observation_state_band{band_number} ob_inner
                        ON ob_inner.name = pt_inner.observation
                    WHERE LOWER(pt_inner.type) NOT LIKE '%crosses projection boundary%'
                    AND LOWER(pt_inner."1d_pipeline") = 'completed'
@@ -342,7 +342,8 @@ def get_observations_non_edge_rows(band_number, conn):
                THEN true
                ELSE false
            END AS all_complete
-        FROM possum.partial_tile_1d_pipeline_band{band_number} pt;
+        FROM possum.partial_tile_1d_pipeline_band{band_number} pt, possum.observation ob
+        WHERE ob.name = pt.observation
     """
     return execute_query(sql, conn)
 
@@ -356,7 +357,7 @@ def get_3d_tile_data(tile_id, band_number, conn):
     - band_number: 1 or 2
     """
     sql = f"""SELECT tile_id, "3d_pipeline_val", "3d_val_link", "3d_pipeline_ingest", "3d_pipeline"
-              from possum.tile_3d_pipeline_band{band_number} WHERE tile_id = {tile_id}"""
+              from possum.tile_state_band{band_number} WHERE tile_id = {tile_id}"""
     return execute_query(sql, conn)
 
 def get_1d_pipeline_validation_status(field_name, band_number, conn):
@@ -364,7 +365,7 @@ def get_1d_pipeline_validation_status(field_name, band_number, conn):
     Handy method to get 1d_pipeline_validation status (useful for tests):
     """
     sql = f"""
-        SELECT "1d_pipeline_validation" FROM possum.observation_1d_pipeline_band{band_number}
+        SELECT "1d_pipeline_validation" FROM possum.observation_state_band{band_number}
         WHERE name = '{field_name}';
         """
     return execute_query(sql, conn)
@@ -374,7 +375,7 @@ def get_single_sb_1d_pipeline_status(field_name, band_number, conn):
     Handy method to get single_sb_1d_pipeline status (useful for tests):
     """
     sql = f"""
-        SELECT single_sb_1d_pipeline FROM possum.observation_1d_pipeline_band{band_number}
+        SELECT single_sb_1d_pipeline FROM possum.observation_state_band{band_number}
         WHERE name = '{field_name}';
         """
     return execute_query(sql, conn)

@@ -11,16 +11,16 @@ class CheckStatusAndLaunch3DPipelinev2Test(_3DPipelineBaseTest):
     def test_update_status(self):
         "Test update_status"
         tile_number = 1239
-        row_num = db_query.update_3d_pipeline_table(tile_number, "1", "Running", "3d_pipeline", self.conn)
+        row_num = db_query.update_3d_pipeline_table(tile_number, "1", "Running", "3d_pipeline_val", self.conn)
         assert row_num == 1
 
         tile_number = '1240'
-        row_num = db_query.update_3d_pipeline_table(tile_number, "1", "Running", "3d_pipeline", self.conn)
+        row_num = db_query.update_3d_pipeline_table(tile_number, "1", "Running", "3d_pipeline_val", self.conn)
         assert row_num == 1
 
         #check that the update works
         results = db_query.get_3d_tile_data('1239', '1', self.conn)
-        assert results[0][4] == 'Running' #3d_pipeline
+        assert results[0][1] == 'Running' #3d_pipeline_val
 
         results = db_query.get_3d_tile_data(1240, '1', self.conn)
-        assert results[0][4] == 'Running' #3d_pipeline
+        assert results[0][1] == 'Running' #3d_pipeline_val
