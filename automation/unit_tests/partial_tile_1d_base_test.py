@@ -12,11 +12,12 @@ class PartialTile1DBaseTest(unittest.TestCase, ABC):
     "Setup the tables for partial_tile 1D pipeline cases"
     def setUp(self):
         self.conn = db_query.get_database_connection(test=True)
-        db.drop_test_schema(self.conn)
-        db.create_test_schema(self.conn)
-        db.create_observation_test_table(self.conn)
-        db.create_observation_state_tables(self.conn)
-        db.create_partial_tile_pipeline_tables(self.conn)
+        queries = []
+        queries.append(db.drop_test_schema())
+        queries.append(db.create_test_schema())
+        queries.append(db.create_observation_test_table())
+        queries.extend(db.create_observation_state_tables())
+        queries.extend(db.create_partial_tile_pipeline_tables())
         # insert partial tile data
         # Columns: observation, sbid, tile1, tile2, tile3, tile4, type, number_sources, 1d_pipeline
         partial_tile_csv = 'automation/unit_tests/csv/partial_tile_1d_pipeline_band1.csv'
@@ -27,7 +28,11 @@ class PartialTile1DBaseTest(unittest.TestCase, ABC):
             next(reader)
             for row in reader:
                 # observation, sbid, tile1, tile2, tile3, tile4, type, number_sources, 1d_pipeline
-                db.insert_row_into_partial_tile_table(row, '1', self.conn)
+                queries.append(db.insert_row_into_partial_tile_table(row, '1'))
+                # execute in one transaction
+        with self.conn:
+            for query in queries:
+                db_query.execute_query(query[0], self.conn, query[1], True)        
         # insert observation data: name, sbid, 1d_pipeline_validation, single_sb_1d_pipeline
         observation_csv = 'automation/unit_tests/csv/observation_state_band1.csv'
         # Open and stream rows
@@ -45,7 +50,12 @@ class PartialTile1DBaseTest(unittest.TestCase, ABC):
 
     def tearDown(self):
         if self.conn:
-            db.drop_test_tables(self.conn)
-            db.drop_test_schema(self.conn)
+            queries = []
+            queries.extend(db.drop_test_tables())
+            queries.append(db.drop_test_schema())
+            # using with statement to auto commit and rollback if there's exception
+            with self.conn:
+                for query in queries:
+                    db_query.execute_query(query[0], self.conn, query[1], True)
             self.conn.close()
             self.conn = None

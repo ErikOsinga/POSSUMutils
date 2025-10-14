@@ -24,7 +24,6 @@ def get_database_parameters(test=False):
     else:
         # Get database connection details from config.env file
         load_dotenv(dotenv_path='automation/config.env')
-
     return {
         'dbname': os.getenv('DATABASE_NAME'),
         'user': os.getenv('DATABASE_USER'),
@@ -53,12 +52,12 @@ def execute_update_query(query, conn, params=None, verbose=True):
                 if params:
                     print(f"With parameters: {params}")
             cursor.execute(query, params)
-            conn.commit()
             rows_affected = cursor.rowcount
             if verbose:
                 print(f"{rows_affected} rows affected.")
     except Exception as e:
         print(f"An error occurred: {e}")
+        raise
     return rows_affected
 
 def execute_query(query, database_connection, params=None, verbose=True):
@@ -75,7 +74,7 @@ def execute_query(query, database_connection, params=None, verbose=True):
     results = []
     try:
         with database_connection.cursor() as cursor:
-            # Execute the query
+        # Execute the query
             if verbose:
                 if params:
                     print(f"Executing database query: {query} with {params}")
@@ -85,10 +84,9 @@ def execute_query(query, database_connection, params=None, verbose=True):
             # Fetch all results
             if cursor.description is not None:
                 results = cursor.fetchall() # select query
-            else:
-                database_connection.commit() # insert, delete, create, alter , update
     except Exception as e:
         print(f"An error occurred: {e}")
+        raise
     return results
 
 def update_3d_pipeline_table(tile_number, band_number, status, column_name, conn):
