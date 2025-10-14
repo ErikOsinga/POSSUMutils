@@ -12,9 +12,13 @@ from automation import database_queries as db_query
 class _3DPipelineBaseTest(unittest.TestCase, ABC):
     def setUp(self):
         self.conn = db_query.get_database_connection(True)
-        db.drop_test_schema(self.conn)
-        db.create_test_schema(self.conn)
-        db.create_tile_state_tables(self.conn)
+        queries = []
+        queries.append(db.drop_test_schema())
+        queries.append(db.create_test_schema())
+        queries.extend(db.create_tile_state_tables())
+        with self.conn:
+            for query in queries:
+                db_query.execute_query(query[0], self.conn, query[1], True)
 
         # Columns: tile_id, 3d_pipeline, 3d_pipeline_val, 3d_pipeline_ingest
         _3d_data = 'automation/unit_tests/csv/tile_state_band1.csv'
@@ -34,6 +38,12 @@ class _3DPipelineBaseTest(unittest.TestCase, ABC):
                 db.insert_3d_pipeline_test_data(row[0], timestamp, _3d_val, row[3], self.conn)
 
     def tearDown(self):
-        db.drop_test_tables(self.conn)
-        db.drop_test_schema(self.conn)
+        sql = []
+        sql.extend(db.drop_test_tables())
+        sql.append(db.drop_test_schema())
+        # using with statement to auto commit and rollback if there's exception
+        with self.conn:
+            for query in sql:
+                db_query.execute_query(query[0], self.conn, query[1], True)
+
         self.conn.close()
