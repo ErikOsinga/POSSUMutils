@@ -52,6 +52,7 @@ def execute_update_query(query, conn, params=None, verbose=True):
                 if params:
                     print(f"With parameters: {params}")
             cursor.execute(query, params)
+            conn.commit()
             rows_affected = cursor.rowcount
             if verbose:
                 print(f"{rows_affected} rows affected.")
@@ -195,8 +196,8 @@ def get_tiles_for_pipeline_run(conn, band_number):
         SELECT DISTINCT tile_id
         FROM possum.tile_state_band{band_number} tile_3d
         INNER JOIN possum.associated_tile ON associated_tile.tile = tile_3d.tile_id
-        INNER JOIN possum.observation ON observation.name = associated_tile.name
-        WHERE observation.cube_state = 'COMPLETED'
+        INNER JOIN possum.observation_state_band{band_number} ob ON ob.name = associated_tile.name
+        WHERE UPPER(ob.cube_state) = 'COMPLETED'
         AND (tile_3d."3d_pipeline_val" IS NULL OR TRIM(tile_3d."3d_pipeline_val") = '')
         ORDER BY tile_id
     """

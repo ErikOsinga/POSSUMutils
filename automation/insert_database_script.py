@@ -392,6 +392,19 @@ def create_observation_test_table():
     """
     return (sql, None)
 
+def create_associated_tile_test_table(conn):
+    """
+    Create possum.associated_tile table for tests
+    """
+    sql = """
+        CREATE TABLE IF NOT EXISTS possum.associated_tile (
+            id BIGSERIAL PRIMARY KEY,
+            name TEXT,
+            tile BIGINT
+        );
+    """
+    db.execute_query(sql, conn, None)
+
 def insert_observation_row(name, sbid, conn):
     """
     Insert a row into possum.observation table for tests
@@ -401,6 +414,27 @@ def insert_observation_row(name, sbid, conn):
         VALUES (%s, %s);
     """
     return db.execute_query(sql, conn, (name, sbid))
+
+def insert_observation_state_data(name, band_number, _1d_val, single_sb, cube_state, conn):
+	"""
+	Insert test data into possum.observation_state_band1 table
+	"""
+	sql = f"""
+		INSERT INTO possum.observation_state_band{band_number}
+		(name, "1d_pipeline_validation", single_sb_1d_pipeline, cube_state)
+		VALUES(%s, %s, %s, %s)
+	"""
+	return db.execute_query(sql, conn, (name, _1d_val, single_sb, cube_state))
+	
+def insert_associated_tile_data(name, tile, conn):
+    """
+    Insert test data into possum.associated_tile table
+    """
+    sql = """
+        INSERT INTO possum.associated_tile (name, tile)
+        VALUES (%s, %s);
+    """
+    return db.execute_query(sql, conn, (name, tile))
 
 def insert_3d_pipeline_test_data(tile_id, _3d_pipeline, val, ingest, conn):
     """

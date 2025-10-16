@@ -15,9 +15,10 @@ class CheckIngest3dPipeline(_3DPipelineBaseTest):
         tiles_to_run = [row['tile_id'] for row in tile_table if ( (row['3d_pipeline_val'] == 'Good') and (row['3d_pipeline_ingest'] == '') )]
         """
         tiles_to_run = check_ingest_3Dpipeline.get_tiles_for_ingest('1', self.conn)
-        assert len(tiles_to_run) == 2
+        assert len(tiles_to_run) == 3
         assert tiles_to_run[0] == 1234
         assert tiles_to_run[1] == 1235
+        assert tiles_to_run[2] == 6755
 
     def test_update_status(self):
         """

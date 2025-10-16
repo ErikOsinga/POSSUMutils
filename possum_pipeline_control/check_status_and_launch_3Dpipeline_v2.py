@@ -139,12 +139,12 @@ def launch_band1_3Dpipeline():
     # on p1
     Google_API_token = os.getenv('POSSUM_STATUS_TOKEN')
     
-    # Check google sheet for band 1 tiles that have been ingested into CADC 
+    # Check database for band 1 tiles that have been ingested into CADC 
     # (and thus available on CANFAR) but not yet processed with 3D pipeline
     conn = db.get_database_connection(test=False)
-    # db.get_tiles_for_pipeline_run has been written for the SQL equivalent
-    # but we don't need to use it yet
-    tile_numbers = get_tiles_for_pipeline_run(band_number=1, Google_API_token=Google_API_token)
+    # We are getting the tiles from the DB instead of the sheet now
+    tile_numbers = db.get_tiles_for_pipeline_run(conn, band_number=1)
+    conn.close()
     canfar_tilenumbers = get_canfar_tiles(band_number=1)
     sleep(1)
 

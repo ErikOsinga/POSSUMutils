@@ -27,15 +27,16 @@ class _3DPipelineBaseTest(unittest.TestCase, ABC):
             reader = csv.reader(csvfile)
             # Skip header
             next(reader)
-            for row in reader:
-                #tile_id, 3d_pipeline, 3d_pipeline_val, 3d_pipeline_ingest
-                timestamp = None
-                if isinstance(row[1], datetime):
-                # the spreadsheet has mixed values (state and timestamp)
-                # we're going to separate them
-                    timestamp = row[1]
-                _3d_val = row[2]
-                db.insert_3d_pipeline_test_data(row[0], timestamp, _3d_val, row[3], self.conn)
+            with self.conn:
+                for row in reader:
+                    #tile_id, 3d_pipeline, 3d_pipeline_val, 3d_pipeline_ingest
+                    timestamp = None
+                    if isinstance(row[1], datetime):
+                    # the spreadsheet has mixed values (state and timestamp)
+                    # we're going to separate them
+                        timestamp = row[1]
+                    _3d_val = row[2]
+                    db.insert_3d_pipeline_test_data(row[0], timestamp, _3d_val, row[3], self.conn)
 
     def tearDown(self):
         sql = []

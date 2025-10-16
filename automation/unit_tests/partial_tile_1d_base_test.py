@@ -34,19 +34,7 @@ class PartialTile1DBaseTest(unittest.TestCase, ABC):
             for query in queries:
                 db_query.execute_query(query[0], self.conn, query[1], True)        
         # insert observation data: name, sbid, 1d_pipeline_validation, single_sb_1d_pipeline
-        observation_csv = 'automation/unit_tests/csv/observation_state_band1.csv'
-        # Open and stream rows
-        with open(observation_csv, newline='', encoding='utf-8') as csvfile:
-            reader = csv.reader(csvfile)
-            # Skip header
-            next(reader)
-            for row in reader:
-                # name, sbid into observation table
-                db.insert_observation_row(row[0], row[1], self.conn)
-                # name, band, 1d_pipeline_validation
-                db_query.update_1d_pipeline_table(row[0], '1', row[2], "1d_pipeline_validation", self.conn)
-                # name, band, single_sb_1d_pipeline
-                db_query.update_1d_pipeline_table(row[0], '1', row[3], "single_sb_1d_pipeline", self.conn)
+        insert_observation_state_csv_data(self.conn)
 
     def tearDown(self):
         if self.conn:
@@ -59,3 +47,21 @@ class PartialTile1DBaseTest(unittest.TestCase, ABC):
                     db_query.execute_query(query[0], self.conn, query[1], True)
             self.conn.close()
             self.conn = None
+
+def insert_observation_state_csv_data(conn):
+    """
+    Insert observation state data from CSV file
+    """
+    observation_state_csv = 'automation/unit_tests/csv/observation_state_band1.csv'
+    # Open and stream rows
+    with conn:
+        with open(observation_state_csv, newline='', encoding='utf-8') as csvfile:
+            reader = csv.reader(csvfile)
+            # Skip header
+            next(reader)
+            for row in reader:
+                # name, sbid into observation table
+                db.insert_observation_row(row[0], row[1], conn)
+                # name, band, 1d_pipeline_validation, single_sb_1d_pipeline, cube_state into observation_state_band1 table
+                db.insert_observation_state_data(row[0], '1', row[2], row[3], row[4], conn)
+ 
