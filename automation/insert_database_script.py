@@ -134,6 +134,7 @@ def create_observation_state_tables():
     add_column_sql = """
         CREATE TABLE IF NOT EXISTS possum.observation_state_band{} (
             name TEXT PRIMARY KEY,
+            sbid CHARACTER VARYING,
             "1d_pipeline_validation" TEXT,
             single_sb_1d_pipeline TEXT,
             comments TEXT,
@@ -142,7 +143,8 @@ def create_observation_state_tables():
             cube_update TIMESTAMP WITHOUT TIME ZONE,
             cube_state TEXT,
             cube_sent BOOLEAN DEFAULT FALSE,
-            mfs_sent BOOLEAN DEFAULT FALSE
+            mfs_sent BOOLEAN DEFAULT FALSE,
+            FOREIGN KEY (sbid) REFERENCES possum.observation(sbid)
         );
     """
     # 1 table per band since the footprints are different
@@ -223,7 +225,7 @@ def create_tile_state_tables():
     for band_number in (1,2):
         sql = f"""
             CREATE TABLE IF NOT EXISTS possum.tile_state_band{band_number} (
-                tile_id BIGSERIAL PRIMARY KEY,
+                tile BIGSERIAL PRIMARY KEY,
                 "3d_pipeline" TIMESTAMP WITHOUT TIME ZONE,
                 "3d_pipeline_val" TEXT,
                 "3d_pipeline_ingest" TEXT,
@@ -250,9 +252,9 @@ def insert_3d_pipeline_data_from_spreadsheet():
         tile_data = tile_sheet.get_all_values()
         sql = f"""
                 INSERT INTO possum.tile_state_band{band_number}
-                (tile_id, "3d_pipeline")
+                (tile, "3d_pipeline")
                 VALUES (%s, %s)
-                ON CONFLICT(tile_id) DO UPDATE
+                ON CONFLICT(tile) DO UPDATE
                 SET "3d_pipeline" = %s;
             """
         query_l.append(sql)
@@ -272,9 +274,9 @@ def insert_3d_pipeline_data_from_spreadsheet():
     # data without 3d_pipeline_val
     sql = f"""
             INSERT INTO possum.tile_state_band{band_number}
-            (tile_id, "3d_val_link", "3d_pipeline_validator", "3d_val_comments", "3d_pipeline_ingest")
+            (tile, "3d_val_link", "3d_pipeline_validator", "3d_val_comments", "3d_pipeline_ingest")
             VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT(tile_id) DO UPDATE SET
+            ON CONFLICT(tile) DO UPDATE SET
             "3d_val_link" = %s,
             "3d_pipeline_validator" = %s,
             "3d_val_comments" = %s,
@@ -284,9 +286,9 @@ def insert_3d_pipeline_data_from_spreadsheet():
     # data with 3d_pipeline_val
     sql = f"""
             INSERT INTO possum.tile_state_band{band_number}
-            (tile_id, "3d_pipeline_val", "3d_val_link", "3d_pipeline_validator", "3d_val_comments", "3d_pipeline_ingest")
+            (tile, "3d_pipeline_val", "3d_val_link", "3d_pipeline_validator", "3d_val_comments", "3d_pipeline_ingest")
             VALUES (%s, %s, %s, %s, %s, %s)
-            ON CONFLICT(tile_id) DO UPDATE SET
+            ON CONFLICT(tile) DO UPDATE SET
             "3d_pipeline_val" = %s,
             "3d_val_link" = %s,
             "3d_pipeline_validator" = %s,
@@ -346,14 +348,14 @@ def upsert_tile_state_columns():
     for band_number in (1,2):
         sql = f"""
             INSERT INTO possum.tile_state_band{band_number} (
-              tile_id,
+              tile,
               cube_sent, mfs_sent,
               cube_state, mfs_state)
             SELECT tile.tile,
               tile.band{band_number}_cube_sent, tile.band{band_number}_mfs_sent,
               tile.band{band_number}_cube_state, tile.band{band_number}_mfs_state
             FROM possum.tile tile
-            ON CONFLICT (tile_id) DO UPDATE
+            ON CONFLICT (tile) DO UPDATE
             SET cube_sent = EXCLUDED.cube_sent,
                 mfs_sent = EXCLUDED.mfs_sent,
                 cube_state = EXCLUDED.cube_state,
@@ -387,7 +389,7 @@ def create_observation_test_table():
     sql = """
         CREATE TABLE IF NOT EXISTS possum.observation (
             name TEXT PRIMARY KEY,
-            sbid CHARACTER VARYING
+            sbid CHARACTER VARYING UNIQUE
         );
     """
     return (sql, None)
@@ -442,7 +444,7 @@ def insert_3d_pipeline_test_data(tile_id, _3d_pipeline, val, ingest, conn):
     """
     sql = """
         INSERT INTO possum.tile_state_band1
-        (tile_id, "3d_pipeline", "3d_pipeline_val", "3d_pipeline_ingest")
+        (tile, "3d_pipeline", "3d_pipeline_val", "3d_pipeline_ingest")
         VALUES(%s, %s, %s, %s)
     """
     return db.execute_query(sql, conn, (tile_id, _3d_pipeline, val, ingest))

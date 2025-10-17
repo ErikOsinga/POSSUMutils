@@ -25,8 +25,9 @@ class CheckStatusAndLaunch3DPipelinev2Test(_3DPipelineBaseTest):
             for row in reader:
                 db.insert_associated_tile_data(row[0], row[1], self.conn)
         # create and populate observation_state_band1 table
-        queries = db.create_observation_state_tables()
+        queries = []
         queries.append(db.create_observation_test_table())
+        queries.extend(db.create_observation_state_tables())
         with self.conn:
             for query in queries:
                 db_query.execute_query(query[0], self.conn, query[1], True)
