@@ -119,7 +119,7 @@ def update_3d_pipeline_table(tile_number, band_number, status, column_name, conn
     query = f"""
         UPDATE possum.tile_state_band{band_number}
         SET "{column_name}" = '{status}'
-        WHERE tile_id = '{tile_number}';
+        WHERE tile = '{tile_number}';
     """
     return execute_update_query(query, conn)
 
@@ -193,13 +193,13 @@ def get_tiles_for_pipeline_run(conn, band_number):
     validate_band_number(band_number)
     print(f"Fetching tiles ready for 3D pipeline run for band {band_number} from the database.")
     query = f"""
-        SELECT DISTINCT tile_id
+        SELECT DISTINCT tile_3d.tile
         FROM possum.tile_state_band{band_number} tile_3d
-        INNER JOIN possum.associated_tile ON associated_tile.tile = tile_3d.tile_id
+        INNER JOIN possum.associated_tile ON associated_tile.tile = tile_3d.tile
         INNER JOIN possum.observation_state_band{band_number} ob ON ob.name = associated_tile.name
         WHERE UPPER(ob.cube_state) = 'COMPLETED'
         AND (tile_3d."3d_pipeline_val" IS NULL OR TRIM(tile_3d."3d_pipeline_val") = '')
-        ORDER BY tile_id
+        ORDER BY tile
     """
     return execute_query(query, conn)
 
@@ -218,12 +218,12 @@ def get_tiles_for_ingest(band_number, conn):
     validate_band_number(band_number)
     print(f"Fetching tiles ready for 3D pipeline run for band {band_number} from the database.")
     query = f"""
-        SELECT DISTINCT tile_id
+        SELECT DISTINCT tile
         FROM possum.tile_state_band{band_number} tile_3d
         WHERE LOWER(tile_3d."3d_pipeline_val") = 'good' AND
         (tile_3d."3d_pipeline_ingest" IS NULL OR
         TRIM(tile_3d."3d_pipeline_ingest") = '')
-        ORDER BY tile_id
+        ORDER BY tile
     """
     results = execute_query(query, conn)
     # flatten tile ids into an array
@@ -355,8 +355,8 @@ def get_3d_tile_data(tile_id, band_number, conn):
     - tile_id: tile number
     - band_number: 1 or 2
     """
-    sql = f"""SELECT tile_id, "3d_pipeline_val", "3d_val_link", "3d_pipeline_ingest", "3d_pipeline"
-              from possum.tile_state_band{band_number} WHERE tile_id = {tile_id}"""
+    sql = f"""SELECT tile, "3d_pipeline_val", "3d_val_link", "3d_pipeline_ingest", "3d_pipeline"
+              from possum.tile_state_band{band_number} WHERE tile = {tile_id}"""
     return execute_query(sql, conn)
 
 def get_1d_pipeline_validation_status(field_name, band_number, conn):
