@@ -328,7 +328,7 @@ def upsert_observation_state_columns():
               obs.cube_state, obs.mfs_state,
               obs.cube_update, obs.mfs_update
             FROM possum.observation obs
-            WHERE obs.band = 1
+            WHERE obs.band = {band_number}
             ON CONFLICT (name) DO UPDATE
             SET cube_sent = EXCLUDED.cube_sent,
                 mfs_sent = EXCLUDED.mfs_sent,
