@@ -1,14 +1,15 @@
 import os
 import argparse
 import glob
+from dotenv import load_dotenv
 import gspread
 import numpy as np
 import astropy.table as at
 import ast
 from time import sleep
-import random
 from prefect import flow, task
-from gspread import Cell
+from automation import database_queries as db
+from possum_pipeline_control import util
 
 """
 Usage: python log_processing_status.py fieldstr sbid tilestr
@@ -40,84 +41,32 @@ def check_pipeline_complete(log_file_path):
     else:
         return "Failed"
 
-def safe_update_cells(sheet, cells, max_retries=5):
-    for attempt in range(max_retries):
-        try:
-            sheet.update_cells(cells)
-            return True
-        except Exception as e:
-            # Check for rate limit error
-            if "429" in str(e):
-                sleep_time = (2 ** attempt) + random.uniform(0, 1)
-                print(f"Rate limit hit; retrying in {sleep_time:.2f} seconds...")
-                sleep(sleep_time)
-            else:
-                raise e
-    return False
-
-def update_validation_spreadsheet(field_ID, SBid, band, Google_API_token, status, status_column):
+def update_validation_spreadsheet(field_ID, SBid, band, status, conn):
     """
     Update the status of the specified tile in the VALIDATION Google Sheet.
-    
+
     Args:
     field_id         : the field id
     SBid             : the SB number
     band (str): The band of the tile.
     Google_API_token (str): The path to the Google API token JSON file.
     status (str): The status to set in the 'status_column' column.
-    status_column: The column to update in the Google Sheet.
 
     """
-    
-    print("Updating POSSUM pipeline validation sheet with summary plot status")
+    print("Updating POSSUM pipeline validation database with summary plot status")
 
-    # Authenticate and grab the spreadsheet
-    gc = gspread.service_account(filename=Google_API_token)
-    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k')
-
-    # Select the worksheet for the given band number
-    band_number = '1' if band == '943MHz' else '2'
-    tile_sheet = ps.worksheet(f'Partial Tile Pipeline - regions - Band {band_number}')
-    tile_data = tile_sheet.get_all_values()
-    column_names = tile_data[0]
-    tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
-
-    # Build field name prefix
-    fieldname = "EMU_" if band == '943MHz' else 'WALLABY_'  # TODO: verify WALLABY_ fieldname
-    full_field_name = f"{fieldname}{field_ID}"
-
-    # Update all rows belonging to field and sbid
-    rows_to_update = [
-        idx + 2  # +2 because gspread index is 1-based and skips the header row
-        for idx, row in enumerate(tile_table)
-        if row['field_name'] == full_field_name and row['sbid'] == str(SBid)
-    ]
-
-    if not rows_to_update:
+    band_number = util.get_band_number(band)
+    full_field_name = util.get_full_field_name(field_ID, band)
+    rows_to_update = db.update_1d_pipeline_table(full_field_name, band_number, status, "1d_pipeline_validation", conn)
+    if rows_to_update == 0:
         print(f"No rows found for field {full_field_name} and SBID {SBid}")
         return False
-    
-    # Determine the column letter of the status column.
-    # col_letter = gspread.utils.rowcol_to_a1(1, column_names.index(status_column) + 1)[0]
-    
-    # Determine the index (1-based) for the column to update
-    col_index = column_names.index(status_column) + 1
-    
-    # Prepare a list of cell updates.
-    cells = [Cell(r, col_index, status) for r in rows_to_update]
-
-    # Check if any row has "crosses projection boundary" in the type column
-    boundary_issue = False
-    for row_index in rows_to_update:
-        # Check for the projection boundary issue
-        if "crosses projection boundary" in tile_table['type'][row_index - 2].lower():
-            boundary_issue = True
-        
-    # Update the cells in 1 go. # Use safe_update_cells to attempt the batch update with retries.
-    if safe_update_cells(tile_sheet, cells):
-        print(f"Updated all {len(rows_to_update)} rows for field {full_field_name} and SBID {SBid} to status '{status}' in '{status_column}' column.")
+    elif rows_to_update > 0:
+        print(f"Updated all {rows_to_update} rows for field {full_field_name} and SBID {SBid} to status '{status}' in '1d_pipeline_validation' column.")
     else:
-        print("Failed to update cells after multiple retries.")
+        print("Failed to update the database.")
+    # Check if there are boundary issues for this field and SBID
+    boundary_issue = db.find_boundary_issues(SBid, full_field_name, band_number, conn)
 
     return boundary_issue
 
@@ -136,18 +85,15 @@ def update_status_spreadsheet(field_ID, SBid, band, Google_API_token, status, st
 
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
-    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0')
+    ps = gc.open_by_url(os.getenv('POSSUM_STATUS_SHEET'))
     
     # Select the worksheet for the given band number
-    band_number = '1' if band == '943MHz' else '2'
+    band_number = util.get_band_number(band)
     tile_sheet = ps.worksheet(f'Survey Fields - Band {band_number}')
     tile_data = tile_sheet.get_all_values()
     column_names = tile_data[0]
     tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
-
-    # Build field name prefix
-    fieldname = "EMU_" if band == '943MHz' else 'WALLABY_'  # TODO: verify WALLABY_ fieldname
-    full_field_name = f"{fieldname}{field_ID}"
+    full_field_name = util.get_full_field_name(field_ID, band)
 
     # Update all rows belonging to field and sbid
     rows_to_update = [
@@ -158,9 +104,12 @@ def update_status_spreadsheet(field_ID, SBid, band, Google_API_token, status, st
     if rows_to_update:
         print(f"Updating POSSUM Status Monitor with 1D pipeline status for field {full_field_name} and SBID {SBid}")
         col_letter = gspread.utils.rowcol_to_a1(1, column_names.index(status_column) + 1)[0]
+        conn = db.get_database_connection(test=False)
         for row_index in rows_to_update:
             sleep(2) # 60 writes per minute only
             tile_sheet.update(range_name=f'{col_letter}{row_index}', values=[[status]])
+            db.update_1d_pipeline_table(full_field_name, band_number, status, "single_sb_1d_pipeline", conn)
+        conn.close()
         print(f"Updated all {len(rows_to_update)} rows for field {full_field_name} and SBID {SBid} to status '{status}' in '{status_column}' column.")
     else:
         print(f"No rows found for field {full_field_name} and SBID {SBid}.")
@@ -219,6 +168,8 @@ def main(args):
     # Find the POSSUM pipeline log file for the given tilenumber
     log_files = sorted(glob.glob(f"{basedir}/*pipeline_config*_summary.log"))
 
+    # Load constants for Google spreadsheets
+    load_dotenv(dotenv_path='../automation/config.env')
     if len(log_files) > 1:
         log_file_path = log_files[-1]
 
@@ -240,15 +191,16 @@ def main(args):
 
     print(f"field {field_ID} sbid {SB_num} summary plot status: {status}, band: {band}")
 
-    # Update the POSSUM Validation spreadsheet
-    Google_API_token = "/arc/home/ErikOsinga/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
+    # Update the POSSUM Validation database table
     t1 = task(update_validation_spreadsheet, name="update_validation_spreadsheet")
     # execute tasks serially such that logging is preserved (instead of .submit)
-    has_boundary_issue = t1(field_ID, SB_num, band, Google_API_token, status, '1d_pipeline_validation')
+    conn = db.get_database_connection(test=False)
+    has_boundary_issue = t1(field_ID, SB_num, band, status, conn)
+    conn.close()
 
     if status == "Completed":
         # Update the POSSUM Pipeline Status spreadsheet as well. A complete field has been processed!
-        Google_API_token = "/arc/home/ErikOsinga/.ssh/psm_gspread_token.json"
+        Google_API_token = os.getenv('POSSUM_STATUS_TOKEN')
         # put the status as PartialTiles - today's date (e.g. PartialTiles - 2025-03-22)
         status_to_put = f"PartialTiles - {np.datetime64('today', 'D')}"
 
