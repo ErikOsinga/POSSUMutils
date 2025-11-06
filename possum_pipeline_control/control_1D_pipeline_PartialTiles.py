@@ -65,9 +65,9 @@ def run_script_intermittently(script_paths, interval, max_runs=None, max_pending
                     print(f"Running script: {script_path}")
                     cmd_list = ["python", script_path]
                     if args.psm_api_token is not None:
-                        cmd_list += [f'--psm_api_token {args.psm_api_token}']
+                        cmd_list += ["--psm_api_token", args.psm_api_token]
                     if args.psm_val_api_token is not None:
-                        cmd_list += [f'--psm_val_api_token {args.psm_val_api_token}']
+                        cmd_list += ["--psm_val_api_token", args.psm_val_api_token]
 
                     subprocess.run(cmd_list, check=True)
             else:
