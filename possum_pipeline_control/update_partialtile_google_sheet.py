@@ -408,16 +408,16 @@ if __name__ == "__main__":
     Google_API_token_psmval = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
 
     parser = argparse.ArgumentParser(description="Update Partial Tile Google Sheet")
-    parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
+    # parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
     parser.add_argument("--psm_api_token", type=str, default=Google_API_token, help="Path to POSSUM status sheet Google API token JSON file")
     parser.add_argument("--psm_val_api_token", type=str, default=Google_API_token_psmval, help="Path to POSSUM validation sheet sheet Google API token JSON file")
     
     args = parser.parse_args()
-    band = args.band
+    band = "943MHz" # hardcode for now
+    # band = args.band
     Google_API_token = args.psm_api_token
     Google_API_token_psmval = args.psm_val_api_token
     
-    band = "943MHz" # hardcode for now
 
     ready_table, full_table = get_ready_fields(band)
 
