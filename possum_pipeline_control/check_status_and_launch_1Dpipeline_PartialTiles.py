@@ -21,7 +21,7 @@ https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD
 Updates the POSSUM tile status (google sheet) to "running" if 1D pipeline is submitted.
 
 
-A 1D pipeline run can be started if on the sheet called "Partial Tile Pipeline - [centers/edges] - Band [number]":
+A 1D pipeline run can be started if on the sheet called "Partial Tile Pipeline - regions - Band [number]":
 
 1. the "SBID" column is not empty (indicating it has been observed), and
 2. the "number_sources" column is not empty (indicating the sourcelist has been created)
@@ -472,10 +472,10 @@ def launch_band1_1Dpipeline():
             # Launch the first field_ID that has a sourcelist (assumes this script will be called many times)
             for i in range(len(field_IDs)):
                 field_ID = field_IDs[i]
-                t1 = tile1[i]
-                t2 = tile2[i]
-                t3 = tile3[i]
-                t4 = tile4[i]
+                t1 = str(tile1[i])
+                t2 = str(tile2[i])
+                t3 = str(tile3[i])
+                t4 = str(tile4[i])
                 tilenumbers = [t1, t2, t3, t4] # up to four tilenumbers, or less with '' (empty strings)
                 SBid = SBids[i]
                 if field_ID not in fields_on_both:
