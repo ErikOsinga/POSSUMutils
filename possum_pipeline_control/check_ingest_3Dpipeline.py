@@ -1,4 +1,5 @@
 from vos import Client
+import argparse
 import gspread
 import astropy.table as at
 import numpy as np
@@ -154,14 +155,11 @@ def update_status(tile_number, band, Google_API_token, status):
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 
-def ingest_3Dpipeline(band_number=1):
+def ingest_3Dpipeline(band_number=1, Google_API_token=None):
     if band_number == 1:
         band = "943MHz"
     elif band_number == 2:
         band = "1367MHz"
-
-    # on p1, API token for POSSUM Pipeline Validation sheet
-    Google_API_token = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
 
     # Check google Validation sheet for band 1 tiles that have been processed AND validated
     tile_numbers = get_tiles_for_ingest(band_number=band_number, Google_API_token=Google_API_token)
@@ -201,9 +199,16 @@ def ingest_3Dpipeline(band_number=1):
         print("Found no tiles ready to be processed.")
 
 if __name__ == "__main__":
+    # on p1, API token for POSSUM Pipeline Validation sheet
+    Google_API_token = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
+
+    parser = argparse.ArgumentParser(description="Checks POSSUM validation status ('POSSUM Pipeline validation' google sheet) if 3D pipeline outputs can be ingested.")
+    parser.add_argument("--psm_val_api_token", type=str, default=Google_API_token, help="Path to POSSUM validation sheet Google API token JSON file")
+    args = parser.parse_args()
+
     # Band number 1 (943MHz) or 2 ("1367MHz")
     band_number = 1
 
 
     ## Assumes this script is called by run_3D_pipeline_intermittently.py
-    ingest_3Dpipeline(band_number=band_number)
+    ingest_3Dpipeline(band_number=band_number, Google_API_token=args.psm_val_api_token)

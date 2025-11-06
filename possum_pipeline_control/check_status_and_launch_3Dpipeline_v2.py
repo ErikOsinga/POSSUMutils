@@ -1,5 +1,6 @@
 from vos import Client
 import subprocess
+import argparse
 import gspread
 import astropy.table as at
 import numpy as np
@@ -126,10 +127,8 @@ def update_status(tile_number, band, Google_API_token, status):
         print(f"Tile {tile_number} not found in the sheet.")
 
 # Update the launch_band1_3Dpipeline function to pass the correct arguments
-def launch_band1_3Dpipeline():
+def launch_band1_3Dpipeline(Google_API_token):
     band = "943MHz"
-    # on p1
-    Google_API_token = "/home/erik/.ssh/psm_gspread_token.json"
     
     # Check google sheet for band 1 tiles that have been ingested into CADC 
     # (and thus available on CANFAR) but not yet processed with 3D pipeline
@@ -168,4 +167,15 @@ def launch_band1_3Dpipeline():
         print("Found no tiles ready to be processed.")
 
 if __name__ == "__main__":
-    launch_band1_3Dpipeline()
+    # on p1
+    Google_API_token = "/home/erik/.ssh/psm_gspread_token.json"
+
+    parser = argparse.ArgumentParser(description="Check status and launch 3D pipeline")
+    parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
+    parser.add_argument("--psm_api_token", type=str, default=Google_API_token, help="Path to POSSUM status sheet Google API token JSON file")
+    
+    args = parser.parse_args()
+
+    Google_API_token = args.psm_api_token
+
+    launch_band1_3Dpipeline(Google_API_token)

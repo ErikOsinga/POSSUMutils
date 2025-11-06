@@ -173,13 +173,24 @@ def update_validation_spreadsheet(tile_number, band, Google_API_token, status):
 
 
 if __name__ == "__main__":
+    # POSSUM Pipeline Status spreadsheet default loc on p1
+    Google_API_token = "/home/erik/.ssh/psm_gspread_token.json"
+    # on p1, token for accessing Erik's google sheets 
+    Google_API_token_psmval = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
+
     parser = argparse.ArgumentParser(description="Check pipeline status and update CSV file")
     parser.add_argument("tilenumber", type=int, help="The tile number to check")
     parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
+    parser.add_argument("--psm_api_token", type=str, default=Google_API_token, help="Path to POSSUM status sheet Google API token JSON file")
+    parser.add_argument("--psm_val_api_token", type=str, default=Google_API_token_psmval, help="Path to POSSUM validation sheet sheet Google API token JSON file")
+    
 
     args = parser.parse_args()
     tilenumber = args.tilenumber
     band = args.band
+
+    Google_API_token = args.psm_api_token
+    Google_API_token_psmval = args.psm_val_api_token
 
     # Get all tile numbers from the directories
     base_tile_dir_943 = "/arc/projects/CIRADA/polarimetry/ASKAP/Tiles/943MHz/"
@@ -219,12 +230,10 @@ if __name__ == "__main__":
     update_status_csv(tilenumber, status, band, csv_file_path, all_tiles)
 
     # Update the POSSUM status monitor google sheet
-    Google_API_token = "/arc/home/ErikOsinga/.ssh/psm_gspread_token.json"
     # Make sure it's clear that the status is only fully complete if 3D pipeline outputs have been ingested
     if status == "Completed":
         status = "WaitingForValidation"
     update_status_spreadsheet(tilenumber, band, Google_API_token, status)
 
 
-    Google_API_token = "/arc/home/ErikOsinga/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
-    update_validation_spreadsheet(tilenumber, band, Google_API_token, status)
+    update_validation_spreadsheet(tilenumber, band, Google_API_token_psmval, status)

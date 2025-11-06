@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 import os
+import argparse
 import gspread
 import numpy as np
 import subprocess
@@ -35,8 +36,6 @@ def get_ready_fields(band):
     The worksheet is selected based on the band:
         '1' if band == '943MHz', otherwise '2'.
     """
-    # POSSUM Status Monitor
-    Google_API_token = "/home/erik/.ssh/psm_gspread_token.json"
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
     ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0')
@@ -72,12 +71,9 @@ def check_validation_sheet_integrity(band_number=1, verbose=False):
     """
     # grab google sheet POSSUM validation
 
-    # on p1, token for accessing Erik's google sheets 
-    # consider chmod 600 <file> to prevent access
-    # check for each row if it is present exactly once, irrespetive of the number of sources
-    Google_API_token = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
+
     # Authenticate and grab the spreadsheet
-    gc = gspread.service_account(filename=Google_API_token)
+    gc = gspread.service_account(filename=Google_API_token_psmval)
     # "POSSUM Pipeline Validation" sheet (maintained by Erik)
     ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k')
 
@@ -404,17 +400,25 @@ def launch_collate_job():
     print(f"Check logs at https://ws-uv.canfar.net/skaha/v0/session/{session_id[0]}?view=logs")
 
 if __name__ == "__main__":
-    # parser = argparse.ArgumentParser(description="Update Partial Tile Google Sheet")
-    # parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
-    # args = parser.parse_args()
-    # band = args.band
+    # Update the POSSUM Pipeline Status spreadsheet as well. A complete field is being processed!
+    Google_API_token = "/home/erik/.ssh/psm_gspread_token.json"
+    # on p1, token for accessing Erik's google sheets 
+    # consider chmod 600 <file> to prevent access
+    # check for each row if it is present exactly once, irrespetive of the number of sources
+    Google_API_token_psmval = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
+
+    parser = argparse.ArgumentParser(description="Update Partial Tile Google Sheet")
+    parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
+    parser.add_argument("--psm_api_token", type=str, default=Google_API_token, help="Path to POSSUM status sheet Google API token JSON file")
+    parser.add_argument("--psm_val_api_token", type=str, default=Google_API_token_psmval, help="Path to POSSUM validation sheet sheet Google API token JSON file")
+    
+    args = parser.parse_args()
+    band = args.band
+    Google_API_token = args.psm_api_token
+    Google_API_token_psmval = args.psm_val_api_token
     
     band = "943MHz" # hardcode for now
 
-    # Update the POSSUM Pipeline Status spreadsheet as well. A complete field is being processed!
-    Google_API_token = "/home/erik/.ssh/psm_gspread_token.json"
-    # put the status as PartialTiles - Running
-    
     ready_table, full_table = get_ready_fields(band)
 
     print(f"Found {len(ready_table)} fields ready for single SB partial tile pipeline processing in band {band}")
