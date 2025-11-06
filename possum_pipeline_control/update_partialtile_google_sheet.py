@@ -312,7 +312,7 @@ def create_progress_plot(full_table):
         # show slope over last 60 days
         x_ext_proc_60 = x_ext_60[x_ext_60 >= first_day_60d_ago]
         y_ext_proc_60 = slope_proc_60 * x_ext_proc_60 + intercept_proc_60
-        y_ext_val_60  = slope_val_60  * x_ext_60        + intercept_val_60
+        y_ext_val_60  = slope_val_60  * x_ext_proc_60        + intercept_val_60
 
         plt.plot(x_ext_proc_60, y_ext_proc_60, linestyle='--', label='Proc trend (60d)')
         plt.plot(x_ext_60,      y_ext_val_60,  linestyle='--', label='Val trend (60d)')
@@ -369,7 +369,8 @@ def launch_collate_job():
     """
     Launches the collate job for the 1D pipeline. Once per day
     """
-    from skaha.session import Session
+    #from skaha.session import Session
+    from canfar.sessions import Session
     session = Session()
 
     # e.g. for band 1
