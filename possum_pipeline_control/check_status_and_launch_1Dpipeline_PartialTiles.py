@@ -1,4 +1,5 @@
 import os
+import argparse
 from vos import Client
 import subprocess
 import gspread
@@ -400,14 +401,11 @@ def check_predl_job_running_with_sbid(SBnumber: str) -> bool:
         return False
 
 
-def launch_band1_1Dpipeline():
+def launch_band1_1Dpipeline(Google_API_token):
     """
     Launch a headless job to CANFAR for a 1D pipeline Partial Tile
     """
     band = "943MHz"
-    # on p1, token for accessing Erik's google sheets 
-    # consider chmod 600 <file> to prevent access
-    Google_API_token = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
     
     # Get a list of tile numbers that should be ready to be processed by the 1D pipeline according to Erik's sheet.
     # i.e.  'SBID' column is not empty, 'number_sources' is not empty, and '1d_pipeline' column is empty
@@ -507,4 +505,12 @@ def launch_band1_1Dpipeline():
         print("Found no tiles ready to be processed. Either all are done, or a pre-dl job is already running.")
 
 if __name__ == "__main__":
-    launch_band1_1Dpipeline()
+    # on p1, token for accessing Erik's google sheets 
+    # consider chmod 600 <file> to prevent access
+    Google_API_token = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
+
+    parser = argparse.ArgumentParser(description="Checks POSSUM validation status ('POSSUM Pipeline validation' google sheet) if 3D pipeline outputs can be ingested.")
+    parser.add_argument("--psm_val_api_token", type=str, default=Google_API_token, help="Path to POSSUM validation sheet Google API token JSON file")
+    args = parser.parse_args()
+
+    launch_band1_1Dpipeline(args.psm_val_api_token)
