@@ -511,6 +511,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Checks POSSUM validation status ('POSSUM Pipeline validation' google sheet) if 3D pipeline outputs can be ingested.")
     parser.add_argument("--psm_val_api_token", type=str, default=Google_API_token, help="Path to POSSUM validation sheet Google API token JSON file")
+    parser.add_argument("--psm_api_token", type=str, default=None, help="Not used in this file, but here for future compatibility.")
     args = parser.parse_args()
 
     launch_band1_1Dpipeline(args.psm_val_api_token)
