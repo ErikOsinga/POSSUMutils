@@ -18,7 +18,7 @@ def get_open_sessions():
     df_sessions = pd.DataFrame([{
         'type': s['type'],
         'status': s['status'],
-        'startTime': s['startTime'],
+        'startTime': s['startTime'] if 'startTime' in s else 'Pending',
         'name': s['name'],
         'id': s['id'],
     } for s in open_sessions])
