@@ -45,7 +45,7 @@ psrecord "python /arc/projects/CIRADA/polarimetry/software/POSSUM_Polarimetry_Pi
 
 echo "Logging pipeline status"
 # field, sbid, tilenumbers ("8764+8953"), band
-python /arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/log_processing_status_1D_PartialTiles.py $2 $3 $tilelist 943MHz
+python /arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/log_processing_status_1D_PartialTiles.py $2 $3 $tilelist 943MHz --psm_val_api_token /arc/home/ErikOsinga/.ssh/neural-networks--1524580309831-c5c723e2468e.json
 # TODO: for the Partial Tile pipeline, check the following status as well:
 # If all edges and centers have been done for a certain field
 # then create summary plot and delete the partial tiles from CANFAR (otherwise too much storage)
