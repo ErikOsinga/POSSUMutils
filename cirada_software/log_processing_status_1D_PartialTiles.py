@@ -1,9 +1,8 @@
 import argparse
 import glob
-import gspread
-import numpy as np
-import astropy.table as at
 import ast
+from automation import database_queries as db
+from possum_pipeline_control import util
 
 """
 Usage: python log_processing_status.py fieldstr sbid tilestr
@@ -35,70 +34,34 @@ def check_pipeline_complete(log_file_path):
     else:
         return "Failed"
 
-def update_validation_spreadsheet(field_ID, tile_numbers, band, Google_API_token, status):
+def update_partial_tile_1d_pipeline(field_ID, tile_numbers, band, status, conn):
     """
-    Update the status of the specified tile in the VALIDATION Google Sheet.
+    Update the status of the specified tile in the partial_tile_1d_pipeline database table.
     
     Args:
+    field_ID (str): The field ID.
     tile_number (str): The tile number to update.
     band (str): The band of the tile.
-    Google_API_token (str): The path to the Google API token JSON file.
     status (str): The status to set in the '1d_pipeline' column.
     """
-    print("Updating POSSUM pipeline validation sheet")
-
-    t1, t2, t3, t4 = tile_numbers
-
-    # Authenticate and grab the spreadsheet
-    gc = gspread.service_account(filename=Google_API_token)
-    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k')
-
-    # Select the worksheet for the given band number
-    band_number = '1' if band == '943MHz' else '2'
-    tile_sheet = ps.worksheet(f'Partial Tile Pipeline - regions - Band {band_number}')
-    tile_data = tile_sheet.get_all_values()
-    column_names = tile_data[0]
-    tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
-
-    fieldname = "EMU_" if band == '943MHz' else 'WALLABY_' # TODO: verify WALLABY_ fieldname
-
-    # Find the row index for the specified tile number
-    tile_index = None
-    for idx, row in enumerate(tile_table):
-        if ( row['tile1'] == t1
-            and row['tile2'] == t2
-            and row['tile3'] == t3
-            and row['tile4'] == t4
-            and row['field_name'] == f"{fieldname}{field_ID}"
-        ):
-            tile_index = idx + 2  # +2 because gspread index is 1-based and we skip the header row
-            break
-    
-    if tile_index is not None:
-        # Update the status in the '1d_pipeline' column
-        col_letter = gspread.utils.rowcol_to_a1(1, column_names.index('1d_pipeline') + 1)[0]
-        # as of >v6.0.0 the .update function requires a list of lists
-        tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
-        print(f"Updated row with tiles {tile_numbers} status to {status} in '1d_pipeline' column.")
-
-        ## TODO: validation in case all tiles have been completed
-        
-        # # Find the validation file path
-        # psm_val = glob.glob(f"/arc/projects/CIRADA/polarimetry/pipeline_runs/{band}/tile{tilenumber}/*validation.html")
-        # if len(psm_val) == 1:
-        #     psm_val = os.path.basename(psm_val[0])
-        #     validation_link = f"https://ws-uv.canfar.net/arc/files/projects/CIRADA/polarimetry/pipeline_runs/{band}/tile{tilenumber}/{psm_val}"
-        # elif len(psm_val) > 1:
-        #     validation_link = "MultipleHTMLFiles"
-        # else:
-        #     validation_link = "HTMLFileNotFound"
-        # # Update the '3d_val_link' column
-        # col_link_letter = gspread.utils.rowcol_to_a1(1, column_names.index('3d_val_link') + 1)[0]
-        # tile_sheet.update(range_name=f'{col_link_letter}{tile_index}', values=[[validation_link]])
-        # print(f"Updated tile {tilenumber} validation link to {validation_link}")
-
-    else:
-        print(f"Field {fieldname}{field_ID} with tiles {tile_numbers} not found in the sheet.")
+    fieldname = util.get_full_field_name(field_ID, band)
+    band_number = util.get_band_number(band)    
+    db.update_partial_tile_1d_pipeline_status(fieldname, tile_numbers, band_number, status, conn)
+    ## TODO: validation in case all tiles have been completed
+     
+    # # Find the validation file path
+    # psm_val = glob.glob(f"/arc/projects/CIRADA/polarimetry/pipeline_runs/{bxand}/tile{tilenumber}/*validation.html")
+    # if len(psm_val) == 1:
+    #     psm_val = os.path.basename(psm_val[0])
+    #     validation_link = f"https://ws-uv.canfar.net/arc/files/projects/CIRADA/polarimetry/pipeline_runs/{band}/tile{tilenumber}/{psm_val}"
+    # elif len(psm_val) > 1:
+    #     validation_link = "MultipleHTMLFiles"
+    # else:
+    #     validation_link = "HTMLFileNotFound"
+    # # Update the '3d_val_link' column
+    # col_link_letter = gspread.utils.rowcol_to_a1(1, column_names.index('3d_val_link') + 1)[0]
+    # tile_sheet.update(range_name=f'{col_link_letter}{tile_index}', values=[[validation_link]])
+    # print(f"Updated tile {tilenumber} validation link to {validation_link}")
 
 def tilenumbers_to_tilestr(tilenumbers):
     """
@@ -112,6 +75,11 @@ def tilenumbers_to_tilestr(tilenumbers):
     return tilestr
 
 if __name__ == "__main__":
+    # on p1, token for accessing Erik's google sheets 
+    # consider chmod 600 <file> to prevent access
+    # check for each row if it is present exactly once, irrespetive of the number of sources
+    Google_API_token_psmval = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
+
     parser = argparse.ArgumentParser(description="Check pipeline status and update CSV file")
     parser.add_argument(
         "field_ID",
@@ -131,12 +99,15 @@ if __name__ == "__main__":
     )
     parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
 
+    parser.add_argument("--psm_val_api_token", type=str, default=Google_API_token_psmval, help="Path to POSSUM validation sheet Google API token JSON file")
+
     args = parser.parse_args()
     field_ID = args.field_ID
     SB_num = args.SB_num
     tilenumbers = args.tilenumbers
     tilestr = tilenumbers_to_tilestr(tilenumbers)
     band = args.band
+    Google_API_token_psmval = args.psm_val_api_token
 
     # Where to find pipeline outputs
     basedir = f"/arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/{band}"
@@ -167,6 +138,8 @@ if __name__ == "__main__":
 
     print(f"Tilenumbers {tilestr} status: {status}, band: {band}")
 
-    # Update the POSSUM Validation spreadsheet
-    Google_API_token = "/arc/home/ErikOsinga/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
-    update_validation_spreadsheet(field_ID, tilenumbers, band, Google_API_token, status)
+    # Update the POSSUM partial_tile_1d_pipeline database table
+    conn = db.get_database_connection(test=False)
+    update_partial_tile_1d_pipeline(field_ID, tilenumbers, band, status, conn)
+    conn.close()
+    

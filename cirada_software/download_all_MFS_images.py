@@ -2,6 +2,7 @@
 import numpy as np
 from astroquery.utils.tap.core import Tap
 from astroquery.casda import Casda
+import argparse
 import os
 import getpass
 import re
@@ -9,7 +10,7 @@ import gspread
 import astropy.table as at
 import tqdm
 
-def get_all_sbids(band):
+def get_all_sbids(band, Google_API_token):
     """
     Connects to the POSSUM Status Monitor Google Sheet and returns a sub-table
     containing only the rows where the 'sbid' field is not empty.
@@ -23,8 +24,7 @@ def get_all_sbids(band):
     The worksheet is selected based on the band:
         '1' if band == '943MHz', otherwise '2'.
     """
-    # POSSUM Status Monitor
-    Google_API_token = "/arc/home/ErikOsinga/.ssh/psm_gspread_token.json"
+
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
     ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0')
@@ -93,7 +93,16 @@ def getEvalURLs(casda_tap, sb):
     return tar_urls
 
 if __name__ == '__main__':
-    
+    # POSSUM Status Monitor
+    # on CANFAR
+    Google_API_token = "/arc/home/ErikOsinga/.ssh/psm_gspread_token.json"
+
+    parser = argparse.ArgumentParser(description="Download all EMU MFS images")
+    parser.add_argument("--psm_api_token", type=str, default=Google_API_token, help="Path to POSSUM status sheet Google API token JSON file")
+    args = parser.parse_args()
+
+    Google_API_token = args.psm_api_token
+
     band = "943MHz" # hardcode for now
 
     username="erik.osinga@utoronto.ca"
@@ -104,7 +113,7 @@ if __name__ == '__main__':
     casda.login(username=username)
     
     # Get which fields are ready for processing from aussrc
-    ready_table = get_all_sbids(band)
+    ready_table = get_all_sbids(band, Google_API_token)
     sbids = ready_table['sbid']
 
     # Make sure we download in here, create subfolder for every MFS image (numbered by SBID)
