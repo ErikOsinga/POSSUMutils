@@ -1,3 +1,8 @@
+astropy
+gspread
+pandas
+psycopg2
+python-dotenv
 canfar
 vos
 gspread
