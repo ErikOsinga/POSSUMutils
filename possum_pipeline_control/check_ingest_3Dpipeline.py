@@ -1,6 +1,10 @@
 import os
 from dotenv import load_dotenv
 from vos import Client
+import argparse
+import gspread
+import astropy.table as at
+import numpy as np
 from time import sleep
 import pandas as pd
 from possum_pipeline_control import util
@@ -162,6 +166,14 @@ def ingest_3Dpipeline(band_number=1):
         print("Found no tiles ready to be processed.")
 
 if __name__ == "__main__":
+    # on p1, API token for POSSUM Pipeline Validation sheet
+    # DEPRECATED
+    Google_API_token = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
+
+    parser = argparse.ArgumentParser(description="Checks POSSUM validation status ('POSSUM Pipeline validation' google sheet) if 3D pipeline outputs can be ingested.")
+    parser.add_argument("--psm_val_api_token", type=str, default=Google_API_token, help="Path to POSSUM validation sheet Google API token JSON file")
+    args = parser.parse_args()
+
     # Band number 1 (943MHz) or 2 ("1367MHz")
     band_number = 1
 

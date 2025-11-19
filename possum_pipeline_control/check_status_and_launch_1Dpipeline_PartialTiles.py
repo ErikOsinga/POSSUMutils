@@ -1,4 +1,5 @@
 import os
+import argparse
 from vos import Client
 import subprocess
 import time
@@ -18,7 +19,7 @@ https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD
 Updates the POSSUM tile status (google sheet) to "running" if 1D pipeline is submitted.
 
 
-A 1D pipeline run can be started if on the sheet called "Partial Tile Pipeline - [centers/edges] - Band [number]":
+A 1D pipeline run can be started if on the sheet called "Partial Tile Pipeline - regions - Band [number]":
 
 1. the "SBID" column is not empty (indicating it has been observed), and
 2. the "number_sources" column is not empty (indicating the sourcelist has been created)
@@ -289,12 +290,13 @@ def check_predl_job_running_with_sbid(SBnumber: str) -> bool:
         return False
 
 
-def launch_band1_1Dpipeline():
+def launch_band1_1Dpipeline(Google_API_token):
     """
     Launch a headless job to CANFAR for a 1D pipeline Partial Tile
     """
     band = "943MHz"
 
+    
     # Get a list of tile numbers that should be ready to be processed by the 1D pipeline according to Erik's sheet.
     # i.e.  'SBID' column is not empty, 'number_sources' is not empty, and '1d_pipeline' column is empty
 
@@ -364,10 +366,10 @@ def launch_band1_1Dpipeline():
             # Launch the first field_ID that has a sourcelist (assumes this script will be called many times)
             for i in range(len(field_IDs)):
                 field_ID = field_IDs[i]
-                t1 = tile1[i]
-                t2 = tile2[i]
-                t3 = tile3[i]
-                t4 = tile4[i]
+                t1 = str(tile1[i])
+                t2 = str(tile2[i])
+                t3 = str(tile3[i])
+                t4 = str(tile4[i])
                 tilenumbers = [t1, t2, t3, t4] # up to four tilenumbers, or less with '' (empty strings)
                 SBid = SBids[i]
                 if field_ID not in fields_on_both:
@@ -401,4 +403,13 @@ def launch_band1_1Dpipeline():
         print("Found no tiles ready to be processed. Either all are done, or a pre-dl job is already running.")
 
 if __name__ == "__main__":
-    launch_band1_1Dpipeline()
+    # on p1, token for accessing Erik's google sheets 
+    # consider chmod 600 <file> to prevent access
+    Google_API_token = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
+
+    parser = argparse.ArgumentParser(description="Checks POSSUM validation status ('POSSUM Pipeline validation' google sheet) if 3D pipeline outputs can be ingested.")
+    parser.add_argument("--psm_val_api_token", type=str, default=Google_API_token, help="Path to POSSUM validation sheet Google API token JSON file")
+    parser.add_argument("--psm_api_token", type=str, default=None, help="Not used in this file, but here for future compatibility.")
+    args = parser.parse_args()
+
+    launch_band1_1Dpipeline(args.psm_val_api_token)

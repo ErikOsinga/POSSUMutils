@@ -2,6 +2,7 @@
 import sys
 import os
 from dotenv import load_dotenv
+import argparse
 import gspread
 import numpy as np
 import subprocess
@@ -267,7 +268,7 @@ def create_progress_plot(full_table):
         # show slope over last 60 days
         x_ext_proc_60 = x_ext_60[x_ext_60 >= first_day_60d_ago]
         y_ext_proc_60 = slope_proc_60 * x_ext_proc_60 + intercept_proc_60
-        y_ext_val_60  = slope_val_60  * x_ext_60        + intercept_val_60
+        y_ext_val_60  = slope_val_60  * x_ext_proc_60        + intercept_val_60
 
         plt.plot(x_ext_proc_60, y_ext_proc_60, linestyle='--', label='Proc trend (60d)')
         plt.plot(x_ext_60,      y_ext_val_60,  linestyle='--', label='Val trend (60d)')
@@ -324,7 +325,8 @@ def launch_collate_job():
     """
     Launches the collate job for the 1D pipeline. Once per day
     """
-    from skaha.session import Session
+    #from skaha.session import Session
+    from canfar.sessions import Session
     session = Session()
 
     # e.g. for band 1
@@ -358,11 +360,20 @@ def launch_collate_job():
     print(f"Check logs at https://ws-uv.canfar.net/skaha/v0/session/{session_id[0]}?view=logs")
 
 if __name__ == "__main__":
-    # parser = argparse.ArgumentParser(description="Update Partial Tile Google Sheet")
+    # Update the POSSUM Pipeline Status spreadsheet as well. A complete field is being processed!
+    Google_API_token = "/home/erik/.ssh/psm_gspread_token.json"
+    # on p1, token for accessing Erik's google sheets 
+    # consider chmod 600 <file> to prevent access
+    # check for each row if it is present exactly once, irrespetive of the number of sources
+    Google_API_token_psmval = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
+
+    parser = argparse.ArgumentParser(description="Update Partial Tile Google Sheet")
     # parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
-    # args = parser.parse_args()
-    # band = args.band
+    ### DEPRECATED
+    parser.add_argument("--psm_api_token", type=str, default=Google_API_token, help="Path to POSSUM status sheet Google API token JSON file")
+    parser.add_argument("--psm_val_api_token", type=str, default=Google_API_token_psmval, help="Path to POSSUM validation sheet sheet Google API token JSON file")
     
+    args = parser.parse_args()
     band = "943MHz" # hardcode for now
     
     # load env for google spreadsheet constants
@@ -371,6 +382,7 @@ if __name__ == "__main__":
     Google_API_token = os.getenv('POSSUM_STATUS_SHEET')
     # put the status as PartialTiles - Running
     
+
     ready_table, full_table = get_ready_fields(band)
 
     print(f"Found {len(ready_table)} fields ready for single SB partial tile pipeline processing in band {band}")

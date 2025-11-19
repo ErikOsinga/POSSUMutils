@@ -1,0 +1,8 @@
+canfar
+vos
+gspread
+pandas
+numpy
+astropy
+matplotlib
+prefect

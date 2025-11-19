@@ -77,6 +77,7 @@ if __name__ == "__main__":
     parser.add_argument("tilenumber", type=int, help="The tile number to process")
     parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
     parser.add_argument("status", type=str)
+    parser.add_argument("--psm_api_token", type=str, default=Google_API_token, help="Path to POSSUM status sheet Google API token JSON file")
 
     args = parser.parse_args()
     tilenumber = args.tilenumber
@@ -86,4 +87,4 @@ if __name__ == "__main__":
     if status == 'None' or status == 'none':
         status = ''
 
-    update_status(tilenumber, band, Google_API_token, status)
+    update_status(tilenumber, band, args.psm_api_token, status)

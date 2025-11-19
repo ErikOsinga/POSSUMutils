@@ -75,6 +75,11 @@ def tilenumbers_to_tilestr(tilenumbers):
     return tilestr
 
 if __name__ == "__main__":
+    # on p1, token for accessing Erik's google sheets 
+    # consider chmod 600 <file> to prevent access
+    # check for each row if it is present exactly once, irrespetive of the number of sources
+    Google_API_token_psmval = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
+
     parser = argparse.ArgumentParser(description="Check pipeline status and update CSV file")
     parser.add_argument(
         "field_ID",
@@ -94,12 +99,15 @@ if __name__ == "__main__":
     )
     parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
 
+    parser.add_argument("--psm_val_api_token", type=str, default=Google_API_token_psmval, help="Path to POSSUM validation sheet Google API token JSON file")
+
     args = parser.parse_args()
     field_ID = args.field_ID
     SB_num = args.SB_num
     tilenumbers = args.tilenumbers
     tilestr = tilenumbers_to_tilestr(tilenumbers)
     band = args.band
+    Google_API_token_psmval = args.psm_val_api_token
 
     # Where to find pipeline outputs
     basedir = f"/arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/{band}"
