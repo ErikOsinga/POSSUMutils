@@ -1,3 +1,4 @@
+import argparse
 import subprocess
 import time
 import pandas as pd
@@ -18,7 +19,7 @@ def get_open_sessions():
     df_sessions = pd.DataFrame([{
         'type': s['type'],
         'status': s['status'],
-        'startTime': s['startTime'],
+        'startTime': s['startTime'] if 'startTime' in s else 'Pending',
         'name': s['name'],
         'id': s['id'],
     } for s in open_sessions])
@@ -30,7 +31,7 @@ def get_open_sessions():
 
     return df_sessions
 
-def run_script_intermittently(script_paths, interval, max_runs=None, max_pending=20, max_running=50):
+def run_script_intermittently(script_paths, interval, max_runs=None, max_pending=20, max_running=50, args=None):
     """
     Execute all scripts in script_paths intermittently
     """
@@ -62,7 +63,13 @@ def run_script_intermittently(script_paths, interval, max_runs=None, max_pending
             if n_headless_pending < max_pending and n_headless_running < max_running:
                 for script_path in script_paths:
                     print(f"Running script: {script_path}")
-                    subprocess.run(["python", script_path], check=True)
+                    cmd_list = ["python", script_path]
+                    if args.psm_api_token is not None:
+                        cmd_list += ["--psm_api_token", args.psm_api_token]
+                    if args.psm_val_api_token is not None:
+                        cmd_list += ["--psm_val_api_token", args.psm_val_api_token]
+
+                    subprocess.run(cmd_list, check=True)
             else:
                 if n_headless_pending >= max_pending:
                     print("Too many pending headless sessions. Skipping this run.")
@@ -83,6 +90,13 @@ def run_script_intermittently(script_paths, interval, max_runs=None, max_pending
         time.sleep(interval)
 
 if __name__ == "__main__":
+
+
+    parser = argparse.ArgumentParser(description="Update Partial Tile Google Sheet")
+    parser.add_argument("--psm_api_token", type=str, default=None, help="Path to POSSUM status sheet Google API token JSON file")
+    parser.add_argument("--psm_val_api_token", type=str, default=None, help="Path to POSSUM validation sheet sheet Google API token JSON file")
+    args = parser.parse_args()
+
     # Path to the script to be run intermittently
     script_paths = ["update_partialtile_google_sheet.py" # Check POSSUM Pipeline Status sheet and create queue of jobs in POSSUM Pipeline Validation sheet. 
                                                          # This is done via "check_status_and_launch_1Dpipeline_PartialTiles.py 'pre'"
@@ -108,5 +122,5 @@ if __name__ == "__main__":
     max_running = 15 # probably good to set low to limit parallel downloads of separate tiles
 
     # start 
-    run_script_intermittently(script_paths, interval, max_runs, max_pending, max_running)
+    run_script_intermittently(script_paths, interval, max_runs, max_pending, max_running, args)
 
