@@ -1,0 +1,5 @@
+1. Rename config.env.example to config.env.
+2. Enter ausSRC database details in the .env file. 
+3. Enter Google spreadsheet token
+4. Update Google spreadsheet file locations (only if the files are different, e.g. for testing)
+
