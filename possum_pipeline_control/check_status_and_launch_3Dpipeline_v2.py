@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from vos import Client
 import subprocess
+import argparse
 import gspread
 import astropy.table as at
 import numpy as np
@@ -133,7 +134,6 @@ def update_status(tile_number, band, Google_API_token, status):
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 
-# Update the launch_band1_3Dpipeline function to pass the correct arguments
 def launch_band1_3Dpipeline():
     band = "943MHz"
     # on p1
@@ -181,4 +181,19 @@ def launch_band1_3Dpipeline():
 if __name__ == "__main__":
     # load env for google spreadsheet constants
     load_dotenv(dotenv_path='../automation/config.env')
+    launch_band1_3Dpipeline()
+
+    # DEPRECATED
+    Google_API_token = "/home/erik/.ssh/psm_gspread_token.json"
+
+    parser = argparse.ArgumentParser(description="Check status and launch 3D pipeline")
+    parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
+    # DEPRECATED
+    parser.add_argument("--psm_api_token", type=str, default=Google_API_token, help="Path to POSSUM status sheet Google API token JSON file")
+    
+    args = parser.parse_args()
+
+    # DEPRECATED
+    Google_API_token = args.psm_api_token
+
     launch_band1_3Dpipeline()
