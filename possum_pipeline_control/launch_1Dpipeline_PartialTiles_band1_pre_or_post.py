@@ -4,7 +4,6 @@ from datetime import datetime
 # from skaha.session import Session
 from canfar.sessions import Session
 from control_1D_pipeline_PartialTiles import get_open_sessions
-
 """
 Submit a headless job to do either pre-processing or post-processing of 1D Partial Tile Pipeline.
 See arguments in __main__ below

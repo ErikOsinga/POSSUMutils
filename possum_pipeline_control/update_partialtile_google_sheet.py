@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 import os
+from dotenv import load_dotenv
 import argparse
 import gspread
 import numpy as np
@@ -36,9 +37,11 @@ def get_ready_fields(band):
     The worksheet is selected based on the band:
         '1' if band == '943MHz', otherwise '2'.
     """
+    # POSSUM Status Monitor
+    Google_API_token = os.getenv('POSSUM_STATUS_TOKEN')
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
-    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0')
+    ps = gc.open_by_url(os.getenv('POSSUM_STATUS_SHEET'))
     
     # Select the worksheet for the given band number
     band_number = '1' if band == '943MHz' else '2'
@@ -62,49 +65,6 @@ def launch_pipeline_command(fieldname, SBID):
     command = f"python launch_1Dpipeline_PartialTiles_band1_pre_or_post.py {fieldname} {SBID} pre"
     print(f"Executing command: {command}")
     subprocess.run(command, shell=True, check=True)
-
-def check_validation_sheet_integrity(band_number=1, verbose=False):
-    """
-    Check if each field+sbid+tile combination is present in the sheet exactly once. 
-    This should be the case, but sometimes I have seen identical rows with different 'number_sources'
-     
-    """
-    # grab google sheet POSSUM validation
-
-
-    # Authenticate and grab the spreadsheet
-    gc = gspread.service_account(filename=Google_API_token_psmval)
-    # "POSSUM Pipeline Validation" sheet (maintained by Erik)
-    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k')
-
-    # Select the worksheet for the given band number
-    tile_sheet = ps.worksheet(f'Partial Tile Pipeline - regions - Band {band_number}')
-    tile_data = tile_sheet.get_all_values()
-    column_names = tile_data[0]
-    tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
-
-    sheet_is_ok = True
-    for i, row in enumerate(tile_table):
-        field_name, sbid, tile1, tile2, tile3, tile4, region_type, num_sources, pstatus, vstatus = row
-        mask = (tile_table['field_name'] == field_name) & (tile_table['sbid'] == sbid) & \
-                (tile_table['tile1'] == tile1) & (tile_table['tile2'] == tile2) & \
-                (tile_table['tile3'] == tile3) & (tile_table['tile4'] == tile4) & \
-                (tile_table['type'] == region_type) # & (tile_table['number_sources'] == num_sources)
-        
-        if np.sum(mask) == 1:
-            continue
-        elif np.sum(mask) == 0:
-            print(f"row index={i} not found in google sheet") # shouldnt happpen
-            sheet_is_ok = False
-        else:
-            print(f"Found row index={i} multiple times in Google Sheet. In location (index) {np.where(mask)[0]}")
-            sheet_is_ok = False
-            # raise ValueError(f"Somehow found this row multiple times in Google Sheet, check rows {np.where(mask)[0]}")
-    
-    if sheet_is_ok:
-        print("Google Sheet is OK. No duplicate rows found.")
-    else:
-        print("Google Sheet is NOT OK. Duplicate rows found.")
 
 def extract_date(entry):
     # Remove extra whitespace
@@ -409,14 +369,18 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Update Partial Tile Google Sheet")
     # parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
+    ### DEPRECATED
     parser.add_argument("--psm_api_token", type=str, default=Google_API_token, help="Path to POSSUM status sheet Google API token JSON file")
     parser.add_argument("--psm_val_api_token", type=str, default=Google_API_token_psmval, help="Path to POSSUM validation sheet sheet Google API token JSON file")
     
     args = parser.parse_args()
     band = "943MHz" # hardcode for now
-    # band = args.band
-    Google_API_token = args.psm_api_token
-    Google_API_token_psmval = args.psm_val_api_token
+    
+    # load env for google spreadsheet constants
+    load_dotenv(dotenv_path='../automation/config.env')
+    # Update the POSSUM Pipeline Status spreadsheet as well. A complete field is being processed!
+    Google_API_token = os.getenv('POSSUM_STATUS_SHEET')
+    # put the status as PartialTiles - Running
     
 
     ready_table, full_table = get_ready_fields(band)

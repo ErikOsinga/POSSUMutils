@@ -14,6 +14,7 @@ band       -- str -- either "943MHz" or "1367MHz" for band 1 or band 2 data
 
 import argparse
 import os
+from dotenv import load_dotenv
 from prefect import flow, task
 import gspread
 import numpy as np
@@ -22,8 +23,12 @@ import astroquery.cadc as cadc
 import datetime
 from time import sleep
 # important to grab _run() because run() is wrapped in sys.exit()
-from possum2caom2.composable import _run as possum_run # type: ignore
-
+try:
+    from possum2caom2.composable import _run as possum_run # type: ignore
+except ImportError:
+    possum_run = None
+from automation import database_queries as db
+from possum_pipeline_control import util
 
 # 14 (grouped) products for the 3D pipeline
 all_3dproducts = [ 
@@ -101,9 +106,9 @@ def check_report(tile_workdir):
         return False
 
 @task
-def update_validation_spreadsheet(tile_number, band, Google_API_token, status, test):
+def update_validation_spreadsheet(tile_number, band_str, status, test_flag, conn):
     """
-    Update the status of the specified tile in the VALIDATION Google Sheet.
+    Update the status of the specified tile in the VALIDATION database table.
     (see also log_processing_status.py)
     
     Args:
@@ -113,46 +118,23 @@ def update_validation_spreadsheet(tile_number, band, Google_API_token, status, t
     status (str): The status to set in the '3d_pipeline_ingest' column.
     test (bool):  if we want to test what happened to something with 'IngestFailed' status
     """
-    print("Updating POSSUM pipeline validation sheet")
-
-    # Make sure its not int
-    tile_number = str(tile_number)
-    
-    # Authenticate and grab the spreadsheet
-    gc = gspread.service_account(filename=Google_API_token)
-    # POSSUM Validation spreadsheet
-    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k')
-
-    # Select the worksheet for the given band number
-    band_number = '1' if band == '943MHz' else '2'
-    tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_number}')
-    tile_data = tile_sheet.get_all_values()
-    column_names = tile_data[0]
-    tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
-
-    # Find the row index for the specified tile number
-    tile_index = None
-    for idx, row in enumerate(tile_table):
-        if row['tile_id'] == tile_number:
-            tile_index = idx + 2  # +2 because gspread index is 1-based and we skip the header row
-            break
-    
-    if tile_index is not None:
-        if not test:
+    print("Updating POSSUM pipeline validation database")
+    band_number = util.get_band_number(band_str)
+    row = db.get_3d_tile_data(tile_number, band_number, conn)
+    if len(row) > 0:
+        if not test_flag:
             # Status should be "IngestRunning" otherwise something went wrong
-            if row['3d_pipeline_ingest'] != "IngestRunning":
-                raise ValueError(f"Found status {row['3d_pipeline_ingest']} while it should be 'IngestRunning'")
+            if row[0][3] != "IngestRunning":
+                raise ValueError(f"Found status {row[0][3]} while it should be 'IngestRunning'")
         else:
-            print(f"Testing enabled. Current status of tile {tile_number} is {row['3d_pipeline_ingest']}")
+            print(f"Testing enabled. Current status of tile {tile_number} is {row[0][3]}")
 
         # Update the status in the '3d_pipeline_ingest' column
-        col_letter = gspread.utils.rowcol_to_a1(1, column_names.index('3d_pipeline_ingest') + 1)[0]
-        # as of >v6.0.0 the .update function requires a list of lists
-        tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
-        print(f"Updated tile {tile_number} status to {status} in '3d_pipeline_ingest' column.")
-
-    else:
-        raise ValueError(f"Tile {tile_number} not found in the sheet.")
+        row_num = db.update_3d_pipeline_table(tile_number, band_number, status, "3d_pipeline_ingest", conn)
+        if row_num > 0:
+            print(f"Updated tile {tile_number} status to {status} in '3d_pipeline_ingest' column.")
+        else:
+            raise ValueError(f"Tile {tile_number} not found in the database.")
 
 @task
 def check_CADC(tilenumber, band):
@@ -171,7 +153,7 @@ def check_CADC(tilenumber, band):
     CADC_session.login(certificate_file=CADC_cert_file)
 
     query=CADC_session.create_async("""SELECT observationID,Plane.productID,Observation.lastModified FROM caom2.Plane AS Plane 
-	JOIN caom2.Observation AS Observation ON Plane.obsID = Observation.obsID 
+    JOIN caom2.Observation AS Observation ON Plane.obsID = Observation.obsID 
     WHERE  (Observation.collection = 'POSSUM') AND (observationID NOT LIKE '%pilot1') """)
     query.run().wait()  
     query.raise_if_error()
@@ -205,7 +187,7 @@ def check_CADC(tilenumber, band):
     return True, date
 
 @task
-def update_status_spreadsheet(tile_number, band, Google_API_token, status):
+def update_status_spreadsheet(tile_number, band, Google_API_token, date):
     """
     Update the status of the specified tile in the Google Sheet.
     
@@ -213,7 +195,7 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
     tile_number (str): The tile number to update.
     band (str): The band of the tile.
     Google_API_token (str): The path to the Google API token JSON file.
-    status (str): The status to set in the '3d_pipeline' column.
+    date (str): The timestamp to set in the '3d_pipeline' column.
 
     ## Note the STATUS spreadsheet only has the '3d_pipeline' column. 
     ## the VALIDATION spreadsheet has more details.
@@ -225,10 +207,10 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
     
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
-    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0')
+    ps = gc.open_by_url(os.getenv('POSSUM_STATUS_SHEET'))
 
     # Select the worksheet for the given band number
-    band_number = '1' if band == '943MHz' else '2'
+    band_number = util.get_band_number(band)
     tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_number}')
     tile_data = tile_sheet.get_all_values()
     column_names = tile_data[0]
@@ -245,8 +227,12 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
         # Update the status in the '3d_pipeline' column
         col_letter = gspread.utils.rowcol_to_a1(1, column_names.index('3d_pipeline') + 1)[0]
         # as of >v6.0.0 the .update function requires a list of lists
-        tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
-        print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
+        tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[date]])
+        print(f"Updated tile {tile_number} status to {date} in '3d_pipeline' column.")
+        # Also update the DB
+        conn = db.get_database_connection(test=False)
+        db.update_3d_pipeline_table(tile_number, band_number, date, "3d_pipeline", conn)
+        conn.close()
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 
@@ -295,14 +281,15 @@ def do_ingest(tilenumber, band, test=False):
     else:
         print("_report.txt reports that ingestion failed")
 
-    # Record the status in the POSSUM Validation spreadsheet
-    Google_API_token = "/arc/home/ErikOsinga/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
-    update_validation_spreadsheet(tilenumber, band, Google_API_token, status, test=test)
+    # Record the status in the POSSUM Validation database
+    conn = db.get_database_connection(test=False)
+    update_validation_spreadsheet(tilenumber, band, status, test_flag=test, conn=conn)
+    conn.close()
 
     if status == "Ingested":
         # If succesful, also record the date of ingestion in POSSUM status spreadsheet
         # Update the POSSUM status monitor google sheet (see also log_processing_status.py)
-        Google_API_token = "/arc/home/ErikOsinga/.ssh/psm_gspread_token.json"
+        Google_API_token = os.getenv('POSSUM_STATUS_TOKEN')
         update_status_spreadsheet(tilenumber, band, Google_API_token, date)
 
     else:
@@ -323,5 +310,8 @@ if __name__ == "__main__":
 
     # needs to be str for comparison
     tilenumber = str(tilenumber)
+    
+	# load env for google spreadsheet constants
+    load_dotenv(dotenv_path='../automation/config.env')
 
     do_ingest(tilenumber, band, test=test)
