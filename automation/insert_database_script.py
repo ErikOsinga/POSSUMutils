@@ -12,8 +12,11 @@ from psycopg2.extras import execute_batch
 import gspread
 import pandas as pd
 from dotenv import load_dotenv
-#from automation
-import database_queries as db
+# workaround depending on where this script is called from
+try:
+    from automation import database_queries as db
+except ModuleNotFoundError:
+    import database_queries as db
 
 GC = None
 VALIDATION_SHEET = None
