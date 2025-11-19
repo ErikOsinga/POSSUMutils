@@ -1,14 +1,19 @@
 """
 Handy scripts to update the database with the Google spreadsheets data.
 Usage: python3 insert_database_script.py
+
+Hopefully this will only have to be run once to set up the database tables.
+After that, the google sheet is deprecated, and we move to the database as the source of truth.
 """
+
 from datetime import datetime
 import os
 from psycopg2.extras import execute_batch
 import gspread
 import pandas as pd
 from dotenv import load_dotenv
-from automation import database_queries as db
+#from automation
+import database_queries as db
 
 GC = None
 VALIDATION_SHEET = None
