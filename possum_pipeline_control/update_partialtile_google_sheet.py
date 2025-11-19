@@ -356,8 +356,8 @@ def launch_collate_job():
         env={},
     )
 
-    print("Check sessions at https://ws-uv.canfar.net/skaha/v0/session")
-    print(f"Check logs at https://ws-uv.canfar.net/skaha/v0/session/{session_id[0]}?view=logs")
+    print("Check sessions at https://ws-uv.canfar.net/skaha/v1/session")
+    print(f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs")
 
 if __name__ == "__main__":
     # Update the POSSUM Pipeline Status spreadsheet as well. A complete field is being processed!

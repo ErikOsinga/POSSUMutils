@@ -25,8 +25,8 @@ def launch_session(run_name, tilenumber, image, cores, ram):
         env={},
     )
 
-    print("Check sessions at https://ws-uv.canfar.net/skaha/v0/session")
-    print(f"Check logs at https://ws-uv.canfar.net/skaha/v0/session/{session_id[0]}?view=logs")
+    print("Check sessions at https://ws-uv.canfar.net/skaha/v1/session")
+    print(f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs")
 
     return
 
