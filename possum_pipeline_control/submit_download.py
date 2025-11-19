@@ -14,11 +14,12 @@ the particular flow run might show what happens?
 """
 
 from datetime import date
+# from skaha.session import Session  # noqa: E402
+from canfar.sessions import Session
+session = Session()
+
 today = date.today()
 print("Download script called. Today's date:", today)
-
-from skaha.session import Session  # noqa: E402
-session = Session()
 
 def launch_download():
     """Launch tile download script"""

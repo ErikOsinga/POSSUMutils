@@ -2,7 +2,9 @@
 
 import time
 import pandas as pd
-from skaha.session import Session
+# from skaha.session import Session
+from canfar.sessions import Session
+
 
 def get_open_sessions():
     """

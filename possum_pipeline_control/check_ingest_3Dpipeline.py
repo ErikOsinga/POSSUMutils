@@ -8,7 +8,8 @@ import numpy as np
 from time import sleep
 import pandas as pd
 from possum_pipeline_control import util
-from skaha.session import Session
+# from skaha.session import Session
+from canfar.sessions import Session
 from automation import database_queries as db
 
 session = Session()
