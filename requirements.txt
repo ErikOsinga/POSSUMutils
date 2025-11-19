@@ -9,5 +9,6 @@ gspread
 pandas
 numpy
 astropy
+astroquery
 matplotlib
 prefect
