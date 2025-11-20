@@ -392,15 +392,15 @@ if __name__ == "__main__":
     if not os.path.exists(local_file):
         print("Creating 1D pipeline progress plot")
         create_progress_plot(full_table)
-        print("Collating all the 1D pipeline outputs")
-        launch_collate_job()        
+        # print("Collating all the 1D pipeline outputs")
+        # launch_collate_job()
     else:
         file_mod_time = os.path.getmtime(local_file)
         if (time.time() - file_mod_time) > 86400:  # 86400 seconds = 1 day
             print("Updating 1D pipeline progress plot")
             create_progress_plot(full_table)
-            print("Collating all the 1D pipeline outputs")
-            launch_collate_job()
+            # print("Collating all the 1D pipeline outputs")
+            # launch_collate_job()
 
     # Loop over each row in the returned table to launch the pipeline command.
     # The 'fieldname' is taken from the column "name" with "EMU_" stripped if present.
