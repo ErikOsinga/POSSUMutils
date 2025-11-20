@@ -493,16 +493,24 @@ if __name__ == "__main__":
 
     connection = db.get_database_connection(test=False)
     queries = []
-    queries.extend(create_partial_tile_pipeline_tables())
-    queries.extend(create_observation_state_tables())
-    queries.extend(upsert_observation_state_columns())
-    queries.extend(create_tile_state_tables())
-    queries.extend(upsert_tile_state_columns())
-    queries.append(delete_original_state_columns())
+
+    if False:
+        print("This code changes the database schema and inserts data from the Google spreadsheets.")
+        print("But since we have already done that, the code is now disabled to prevent accidental re-runs.")
+        queries.extend(create_partial_tile_pipeline_tables())
+        queries.extend(create_observation_state_tables())
+        queries.extend(upsert_observation_state_columns())
+        queries.extend(create_tile_state_tables())
+        queries.extend(upsert_tile_state_columns())
+        queries.append(delete_original_state_columns())
+    
     # using with statement to auto commit and rollback if there's exception
     with connection:
+        # this is in case we do need to create the tables again
         for query in queries:
             db.execute_query(query[0], connection, query[1], True)
+        
+        # stream data into the tables
         query, data = insert_partial_tile_data()
         execute_batch(connection.cursor(), query, data)
         query_list, data_list = insert_observation_1d_data_from_spreadsheet()
@@ -511,4 +519,7 @@ if __name__ == "__main__":
         query_list, data_list = insert_3d_pipeline_data_from_spreadsheet()
         for query, data in zip(query_list, data_list):
             execute_batch(connection.cursor(), query, data)
+    
     connection.close()
+
+    print("Database update complete.")
