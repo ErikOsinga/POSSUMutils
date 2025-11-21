@@ -43,9 +43,10 @@ export PYTHONPATH="/arc/projects/CIRADA/polarimetry/software/RMtoolsdev/:$PYTHON
 echo "Starting pipeline run $1 field_ID $2 SBID $3 tiles $tilelist_dir"
 psrecord "python /arc/projects/CIRADA/polarimetry/software/POSSUM_Polarimetry_Pipeline/pipeline/pipeline_prefect.py $workdir/config_943MHz_$2_$3_$tilelist_dir.ini" --include-children --log $workdir/psrecord_$2_$3_$tilelist_dir.txt --plot $workdir/psrecord_$2_$3_$tilelist_dir.png --interval 1
 
+
 echo "Logging pipeline status"
+# go to POSSUMutils to run as module
+cd /arc/projects/CIRADA/polarimetry/software/POSSUMutils
+# treat cirada_software as a module to make sure imports work
 # field, sbid, tilenumbers ("8764+8953"), band
-python /arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/log_processing_status_1D_PartialTiles.py $2 $3 $tilelist 943MHz --psm_val_api_token /arc/home/ErikOsinga/.ssh/neural-networks--1524580309831-c5c723e2468e.json
-# TODO: for the Partial Tile pipeline, check the following status as well:
-# If all edges and centers have been done for a certain field
-# then create summary plot and delete the partial tiles from CANFAR (otherwise too much storage)
+python -m cirada_software.log_processing_status_1D_PartialTiles.py $2 $3 $tilelist 943MHz --database_config_path /arc/projects/CIRADA/polarimetry/software/POSSUMutils/automation/config.env

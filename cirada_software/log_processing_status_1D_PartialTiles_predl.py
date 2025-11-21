@@ -1,5 +1,7 @@
 #!/usr/bin/env python
+import os
 import argparse
+from dotenv import load_dotenv
 from .log_processing_status_1D_PartialTiles_summary import update_status_spreadsheet
 
 """
@@ -21,16 +23,23 @@ if __name__ == "__main__":
         help="SB number. e.g. 50413",
     )
     parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
+    parser.add_argument("--database_config_path", type=str, default="automation/config.env", help="Path to .env file with database connection parameters.")
+    # consider chmod 600 <file> to prevent access
 
     args = parser.parse_args()
     field_ID = args.field_ID # without EMU_
     SBID = args.SB_num
     band = args.band
+    database_config_path = args.database_config_path
         
+    load_dotenv(dotenv_path=database_config_path)
+    Google_API_token = os.getenv('POSSUM_STATUS_TOKEN')
+    if not os.path.isfile(Google_API_token):
+        raise FileNotFoundError(f"Google API token file not found at {Google_API_token}")
+
     # update the status in Cameron's spreadsheet
     status_to_put = "PartialTiles - Running"
-    Google_API_token = "/arc/home/ErikOsinga/.ssh/psm_gspread_token.json"
 
     print(f"Updating status to {status_to_put} for field {field_ID} SBID {SBID} band {band} in column 'single_SB_1D_pipeline'")
 
-    update_status_spreadsheet(field_ID, SBID, band, Google_API_token, status_to_put, 'single_SB_1D_pipeline')
+    update_status_spreadsheet(field_ID, SBID, band, Google_API_token, status_to_put, 'single_SB_1D_pipeline', database_config_path=database_config_path)

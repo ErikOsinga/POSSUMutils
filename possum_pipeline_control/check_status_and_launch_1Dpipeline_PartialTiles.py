@@ -236,7 +236,7 @@ def launch_pipeline(field_ID, tilenumbers, SBid, band):
 
 def launch_pipeline_summary(field_ID, SBid, band):
     """
-    # Launch the appropriate 1D pipeline summary script based on the band
+    Launch the appropriate 1D pipeline summary script based on the band
 
     field_ID    -- str/int         -- 7 char fieldID, e.g. 1412-28
     SBid        -- str/int         -- 5 (?) digit SBid, e.g. 50413
@@ -255,7 +255,7 @@ def launch_pipeline_summary(field_ID, SBid, band):
     print(f"Running command: {' '.join(command)}")
     subprocess.run(command, check=True)
 
-def update_validation_status(field_name, sbid, band_number, status):
+def update_validation_status(field_name, sbid, band_number, status, database_config_path="automation/config.env"):
     """
     Update the status of the specified partial tile or all rows for a given field_name and sbid.
     A Partial Tile is uniquely defined by field_ID + sbid + tile_number.
@@ -266,7 +266,7 @@ def update_validation_status(field_name, sbid, band_number, status):
         status (str): The status to set in the specified column.
     """
     print("Updating partial tile status in the POSSUM pipeline validation sheet.")
-    conn = db.get_database_connection(test=False)
+    conn = db.get_database_connection(test=False, database_config_path=database_config_path)
     row_num = db.update_1d_pipeline_table(field_name, band_number, "Running", "1d_pipeline_validation", conn)
     conn.close()
 
@@ -303,7 +303,7 @@ def launch_band1_1Dpipeline(database_config_path: str = "automation/config.env")
     # i.e.  'SBID' column is not empty, 'number_sources' is not empty, and '1d_pipeline' column is empty
 
     # connect to the database
-    conn = db.get_database_connection(test=False)
+    conn = db.get_database_connection(test=False, database_config_path=database_config_path)
     field_IDs, tile1, tile2, tile3, tile4, SBids, fields_to_validate, field_to_validate_boundaryissues = get_tiles_for_pipeline_run(conn, band_number=1)
     assert len(tile1) == len(tile2) == len(tile3) == len(tile4), "Need to have 4 tile columns in google sheet. Even if row can be empty."
     # close the connection
@@ -333,8 +333,9 @@ def launch_band1_1Dpipeline(database_config_path: str = "automation/config.env")
             launch_pipeline_summary(field_id, sbid, band)
 
             # Update the status of the '1d_pipeline_validation' column to "Running" regardless of tile number
-            update_validation_status(field, sbid, band_number, "Running")
+            update_validation_status(field, sbid, band_number, "Running", database_config_path=database_config_path)
 
+    # Also the ones that can be done if we skip the projection boundary issues
     if len(field_to_validate_boundaryissues) > 0:
         print(f"Found {len(field_to_validate_boundaryissues)} fields that are partially finished (except projection boundaries): {field_to_validate_boundaryissues}\n")
 
@@ -346,9 +347,10 @@ def launch_band1_1Dpipeline(database_config_path: str = "automation/config.env")
             launch_pipeline_summary(field_id, sbid, band)
 
             # Update the status of the '1d_pipeline_validation' column to "Running" regardless of tile number
-            update_validation_status(field, sbid, band_number, "Running")
+            update_validation_status(field, sbid, band_number, "Running", database_config_path=database_config_path)
 
 
+    # Now launch individual 1D pipeline jobs for Partial Tiles
     if len(field_IDs) > 0:
         print(f"Found {len(field_IDs)} partial tile runs in Band 1 ready to be processed with 1D pipeline")
         print(f"On CANFAR, found {len(sourcelist_fieldIDs)} sourcelists for Band 1")
