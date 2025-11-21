@@ -7,7 +7,7 @@ from time import sleep
 import re
 from automation import database_queries as db
 from possum_pipeline_control import util
-from control_1D_pipeline_PartialTiles import get_open_sessions
+from possum_pipeline_control.control_1D_pipeline_PartialTiles import get_open_sessions
 
 """
 Should be executed on p1 in this script's directory (called from control_1D_pipeline_PartialTiles.py):
