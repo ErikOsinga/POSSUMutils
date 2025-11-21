@@ -37,7 +37,7 @@ def get_database_parameters(test=False, database_config_path: str = "automation/
         'port': os.getenv('DATABASE_PORT')
     }
 
-def execute_update_query(query, conn, params=None, verbose=True):
+def execute_update_query(query, conn, params=None, verbose=False):
     """
     Execute an update SQL query and return the number of rows affected.
 
