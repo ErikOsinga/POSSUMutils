@@ -45,8 +45,8 @@ def kill_headless_sessions(also_pending: bool, pause_seconds=1):
         # Filter for headless sessions that are still running
         mask = (
             (df_sessions['type'].str.lower() == 'headless') &
-            (df_sessions['status'].str.lower() == 'running') &
-            (df_sessions['status'].str.lower() == 'pending')
+            ( (df_sessions['status'].str.lower() == 'running') |
+            (df_sessions['status'].str.lower() == 'pending') )
         )
     else:
         # Filter for headless sessions that are still running
