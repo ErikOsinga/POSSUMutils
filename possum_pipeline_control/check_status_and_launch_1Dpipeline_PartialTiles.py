@@ -214,7 +214,7 @@ def field_from_sourcelist_string(srclist_str):
 
 def launch_pipeline(field_ID, tilenumbers, SBid, band):
     """
-    # Launch the appropriate 1D pipeline script based on the band
+    Launch the appropriate 1D pipeline script based on the band
 
     field_ID    -- str/int         -- 7 char fieldID, e.g. 1412-28
     tilenumbers -- list of str/int -- list of up to 4 tile numbers: a tile number is a 4 or 5 digit tilenumber, e.g. 8972, if no number it's an empty string ''
