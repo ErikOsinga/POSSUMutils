@@ -360,31 +360,21 @@ def launch_collate_job():
     print(f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs")
 
 if __name__ == "__main__":
-    # Update the POSSUM Pipeline Status spreadsheet as well. A complete field is being processed!
-    Google_API_token = "/home/erik/.ssh/psm_gspread_token.json"
-    # on p1, token for accessing Erik's google sheets 
-    # consider chmod 600 <file> to prevent access
-    # check for each row if it is present exactly once, irrespetive of the number of sources
-    Google_API_token_psmval = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
-
-    parser = argparse.ArgumentParser(description="Update Partial Tile Google Sheet")
-    # parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
-    ### DEPRECATED
-    parser.add_argument("--psm_api_token", type=str, default=Google_API_token, help="Path to POSSUM status sheet Google API token JSON file")
-    parser.add_argument("--psm_val_api_token", type=str, default=Google_API_token_psmval, help="Path to POSSUM validation sheet sheet Google API token JSON file")
     
+    parser = argparse.ArgumentParser(description="Update Partial Tile Google Sheet")
+    parser.add_argument("--band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile", default="943MHz")
+    parser.add_argument("--database_config_path", type=str, default="automation/config.env", help="Path to .env file with database connection parameters.")
     args = parser.parse_args()
-    band = "943MHz" # hardcode for now
+
+    band = args.band
     
     # load env for google spreadsheet constants
-    load_dotenv(dotenv_path='../automation/config.env')
-    # Update the POSSUM Pipeline Status spreadsheet as well. A complete field is being processed!
+    load_dotenv(dotenv_path=args.database_config_path)
     Google_API_token = os.getenv('POSSUM_STATUS_SHEET')
-    # put the status as PartialTiles - Running
-    
+    # consider chmod 600 <POSSUM_STATUS_TOKEN_FILE> to prevent access!!!
 
+    # Get fields ready for processing according to Cameron's status sheet.
     ready_table, full_table = get_ready_fields(band)
-
     print(f"Found {len(ready_table)} fields ready for single SB partial tile pipeline processing in band {band}")
     
     # If the plot hasnt been updated in a day, re-run the plot
@@ -413,7 +403,7 @@ if __name__ == "__main__":
         # Launch the job that downloads the tiles and populates Erik's google sheet
         launch_pipeline_command(fieldname, SBID)
         
-        ## NOTE: actually better to do in the launched script
+        ## NOTE: moved to do this in the launched script to make sure it only happens if the job is actually launched
         # # update the status in Cameron's spreadsheet
         # status_to_put = "PartialTiles - Running"
         # update_status_spreadsheet(fieldname, SBID, band, Google_API_token, status_to_put, 'single_SB_1D_pipeline')
