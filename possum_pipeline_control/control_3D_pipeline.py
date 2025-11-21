@@ -48,7 +48,7 @@ def run_script_intermittently(script_paths, interval, max_runs=None, max_pending
             if n_headless_pending < max_pending and n_headless_running < max_running:
                 for script_path in script_paths:
                     print(f"Running script: {script_path}")
-                    subprocess.run(["python", script_path], check=True)
+                    subprocess.run(["python", "-m", script_path], check=True)
             else:
                 if n_headless_pending >= max_pending:
                     print("Too many pending headless sessions. Skipping this run.")
@@ -69,8 +69,8 @@ def run_script_intermittently(script_paths, interval, max_runs=None, max_pending
 
 if __name__ == "__main__":
     # Path to the script to be run intermittently
-    script_paths = ["check_status_and_launch_3Dpipeline_v2.py"
-                    ,"check_ingest_3Dpipeline.py"]
+    script_paths = ["possum_pipeline_control.check_status_and_launch_3Dpipeline_v2"
+                    ,"possum_pipeline_control.check_ingest_3Dpipeline"]
     
     # Interval between each run in seconds
     interval = 600  # 10 minutes
