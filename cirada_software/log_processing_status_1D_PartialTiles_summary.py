@@ -1,5 +1,4 @@
 import os
-import sys
 import argparse
 import glob
 from dotenv import load_dotenv
@@ -9,9 +8,10 @@ import astropy.table as at
 import ast
 from time import sleep
 from prefect import flow, task
-sys.path.append("../")
+
 from automation import database_queries as db
 from possum_pipeline_control import util
+
 
 """
 Usage: python log_processing_status.py fieldstr sbid tilestr
