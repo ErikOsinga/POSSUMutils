@@ -6,24 +6,29 @@ import psycopg2
 from dotenv import load_dotenv
 
 
-def get_database_connection(test) :
+def get_database_connection(test: bool, database_config_path: str = "automation/config.env"):
     """
     Initiate a database connection.
     Args:
     - test: True if this should connect to the test database set up in test.env
     """
-    conn_params = get_database_parameters(test)
+    conn_params = get_database_parameters(test, database_config_path)
     return psycopg2.connect(**conn_params)
 
-def get_database_parameters(test=False):
+def get_database_parameters(test=False, database_config_path: str = "automation/config.env"):
     """
     Get database parameters from env file (test.env for test, config.env otherwise)
     """
     if test:
         load_dotenv(dotenv_path='automation/unit_tests/test.env')
     else:
+        print(f"Attempting to load database config from {database_config_path}")
+        if not os.path.exists(database_config_path):
+            raise FileNotFoundError(f"Database config file not found at {database_config_path}")
+        
         # Get database connection details from config.env file
-        load_dotenv(dotenv_path='automation/config.env')
+        load_dotenv(dotenv_path=database_config_path)
+
     return {
         'dbname': os.getenv('DATABASE_NAME'),
         'user': os.getenv('DATABASE_USER'),
