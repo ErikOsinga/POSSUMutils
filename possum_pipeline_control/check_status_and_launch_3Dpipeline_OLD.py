@@ -48,9 +48,9 @@ def update_status(df, local_path, tilenumber, band, new_status):
 def launch_pipeline(tilenumber, band):
     # Launch the appropriate 3D pipeline script based on the band
     if band == "943MHz":
-        command = ["python", "possum_pipeline_control/launch_3Dpipeline_band1.py", str(tilenumber)]
+        command = ["python", "-m", "possum_pipeline_control.launch_3Dpipeline_band1", str(tilenumber)]
     elif band == "1367MHz":
-        command = ["python", "possum_pipeline_control/launch_3Dpipeline_band2.py", str(tilenumber)]
+        command = ["python", "-m", "possum_pipeline_control.launch_3Dpipeline_band2", str(tilenumber)]
         print("Temporarily disabled launching band 2 because need to write that run script")
     else:
         raise ValueError(f"Unknown band: {band}")

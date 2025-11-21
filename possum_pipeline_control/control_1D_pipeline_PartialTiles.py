@@ -63,7 +63,7 @@ def run_script_intermittently(script_paths, interval, max_runs=None, max_pending
             if n_headless_pending < max_pending and n_headless_running < max_running:
                 for script_path in script_paths:
                     print(f"Running script: {script_path}")
-                    cmd_list = ["python", script_path]
+                    cmd_list = ["python", "-m", script_path]
                     if args.database_config_path is not None:
                         cmd_list += ["--database_config_path", args.database_config_path]
 
@@ -95,10 +95,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Path to the script to be run intermittently
-    script_paths = ["possum_pipeline_control/update_partialtile_google_sheet.py" # Check POSSUM Pipeline Status sheet and create queue of jobs in POSSUM Pipeline Validation sheet. 
+    script_paths = ["possum_pipeline_control.update_partialtile_google_sheet" # Check POSSUM Pipeline Status sheet and create queue of jobs in POSSUM Pipeline Validation sheet. 
                                                          # This is done via "check_status_and_launch_1Dpipeline_PartialTiles.py 'pre'"
                                                          # which also downloads the tiles in a CANFAR job.
-                    ,"possum_pipeline_control/check_status_and_launch_1Dpipeline_PartialTiles.py" # Check POSSUM Pipeline Validation sheet and launch jobs
+                    ,"possum_pipeline_control.check_status_and_launch_1Dpipeline_PartialTiles" # Check POSSUM Pipeline Validation sheet and launch jobs
                     # ,"check_ingest_1Dpipeline_PartialTiles.py" # TODO: Check POSSUM Pipeline Validation sheet and ingest results
                                                             # actually, Craig will validate, and Cameron will ingest into YouCat
                     ]  
