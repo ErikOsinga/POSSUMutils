@@ -109,8 +109,8 @@ if __name__ == "__main__":
     # Interval between each run in seconds
     #interval = 300  # 5 minutes
     #interval = 60 #1min
-    #interval = 10*60 # 10 min
-    interval = 0.5*60*60 # 0.5 hours (download is slow atm)
+    interval = 10*60 # 10 min
+    #interval = 0.5*60*60 # 0.5 hours (download is slow atm)
 
     # Maximum number of runs for this script, set to None for infinite
     max_runs = None
