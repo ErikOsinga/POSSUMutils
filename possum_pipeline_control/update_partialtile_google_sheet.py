@@ -14,6 +14,7 @@ import matplotlib.dates as mdates
 import matplotlib.ticker as ticker
 import time
 from datetime import datetime
+from pathlib import Path
 
 """
 Run "check_status_and_launch_1Dpipeline_PartialTiles.py 'pre' " based on Camerons' POSSUM Pipeline Status google sheet.
@@ -120,6 +121,8 @@ def create_progress_plot(full_table):
     plt.xticks(rotation=45)
     plt.tight_layout()
     plt.grid()
+    if not Path('./plots/').exists():
+        Path('./plots/').mkdir()
     plt.savefig('./plots/1D_pipeline_progress_per_field.png')
     plt.show()
     plt.close()
