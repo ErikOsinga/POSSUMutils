@@ -487,7 +487,7 @@ def drop_test_tables():
     return sql_list
 
 if __name__ == "__main__":
-    load_dotenv(dotenv_path='config.env')
+    load_dotenv(dotenv_path='./automation/config.env')
     google_api_token = os.getenv('POSSUM_STATUS_TOKEN')
     GC = gspread.service_account(filename=google_api_token)
     VALIDATION_SHEET = 'https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k'
