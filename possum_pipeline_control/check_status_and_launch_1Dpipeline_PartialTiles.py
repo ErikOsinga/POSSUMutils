@@ -1,12 +1,10 @@
 import os
-import sys
 import argparse
 from vos import Client
 import subprocess
 import time
 from time import sleep
 import re
-sys.path.append("../")
 from automation import database_queries as db
 from possum_pipeline_control import util
 from control_1D_pipeline_PartialTiles import get_open_sessions
