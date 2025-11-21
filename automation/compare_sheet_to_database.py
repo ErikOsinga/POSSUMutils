@@ -7,16 +7,11 @@ to the database as the source of truth.
 Make sure config.env is set.
 """
 
-import sys
-from typing import Any
-
 import gspread
 import astropy.table as at
 import numpy as np
 import tqdm
-
-# assume this script is run in /automation/../ folder (i.e. one above automation/)
-sys.path.append("./")
+# assume this script is run as a module from the POSSUMutils package
 from automation import database_queries as db  # noqa: E402
 
 
@@ -27,7 +22,7 @@ VALIDATION_SHEET_URL = (
 )
 
 
-def get_tile_num(tile_str: Any) -> str:
+def get_tile_num(tile_str: str) -> str:
     """
     Normalise tile number to a string. If the value is None, return an empty string.
 
@@ -40,7 +35,7 @@ def get_tile_num(tile_str: Any) -> str:
     return str(tile_str).replace("None", "")
 
 
-def get_sbid_num(sbid: Any) -> str:
+def get_sbid_num(sbid: str | int) -> str:
     """
     Remove ASKAP- prefix from sbid if present and normalise to string.
 
@@ -56,7 +51,7 @@ def get_sbid_num(sbid: Any) -> str:
     return sbid_str
 
 
-def normalize_value(value: Any) -> str:
+def normalize_value(value: str | None) -> str:
     """
     Normalise a value for comparison between sheet and database.
 

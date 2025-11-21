@@ -1,5 +1,4 @@
 import os
-import sys
 from dotenv import load_dotenv
 from vos import Client
 import subprocess
@@ -8,7 +7,6 @@ import gspread
 import astropy.table as at
 import numpy as np
 from time import sleep
-sys.path.append("../")
 from automation import database_queries as db
 from possum_pipeline_control import util
 

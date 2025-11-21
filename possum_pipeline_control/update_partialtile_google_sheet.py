@@ -14,8 +14,6 @@ import matplotlib.dates as mdates
 import matplotlib.ticker as ticker
 import time
 from datetime import datetime
-sys.path.append('../cirada_software/') # to import update_status_spreadsheet
-from log_processing_status_1D_PartialTiles_summary import update_status_spreadsheet # type: ignore  # noqa: F401
 
 """
 Run "check_status_and_launch_1Dpipeline_PartialTiles.py 'pre' " based on Camerons' POSSUM Pipeline Status google sheet.
