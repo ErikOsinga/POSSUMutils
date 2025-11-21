@@ -176,14 +176,16 @@ def insert_observation_1d_data_from_spreadsheet():
             (name, "1d_pipeline_validation")
             VALUES (%s, %s)
             -- If row already exists, then don't overwrite
-            ON CONFLICT (name) DO NOTHING;
+            ON CONFLICT (name) DO UPDATE
+            SET "1d_pipeline_validation" = %s;
        """
     query_l.append(sql)
     sql_data = []
     for row in observation_unique.values:  # Skip header row
         sql_data.append((
            row[0],  # field_name
-           row[9] #1d_pipeline_validation
+           row[9], #1d_pipeline_validation
+           row[9]  #1d_pipeline_validation if the row already exists
         ))
     data_l.append(sql_data)
 
