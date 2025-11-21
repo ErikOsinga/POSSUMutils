@@ -1,10 +1,6 @@
-import os
 from dotenv import load_dotenv
 from vos import Client
 import argparse
-import gspread
-import astropy.table as at
-import numpy as np
 from time import sleep
 import pandas as pd
 from possum_pipeline_control import util
