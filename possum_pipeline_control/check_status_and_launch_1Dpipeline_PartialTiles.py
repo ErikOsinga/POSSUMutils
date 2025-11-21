@@ -9,10 +9,10 @@ import re
 sys.path.append("../")
 from automation import database_queries as db
 from possum_pipeline_control import util
-from .control_1D_pipeline_PartialTiles import get_open_sessions
+from control_1D_pipeline_PartialTiles import get_open_sessions
 
 """
-Should be executed on p1
+Should be executed on p1 in this script's directory (called from control_1D_pipeline_PartialTiles.py):
 
 Checks POSSUM Partial Tile status (google sheet)if 1D pipeline can be started.
 
@@ -292,7 +292,7 @@ def check_predl_job_running_with_sbid(SBnumber: str) -> bool:
         return False
 
 
-def launch_band1_1Dpipeline(Google_API_token):
+def launch_band1_1Dpipeline(database_config_path: str = "automation/config.env"):
     """
     Launch a headless job to CANFAR for a 1D pipeline Partial Tile
     """
@@ -357,7 +357,7 @@ def launch_band1_1Dpipeline(Google_API_token):
         tiles_ready_but_not_canfar = set(field_IDs) - set(sourcelist_fieldIDs)
         print(f"Field IDs ready according to the sheet but sourcelist not on CANFAR: {tiles_ready_but_not_canfar}")
         # else:
-        tiles_canfar_not_ready = set(sourcelist_fieldIDs) - set(field_IDs)
+        tiles_canfar_not_ready = set(sourcelist_fieldIDs) - set(field_IDs)  # noqa: F841
         # print(f"Field ID sourcelists on CANFAR but not ready to run: {tiles_canfar_not_ready}")
 
         fields_on_both = set(field_IDs) & set(sourcelist_fieldIDs)
@@ -393,7 +393,7 @@ def launch_band1_1Dpipeline(Google_API_token):
                     launch_pipeline(field_ID, tilenumbers, SBid, band)
 
                     # Update the status to "Running"
-                    conn = db.get_database_connection(test=False)
+                    conn = db.get_database_connection(test=False, database_config_path=database_config_path)
                     db.update_partial_tile_1d_pipeline_status(field, tilenumbers, band_number, "Running", conn)
                     conn.close()
 
@@ -405,13 +405,13 @@ def launch_band1_1Dpipeline(Google_API_token):
         print("Found no tiles ready to be processed. Either all are done, or a pre-dl job is already running.")
 
 if __name__ == "__main__":
+    # DEPRECATED:
     # on p1, token for accessing Erik's google sheets 
     # consider chmod 600 <file> to prevent access
-    Google_API_token = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
+    # Google_API_token = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
 
     parser = argparse.ArgumentParser(description="Checks POSSUM validation status ('POSSUM Pipeline validation' google sheet) if 3D pipeline outputs can be ingested.")
-    parser.add_argument("--psm_val_api_token", type=str, default=Google_API_token, help="Path to POSSUM validation sheet Google API token JSON file")
-    parser.add_argument("--psm_api_token", type=str, default=None, help="Not used in this file, but here for future compatibility.")
+    parser.add_argument("--database_config_path", type=str, default="automation/config.env", help="Path to .env file with database connection parameters.")
     args = parser.parse_args()
 
-    launch_band1_1Dpipeline(args.psm_val_api_token)
+    launch_band1_1Dpipeline(args.database_config_path)

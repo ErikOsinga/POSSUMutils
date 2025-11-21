@@ -64,10 +64,8 @@ def run_script_intermittently(script_paths, interval, max_runs=None, max_pending
                 for script_path in script_paths:
                     print(f"Running script: {script_path}")
                     cmd_list = ["python", script_path]
-                    if args.psm_api_token is not None:
-                        cmd_list += ["--psm_api_token", args.psm_api_token]
-                    if args.psm_val_api_token is not None:
-                        cmd_list += ["--psm_val_api_token", args.psm_val_api_token]
+                    if args.database_config_path is not None:
+                        cmd_list += ["--database_config_path", args.database_config_path]
 
                     subprocess.run(cmd_list, check=True)
             else:
@@ -93,8 +91,7 @@ if __name__ == "__main__":
 
 
     parser = argparse.ArgumentParser(description="Update Partial Tile Google Sheet")
-    parser.add_argument("--psm_api_token", type=str, default=None, help="Path to POSSUM status sheet Google API token JSON file")
-    parser.add_argument("--psm_val_api_token", type=str, default=None, help="Path to POSSUM validation sheet sheet Google API token JSON file")
+    parser.add_argument("--database_config_path", type=str, default="../automation/config.env", help="Path to .env file with database connection parameters.")
     args = parser.parse_args()
 
     # Path to the script to be run intermittently
