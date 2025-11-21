@@ -221,9 +221,9 @@ def launch_pipeline(field_ID, tilenumbers, SBid, band):
 
     """
     if band == "943MHz":
-        command = ["python", "launch_1Dpipeline_PartialTiles_band1.py", str(field_ID), str(tilenumbers), str(SBid)]
+        command = ["python", "possum_pipeline_control/launch_1Dpipeline_PartialTiles_band1.py", str(field_ID), str(tilenumbers), str(SBid)]
     elif band == "1367MHz":
-        command = ["python", "launch_1Dpipeline_PartialTiles_band2.py", str(field_ID), str(tilenumbers), str(SBid)]
+        command = ["python", "possum_pipeline_control/launch_1Dpipeline_PartialTiles_band2.py", str(field_ID), str(tilenumbers), str(SBid)]
         command = ""
         raise NotImplementedError("TODO: Temporarily disabled launching band 2 because need to write that run script")
     else:
@@ -242,9 +242,9 @@ def launch_pipeline_summary(field_ID, SBid, band):
 
     """
     if band == "943MHz":
-        command = ["python", "launch_1Dpipeline_PartialTiles_band1_pre_or_post.py", str(field_ID), str(SBid), "post"]
+        command = ["python", "possum_pipeline_control/launch_1Dpipeline_PartialTiles_band1_pre_or_post.py", str(field_ID), str(SBid), "post"]
     elif band == "1367MHz":
-        command = ["python", "launch_1Dpipeline_PartialTiles_band2_pre_or_post.py", str(field_ID), str(SBid), "post"]
+        command = ["python", "possum_pipeline_control/launch_1Dpipeline_PartialTiles_band2_pre_or_post.py", str(field_ID), str(SBid), "post"]
         command = ""
         raise NotImplementedError("TODO: Temporarily disabled launching band 2 because need to write that run script")
     else:
