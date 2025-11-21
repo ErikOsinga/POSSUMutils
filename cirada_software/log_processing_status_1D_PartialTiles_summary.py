@@ -72,7 +72,7 @@ def update_validation_spreadsheet(field_ID, SBid, band, status, conn):
 
     return boundary_issue
 
-def update_status_spreadsheet(field_ID, SBid, band, Google_API_token, status, status_column):
+def update_status_spreadsheet(field_ID, SBid, band, Google_API_token, status, status_column, database_config_path='./automation/config.env'):
     """
     Update the status of the specified tile in the STATUS Google Sheet (Cameron's sheet).
     
@@ -87,6 +87,7 @@ def update_status_spreadsheet(field_ID, SBid, band, Google_API_token, status, st
 
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
+    load_dotenv(dotenv_path=database_config_path)
     ps = gc.open_by_url(os.getenv('POSSUM_STATUS_SHEET'))
     
     # Select the worksheet for the given band number
@@ -106,7 +107,7 @@ def update_status_spreadsheet(field_ID, SBid, band, Google_API_token, status, st
     if rows_to_update:
         print(f"Updating POSSUM Status Monitor with 1D pipeline status for field {full_field_name} and SBID {SBid}")
         col_letter = gspread.utils.rowcol_to_a1(1, column_names.index(status_column) + 1)[0]
-        conn = db.get_database_connection(test=False)
+        conn = db.get_database_connection(test=False, database_config_path=database_config_path)
         for row_index in rows_to_update:
             sleep(2) # 60 writes per minute only
             tile_sheet.update(range_name=f'{col_letter}{row_index}', values=[[status]])
@@ -161,6 +162,10 @@ def main(args):
     field_ID = args.field_ID
     SB_num = args.SB_num
     band = args.band
+    database_config_path = args.database_config_path
+
+    if not os.path.isfile(database_config_path):
+        raise FileNotFoundError(f".env file not found at {database_config_path}")
 
     # Where to find pipeline outputs
     basedir = f"/arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/{band}"
@@ -171,7 +176,8 @@ def main(args):
     log_files = sorted(glob.glob(f"{basedir}/*pipeline_config*_summary.log"))
 
     # Load constants for Google spreadsheets
-    load_dotenv(dotenv_path='../automation/config.env')
+    load_dotenv(dotenv_path=database_config_path)
+
     if len(log_files) > 1:
         log_file_path = log_files[-1]
 
@@ -196,7 +202,7 @@ def main(args):
     # Update the POSSUM Validation database table
     t1 = task(update_validation_spreadsheet, name="update_validation_spreadsheet")
     # execute tasks serially such that logging is preserved (instead of .submit)
-    conn = db.get_database_connection(test=False)
+    conn = db.get_database_connection(test=False, database_config_path=database_config_path)
     has_boundary_issue = t1(field_ID, SB_num, band, status, conn)
     conn.close()
 
@@ -235,6 +241,8 @@ if __name__ == "__main__":
         help="SB number. e.g. 50413",
     )
     parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
+    parser.add_argument("--database_config_path", type=str, default="automation/config.env", help="Path to .env file with database connection parameters.")
+    # consider chmod 600 <file> to prevent access
 
     args = parser.parse_args()
 
