@@ -30,7 +30,7 @@ def get_tile_num(tile_str: str) -> str:
         tile_str: Tile identifier, can be None or numeric/string.
 
     Returns:
-        str: Normalised tile string ('' for None).
+        str: Normalised tile str ('' for None).
     """
     return str(tile_str).replace("None", "")
 
@@ -270,6 +270,41 @@ def build_db_indexes(
     return full_index, field_sbid_index
 
 
+def get_observation_state_validation(band_number: int = 1) -> dict[str, str]:
+    """
+    Load 1d_pipeline_validation state per field from possum.observation_state_band{band_number}.
+
+    Assumes the table has columns:
+        - field_name
+        - 1d_pipeline_validation
+
+    Args:
+        band_number: Band index (1 or 2).
+
+    Returns:
+        dict mapping field_name -> normalised 1d_pipeline_validation state.
+    """
+    conn = db.get_database_connection(test=False)
+    try:
+        query = f"""
+            SELECT name, "1d_pipeline_validation"
+            FROM possum.observation_state_band{band_number}
+        """
+        rows = db.execute_query(query, conn)
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+    state_by_field: dict[str, str] = {}
+    for field_name, validation_state in rows:
+        state_by_field[str(field_name)] = normalize_value(validation_state)
+
+    return state_by_field
+
+
+
 def compare_database_to_sheet(
     db_rows: list[tuple],
     sheet_full_index: dict[tuple[str, str, tuple[str, str, str, str], str], list[at.Row]],
@@ -436,6 +471,81 @@ def compare_sheet_to_database(
     return mismatches
 
 
+def compare_sheet_validation_to_observation_state(
+    tile_table: at.Table,
+    band_number: int = 1,
+) -> list[tuple[str, str]]:
+    """
+    Compare 1d_pipeline_validation between the sheet and possum.observation_state_band{band_number}.
+
+    The sheet may have multiple rows per field_name, but they should all have the same
+    1d_pipeline_validation value for that field. The database has one row per field_name.
+
+    Checks (sheet -> database only):
+      1. Within the sheet, for each field_name, all 1d_pipeline_validation values
+         must be identical (after normalisation).
+      2. The DB must have an entry for each field_name present in the sheet.
+      3. The DB value must match the sheet value for that field_name.
+
+    Args:
+        tile_table: Astropy table from the validation sheet.
+        band_number: Band index to use for possum.observation_state_band{band_number}.
+
+    Returns:
+        List of (field_name, reason) for mismatches.
+    """
+    mismatches: list[tuple[str, str]] = []
+
+    # 1. Aggregate sheet values per field_name, enforcing consistency.
+    sheet_state_by_field: dict[str, str] = {}
+
+    for row in tqdm.tqdm(
+        tile_table, desc="Aggregating 1d_pipeline_validation from sheet"
+    ):
+        field_name = str(row["field_name"])
+        sheet_val = normalize_value(row["1d_pipeline_validation"])
+
+        # If the sheet uses blank/None as a valid state, we keep that too.
+        if field_name not in sheet_state_by_field:
+            sheet_state_by_field[field_name] = sheet_val
+        else:
+            if sheet_state_by_field[field_name] != sheet_val:
+                mismatches.append(
+                    (
+                        field_name,
+                        f"Inconsistent 1d_pipeline_validation in sheet: "
+                        f"{sheet_state_by_field[field_name]} vs {sheet_val}",
+                    )
+                )
+
+    # 2. Load DB observation_state and compare.
+    db_state_by_field = get_observation_state_validation(band_number=band_number)
+
+    for field_name, sheet_val in tqdm.tqdm(
+        sheet_state_by_field.items(),
+        desc="Comparing sheet 1d_pipeline_validation to observation_state",
+    ):
+        if field_name not in db_state_by_field:
+            mismatches.append(
+                (
+                    field_name,
+                    f"Field not found in possum.observation_state_band{band_number}",
+                )
+            )
+            continue
+
+        db_val = db_state_by_field[field_name]
+        if sheet_val != db_val:
+            mismatches.append(
+                (
+                    field_name,
+                    f"1d_pipeline_validation mismatch (sheet={sheet_val}, db={db_val})",
+                )
+            )
+
+    return mismatches
+
+
 def main() -> None:
     band = "943MHz"
     band_number = 1
@@ -491,6 +601,22 @@ def main() -> None:
             print(field_name, sbid, "-", reason)
     else:
         print(" ====== All Google Sheet entries are present in the database. =====")
+
+
+
+    # Compare "1d_pipeline_validation" column from sheet -> to new "possum.observation_state_band1" table
+    validation_mismatches = compare_sheet_validation_to_observation_state(
+        tile_table, band_number=band_number
+    )
+
+    if validation_mismatches:
+        print(
+            "Mismatches found when comparing sheet 1d_pipeline_validation "
+            f"to possum.observation_state_band{band_number}:"
+        )
+        for field_name, reason in validation_mismatches:
+            print(field_name, "-", reason)
+
 
 if __name__ == "__main__":
     main()

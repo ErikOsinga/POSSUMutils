@@ -81,6 +81,7 @@ def get_results_per_field_sbid(conn, band_number='1', verbose=False):
     # Group the table by 'field_name' and 'sbid'
     results = db.get_observations_with_complete_partial_tiles(band_number, conn)
     field_sbid_dict = {}
+    # make dict to get rid of duplicates
     for row in results:
         field_sbid_dict[(row[0], util.get_sbid_num(row[1]))] = row[2]
         if verbose:
