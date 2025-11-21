@@ -59,9 +59,9 @@ def launch_pipeline_command(fieldname, SBID):
     Launches the 1D pipeline pre-or-post script for a given field and SBID.
     
     The command executed is:
-        python launch_1Dpipeline_PartialTiles_band1_pre_or_post.py {fieldname} {SBID} pre
+        python possum_pipeline_control/launch_1Dpipeline_PartialTiles_band1_pre_or_post.py {fieldname} {SBID} pre
     """
-    command = f"python launch_1Dpipeline_PartialTiles_band1_pre_or_post.py {fieldname} {SBID} pre"
+    command = f"python possum_pipeline_control/launch_1Dpipeline_PartialTiles_band1_pre_or_post.py {fieldname} {SBID} pre"
     print(f"Executing command: {command}")
     subprocess.run(command, shell=True, check=True)
 
