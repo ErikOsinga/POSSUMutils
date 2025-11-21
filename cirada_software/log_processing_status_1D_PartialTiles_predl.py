@@ -1,8 +1,6 @@
 #!/usr/bin/env python
-import sys
 import argparse
-sys.path.append('../cirada_software/') # to import update_status_spreadsheet
-from log_processing_status_1D_PartialTiles_summary import update_status_spreadsheet
+from .log_processing_status_1D_PartialTiles_summary import update_status_spreadsheet
 
 """
 While downloading the tiles in a CANFAR job and populating the POSSUM Pipeline Validation sheet, log the processing status
