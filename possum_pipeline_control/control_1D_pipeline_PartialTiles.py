@@ -95,10 +95,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Path to the script to be run intermittently
-    script_paths = ["update_partialtile_google_sheet.py" # Check POSSUM Pipeline Status sheet and create queue of jobs in POSSUM Pipeline Validation sheet. 
+    script_paths = ["possum_pipeline_control/update_partialtile_google_sheet.py" # Check POSSUM Pipeline Status sheet and create queue of jobs in POSSUM Pipeline Validation sheet. 
                                                          # This is done via "check_status_and_launch_1Dpipeline_PartialTiles.py 'pre'"
                                                          # which also downloads the tiles in a CANFAR job.
-                    ,"check_status_and_launch_1Dpipeline_PartialTiles.py" # Check POSSUM Pipeline Validation sheet and launch jobs
+                    ,"possum_pipeline_control/check_status_and_launch_1Dpipeline_PartialTiles.py" # Check POSSUM Pipeline Validation sheet and launch jobs
                     # ,"check_ingest_1Dpipeline_PartialTiles.py" # TODO: Check POSSUM Pipeline Validation sheet and ingest results
                                                             # actually, Craig will validate, and Cameron will ingest into YouCat
                     ]  
