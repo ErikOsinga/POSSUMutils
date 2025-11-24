@@ -394,7 +394,7 @@ def launch_band1_1Dpipeline(database_config_path: str = "automation/config.env")
 
                     # Update the status to "Running"
                     conn = db.get_database_connection(test=False, database_config_path=database_config_path)
-                    db.update_partial_tile_1d_pipeline_status(field, tilenumbers, band_number, "Running", conn)
+                    db.update_partial_tile_1d_pipeline_status(field_ID, tilenumbers, band_number, "Running", conn)
                     conn.close()
 
                     break
