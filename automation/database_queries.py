@@ -267,9 +267,11 @@ def update_partial_tile_1d_pipeline_status(field_name, tile_numbers, band_number
     # Check for NULLS in tile numbers and make sure the query says IS NULL and not = NULL so it works
     for i, tile in enumerate([t1, t2, t3, t4], start=1):
         if tile is None or tile.strip() == '':  # If tile is None, use IS NULL
-            query += f" AND tile{i} IS NULL"
+            # put condition on newline
+            query += f"\n AND tile{i} IS NULL"
         else:  # Otherwise, use equality
-            query += f" AND tile{i} = %s -- tile"
+            # put condition on newline, careful with the commenting!
+            query += f"\n AND tile{i} = %s -- tile"
             args = args + (tile,)
 
     row_num = execute_update_query(query, conn, args)
