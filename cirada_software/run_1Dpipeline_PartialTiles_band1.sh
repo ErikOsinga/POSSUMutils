@@ -49,4 +49,4 @@ echo "Logging pipeline status"
 cd /arc/projects/CIRADA/polarimetry/software/POSSUMutils
 # treat cirada_software as a module to make sure imports work
 # field, sbid, tilenumbers ("8764+8953"), band
-python -m cirada_software.log_processing_status_1D_PartialTiles.py $2 $3 $tilelist 943MHz --database_config_path /arc/projects/CIRADA/polarimetry/software/POSSUMutils/automation/config.env
+python -m cirada_software.log_processing_status_1D_PartialTiles $2 $3 $tilelist 943MHz --database_config_path /arc/projects/CIRADA/polarimetry/software/POSSUMutils/automation/config.env
