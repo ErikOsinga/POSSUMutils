@@ -123,7 +123,7 @@ def get_tiles_for_pipeline_run(db_conn, band_number):
     tile1_to_run, tile2_to_run, tile3_to_run, tile4_to_run = [],[],[],[]
     if rows:
         for row in rows:
-            fields_to_run.append(remove_prefix(row[0]))
+            fields_to_run.append(row[0]) # keep field prefix, e.g. EMU_1227-69
             SBids_to_run.append(util.get_sbid_num(row[1]))
             tile1_to_run.append(str(row[2]) if row[2] else '')
             tile2_to_run.append(str(row[3]) if row[3] else '')
@@ -313,8 +313,7 @@ def launch_band1_1Dpipeline(database_config_path: str = "automation/config.env")
     #                       'selavy-image.i.EMU_1227-69.SB61103.cont.taylor.0.restored.conv.components.15sig.xml',
     #                       ]
     # list of only the field IDs e.g. "1428-12"
-    sourcelist_fieldIDs = [field_from_sourcelist_string(srl) for srl in canfar_sourcelists]
-    sleep(1) # google sheet shenanigans
+    sourcelist_fieldIDs_no_prefix = [field_from_sourcelist_string(srl) for srl in canfar_sourcelists]
 
     assert len(field_IDs) == len(tile1) == len(SBids) # need fieldID, up to 4 tileIDs and SBID to define what to run
 
@@ -340,9 +339,9 @@ def launch_band1_1Dpipeline(database_config_path: str = "automation/config.env")
         for (field, sbid) in field_to_validate_boundaryissues:
             print(f"Launching job to create summary plot for field {field} with sbid {sbid} (skipping edges)")
 
-            field_id = remove_prefix(field)
+            field_no_prefix = remove_prefix(field)
 
-            launch_pipeline_summary(field_id, sbid, band)
+            launch_pipeline_summary(field_no_prefix, sbid, band)
 
             # Update the status of the '1d_pipeline_validation' column to "Running" regardless of tile number
             update_validation_status(field, sbid, band_number, "Running", database_config_path=database_config_path)
@@ -351,16 +350,18 @@ def launch_band1_1Dpipeline(database_config_path: str = "automation/config.env")
     # Now launch individual 1D pipeline jobs for Partial Tiles
     if len(field_IDs) > 0:
         print(f"Found {len(field_IDs)} partial tile runs in Band 1 ready to be processed with 1D pipeline")
-        print(f"On CANFAR, found {len(sourcelist_fieldIDs)} sourcelists for Band 1")
+        print(f"On CANFAR, found {len(sourcelist_fieldIDs_no_prefix)} sourcelists for Band 1")
+
+        field_IDs_no_prefix = [remove_prefix(fid) for fid in field_IDs]
 
         # if len(field_IDs) > len(sourcelist_fieldIDs):
-        tiles_ready_but_not_canfar = set(field_IDs) - set(sourcelist_fieldIDs)
+        tiles_ready_but_not_canfar = set(field_IDs_no_prefix) - set(sourcelist_fieldIDs_no_prefix)
         print(f"Field IDs ready according to the sheet but sourcelist not on CANFAR: {tiles_ready_but_not_canfar}")
         # else:
-        tiles_canfar_not_ready = set(sourcelist_fieldIDs) - set(field_IDs)  # noqa: F841
+        tiles_canfar_not_ready = set(sourcelist_fieldIDs_no_prefix) - set(field_IDs_no_prefix)  # noqa: F841
         # print(f"Field ID sourcelists on CANFAR but not ready to run: {tiles_canfar_not_ready}")
 
-        fields_on_both = set(field_IDs) & set(sourcelist_fieldIDs)
+        fields_on_both = set(field_IDs_no_prefix) & set(sourcelist_fieldIDs_no_prefix)
         # print(f"Fields ready on both CADC and CANFAR: {tiles_on_both}")
         print(f"Number of fields ready according to the sheet and available on CANFAR: {len(fields_on_both)}")
 
@@ -368,6 +369,7 @@ def launch_band1_1Dpipeline(database_config_path: str = "automation/config.env")
             # Launch the first field_ID that has a sourcelist (assumes this script will be called many times)
             for i in range(len(field_IDs)):
                 field_ID = field_IDs[i]
+                field_ID_no_prefix = remove_prefix(field_ID)
                 t1 = str(tile1[i])
                 t2 = str(tile2[i])
                 t3 = str(tile3[i])
@@ -390,7 +392,7 @@ def launch_band1_1Dpipeline(database_config_path: str = "automation/config.env")
                     print(f"\nLaunching headless job for 1D pipeline for field {field_ID} observed in SBid {SBid} covering partial tiles {tilenumbers} ")
 
                     # Launch the pipeline
-                    launch_pipeline(field_ID, tilenumbers, SBid, band)
+                    launch_pipeline(field_ID_no_prefix, tilenumbers, SBid, band)
 
                     # Update the status to "Running"
                     conn = db.get_database_connection(test=False, database_config_path=database_config_path)
