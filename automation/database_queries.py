@@ -70,7 +70,7 @@ def execute_update_query(query, conn, params=None, verbose=False):
         raise
     return rows_affected
 
-def execute_query(query, database_connection, params=None, verbose=True):
+def execute_query(query, database_connection, params=None, verbose=False):
     """
     Execute a SQL query and return the results.
 
