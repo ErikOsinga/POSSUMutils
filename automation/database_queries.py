@@ -269,10 +269,14 @@ def update_partial_tile_1d_pipeline_status(field_name, tile_numbers, band_number
             args = args + (tile,)
 
     row_num = execute_update_query(query, conn, args)
-    if row_num > 0:
+    if row_num == 1:
         print(f"Updated row with tiles {tile_numbers} status to {status} in '1d_pipeline' column.")
-    else:
-        print(f"Field {field_name} with tiles {tile_numbers} not found in the database d.")
+    if row_num == 0:
+        print(f"No matching row found to update for field {field_name} with tiles {tile_numbers}.")
+        raise ValueError(f"Field {field_name} with tiles {tile_numbers} not found in the database d.")
+    if row_num > 1:
+        print(f"Warning: Multiple ({row_num}) rows updated for field {field_name} with tiles {tile_numbers}.")
+        raise ValueError(f"Multiple ({row_num}) rows updated for field {field_name} with tiles {tile_numbers}.")
 
 def get_partial_tiles_for_1d_pipeline_run(band_number, conn):
     """
