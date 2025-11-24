@@ -4,6 +4,9 @@
 #dont commit the config.env
 config.env
 
+# dont commit the test.env
+test.env
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
