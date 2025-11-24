@@ -376,8 +376,8 @@ def launch_band1_1Dpipeline(database_config_path: str = "automation/config.env")
                 t4 = str(tile4[i])
                 tilenumbers = [t1, t2, t3, t4] # up to four tilenumbers, or less with '' (empty strings)
                 SBid = SBids[i]
-                if field_ID not in fields_on_both:
-                    print(f"Skipping {field_ID} as it doesnt have a sourcelist on CANFAR")
+                if field_ID_no_prefix not in fields_on_both:
+                    print(f"Skipping {field_ID} with tilenumbers {tilenumbers} as it doesnt have a sourcelist on CANFAR")
                     continue
                 else:
 
