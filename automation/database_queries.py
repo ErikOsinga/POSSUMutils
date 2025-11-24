@@ -308,8 +308,10 @@ def get_partial_tiles_for_1d_pipeline_run(band_number, conn):
         WHERE ob.sbid IS NOT NULL AND TRIM(ob.sbid) != ''
           AND ob.name = pt.observation
           AND pt.number_sources IS NOT NULL
-          AND (pt."1d_pipeline" IS NULL or TRIM(pt."1d_pipeline") = '');
+          AND (pt."1d_pipeline" IS NULL or TRIM(pt."1d_pipeline") = '')
+        ORDER BY id;
     """
+    # added order by id to have consistent ordering for tests
     return execute_query(query, conn)
 
 def get_observations_with_complete_partial_tiles(band_number, conn):
