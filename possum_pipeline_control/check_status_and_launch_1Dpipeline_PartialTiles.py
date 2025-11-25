@@ -3,7 +3,6 @@ import argparse
 from vos import Client
 import subprocess
 import time
-from time import sleep
 import re
 from automation import database_queries as db
 from possum_pipeline_control import util

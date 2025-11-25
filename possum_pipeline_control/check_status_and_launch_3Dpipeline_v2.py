@@ -6,7 +6,6 @@ import argparse
 import gspread
 import astropy.table as at
 import numpy as np
-from time import sleep
 from automation import database_queries as db
 from possum_pipeline_control import util
 
@@ -135,6 +134,10 @@ def update_status(tile_number, band, Google_API_token, status):
         print(f"Tile {tile_number} not found in the sheet.")
 
 def launch_band1_3Dpipeline():
+    """
+    Check for Band 1 tiles that are ready to be processed with the 3D pipeline and launch the pipeline for the first available tile.
+    3D pipeline can be launched if the tile is processed by AUSsrc (aus_src column not empty) but 3D pipeline not yet run (3d_pipeline column empty).
+    """
     band = "943MHz"
     # on p1
     Google_API_token = os.getenv('POSSUM_STATUS_TOKEN')
@@ -144,9 +147,10 @@ def launch_band1_3Dpipeline():
     conn = db.get_database_connection(test=False)
     # We are getting the tiles from the DB instead of the sheet now
     tile_numbers = db.get_tiles_for_pipeline_run(conn, band_number=1)
+    # tile_numbers is a list of single-element tuples, convert to 1D array
+    tile_numbers = np.array(tile_numbers, dtype=str).squeeze()
     conn.close()
     canfar_tilenumbers = get_canfar_tiles(band_number=1)
-    sleep(1)
 
     if len(tile_numbers) > 0:
         print(f"Found {len(tile_numbers)} tiles in Band 1 ready to be processed with 3D pipeline")
@@ -154,13 +158,15 @@ def launch_band1_3Dpipeline():
 
         if len(tile_numbers) > len(canfar_tilenumbers):
             tiles_in_cadc_not_canfar = set(tile_numbers) - set(canfar_tilenumbers)
-            print(f"Tiles in CADC but not on CANFAR: {tiles_in_cadc_not_canfar}")
-        else:
-            tiles_on_canfar_not_cadc = set(canfar_tilenumbers) - set(tile_numbers)
-            print(f"Tiles on CANFAR but not in CADC: {tiles_on_canfar_not_cadc}")
+            print(f"{len(tiles_in_cadc_not_canfar)} tiles processed by AUSSRC but not on CANFAR: {tiles_in_cadc_not_canfar}")
+        
+        # else:
+        # This set difference also returns the tiles on CANFAR that are already fully 3D processed, so not so useful
+        #     tiles_on_canfar_not_cadc = set(canfar_tilenumbers) - set(tile_numbers)
+        #     print(f"{len(tiles_on_canfar_not_cadc)} tiles on CANFAR but not processed by AUSSRC: {tiles_on_canfar_not_cadc}")
 
         tiles_on_both = set(tile_numbers) & set(canfar_tilenumbers)
-        # print(f"Tiles on both CADC and CANFAR: {tiles_on_both}")
+        print(f"Number of tiles both ready according to AUSSRC and available on CANFAR: {len(tiles_on_both)}")
 
         if tiles_on_both:
             # Launch the first tile number (assumes this script will be called many times)
@@ -180,20 +186,5 @@ def launch_band1_3Dpipeline():
 
 if __name__ == "__main__":
     # load env for google spreadsheet constants
-    load_dotenv(dotenv_path='../automation/config.env')
-    launch_band1_3Dpipeline()
-
-    # DEPRECATED
-    Google_API_token = "/home/erik/.ssh/psm_gspread_token.json"
-
-    parser = argparse.ArgumentParser(description="Check status and launch 3D pipeline")
-    parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
-    # DEPRECATED
-    parser.add_argument("--psm_api_token", type=str, default=Google_API_token, help="Path to POSSUM status sheet Google API token JSON file")
-    
-    args = parser.parse_args()
-
-    # DEPRECATED
-    Google_API_token = args.psm_api_token
-
+    load_dotenv(dotenv_path='./automation/config.env')
     launch_band1_3Dpipeline()
