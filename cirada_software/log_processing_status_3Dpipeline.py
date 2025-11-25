@@ -210,7 +210,7 @@ if __name__ == "__main__":
     update_status_csv(tilenumber, status, band, csv_file_path, all_tiles)
     
     # Load constants for google spreadsheet
-    load_dotenv(dotenv_path='../automation/config.env')
+    load_dotenv(dotenv_path='./automation/config.env')
     # Update the POSSUM status monitor google sheet
     Google_API_token = os.getenv('POSSUM_STATUS_SHEET')
 
