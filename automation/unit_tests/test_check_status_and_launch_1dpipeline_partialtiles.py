@@ -15,14 +15,14 @@ class CheckStatusAndLaunch1DPipelinePartialTiles(PartialTile1DBaseTest):
         (
          field_IDs, tile1, tile2, tile3, tile4, SBids, fields_to_validate, field_to_validate_boundaryissues
         ) = check_status.get_tiles_for_pipeline_run(self.conn, band_number=1)
-        assert field_IDs == ['1748-64', '1759-69', '1759-69', '1759-69', '1759-69', '1136-64', '1136-64', '1136-62']
-        assert tile1 == ['11791', '11726', '11791', '11726', '11791', '11487', '11487', '11490']
-        assert tile2 == ['11792', '11727', '11852', '11727', '11792', '11565', '11488', '11491']
-        assert tile3 == ['11852', '', '', '11791', '11852', '', '', '11492']
-        assert tile4 == ['11853', '', '', '11792', '11853', '', '', '11493']
-        assert SBids == ['54926', '46955', '46955', '46955', '46955', '46948', '46948', '46946']
-        assert fields_to_validate == [('EMU_1136-61', '46950'), ('EMU_0626-09B', '61077')]
-        assert field_to_validate_boundaryissues == {('EMU_1136-62', '46946')}
+        assert field_IDs == ['EMU_1748-64', 'EMU_1759-69', 'EMU_1759-69', 'EMU_1759-69', 'EMU_1759-69', 'EMU_1136-64', 'EMU_1136-64', 'EMU_1136-62'], f"found {field_IDs}"
+        assert tile1 == ['11791', '11726', '11791', '11726', '11791', '11487', '11487', '11490'], f"found {tile1}"
+        assert tile2 == ['11792', '11727', '11852', '11727', '11792', '11565', '11488', '11491'], f"found {tile2}"
+        assert tile3 == ['11852', '', '', '11791', '11852', '', '', '11492'], f"found {tile3}"
+        assert tile4 == ['11853', '', '', '11792', '11853', '', '', '11493'], f"found {tile4}"
+        assert SBids == ['54926', '46955', '46955', '46955', '46955', '46948', '46948', '46946'], f"found {SBids}"
+        assert fields_to_validate == [('EMU_1136-61', '46950'), ('EMU_0626-09B', '61077')], f"found {fields_to_validate}"
+        assert field_to_validate_boundaryissues == {('EMU_1136-62', '46946')}, f"found {field_to_validate_boundaryissues}"
 
     def test_update_1d_pipeline_validation_status(self):
         """ Testing - update the status of the '1d_pipeline_validation' column to "Running"
