@@ -18,4 +18,4 @@ echo "Starting pipeline run $1 tile number $2"
 psrecord "python /arc/projects/CIRADA/polarimetry/software/POSSUM_Polarimetry_Pipeline/pipeline/pipeline_prefect.py /arc/projects/CIRADA/polarimetry/pipeline_runs/943MHz/$1/config_$2.ini 3d" --include-children --log /arc/projects/CIRADA/polarimetry/pipeline_runs/943MHz/$1/psrecord_$2.txt --plot /arc/projects/CIRADA/polarimetry/pipeline_runs/943MHz/$1/psrecord_tile$2.png --interval 1
 
 echo "Logging pipeline status"
-python /arc/projects/CIRADA/polarimetry/software/log_processing_status.py $2 943MHz
+python /arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/log_processing_status_3Dpipeline.py $2 943MHz
