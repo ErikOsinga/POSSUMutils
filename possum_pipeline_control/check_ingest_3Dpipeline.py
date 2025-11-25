@@ -73,8 +73,9 @@ def launch_ingest(tilenumber, band):
     band_number = util.get_band_number(band)
 
     run_name = f"ingest{tilenumber}"
-    # optionally :latest for always the latest version
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
+    # optionally :latest for always the latest version (SEEMS TO BE BROKEN)
+    # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
+    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.15.2"
     # good default values for ingest script
     cores = 2
     ram = 32  # Check allowed values at canfar.net/science-portal
@@ -121,26 +122,24 @@ def ingest_3Dpipeline(band_number=1):
 
     # Check database for band 1 tiles that have been processed AND validated
     conn = db.get_database_connection(test=False)
-    tile_numbers = get_tiles_for_ingest(band_number, conn)    
+    tile_numbers = get_tiles_for_ingest(band_number, conn)
+    tile_numbers = [str(tn) for tn in tile_numbers]  # make sure they are strings for comparison
     conn.close()
 
-    # Check whether tile indeed available on CANFAR (should be)
     canfar_tilenumbers = get_canfar_tiles(band_number=band_number)
-    sleep(1)
 
     if len(tile_numbers) > 0:
-        print(f"Found {len(tile_numbers)} tiles in Band {band_number} ready to be ingested")
-        print(f"On CANFAR, found {len(canfar_tilenumbers)} tiles in Band {band_number}")
+        print(f"Found {len(tile_numbers)} tiles in Band {band_number} ready to be ingested according to AUSSRC database")
+        print(f"    On CANFAR, found {len(canfar_tilenumbers)} tiles in Band {band_number}")
 
         if len(tile_numbers) > len(canfar_tilenumbers):
-            tiles_in_cadc_not_canfar = set(tile_numbers) - set(canfar_tilenumbers)
-            print(f"Tiles in CADC but not on CANFAR: {tiles_in_cadc_not_canfar}")
-        else:
-            tiles_on_canfar_not_cadc = set(canfar_tilenumbers) - set(tile_numbers)
-            print(f"Tiles on CANFAR but not in CADC: {tiles_on_canfar_not_cadc}")
+            tiles_ready_aussrc_not_canfar = set(tile_numbers) - set(canfar_tilenumbers)
+            print(f"{len(tiles_ready_aussrc_not_canfar)} tiles ready according to AUSSRC but not on CANFAR")
+            print(f"    first 5 : {list(tiles_ready_aussrc_not_canfar)[:5]}")
 
+        # Check whether tiles are indeed available on CANFAR (should be)
         tiles_on_both = set(tile_numbers) & set(canfar_tilenumbers)
-        # print(f"Tiles on both CADC and CANFAR: {tiles_on_both}")
+        print(f"Number of tiles both ready to be ingested and on CANFAR: {len(tiles_on_both)}")
 
         if tiles_on_both:
             # Launch the first tile number (assumes this function will be called many times)
@@ -163,19 +162,15 @@ def ingest_3Dpipeline(band_number=1):
         print("Found no tiles ready to be processed.")
 
 if __name__ == "__main__":
-    # on p1, API token for POSSUM Pipeline Validation sheet
-    # DEPRECATED
-    Google_API_token = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
-
     parser = argparse.ArgumentParser(description="Checks POSSUM validation status ('POSSUM Pipeline validation' google sheet) if 3D pipeline outputs can be ingested.")
-    parser.add_argument("--psm_val_api_token", type=str, default=Google_API_token, help="Path to POSSUM validation sheet Google API token JSON file")
+    parser.add_argument("-b", "--band-number", type=int, choices=[1, 2], default=1, help="Band number to process: 1 for 943MHz or 2 for 1367MHz")
     args = parser.parse_args()
 
     # Band number 1 (943MHz) or 2 ("1367MHz")
-    band_number = 1
+    band_number = args.band_number
 
     # load env for google spreadsheet constants
-    load_dotenv(dotenv_path='../automation/config.env')
+    load_dotenv(dotenv_path='./automation/config.env')
 
     ## Assumes this script is called by run_3D_pipeline_intermittently.py
     ingest_3Dpipeline(band_number=band_number)

@@ -236,7 +236,7 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, date):
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 
-@flow(log_prints=True)
+@flow(log_prints=True, name="3D pipeline ingest")
 def do_ingest(tilenumber, band, test=False):
     """Does the ingest script
     
@@ -312,6 +312,6 @@ if __name__ == "__main__":
     tilenumber = str(tilenumber)
     
 	# load env for google spreadsheet constants
-    load_dotenv(dotenv_path='../automation/config.env')
+    load_dotenv(dotenv_path='./automation/config.env')
 
     do_ingest(tilenumber, band, test=test)
