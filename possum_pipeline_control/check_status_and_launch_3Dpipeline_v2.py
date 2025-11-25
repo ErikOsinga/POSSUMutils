@@ -34,7 +34,7 @@ into time-blocked directories.
 @author: Erik Osinga
 """
 
-def get_tiles_for_pipeline_run(band_number, Google_API_token):
+def get_tiles_for_pipeline_run_old(band_number, Google_API_token):
     """
     Get a list of tile numbers that should be ready to be processed by the 3D pipeline 
     
@@ -147,8 +147,9 @@ def launch_band1_3Dpipeline():
     conn = db.get_database_connection(test=False)
     # We are getting the tiles from the DB instead of the sheet now
     tile_numbers = db.get_tiles_for_pipeline_run(conn, band_number=1)
-    # tile_numbers is a list of single-element tuples, convert to 1D array
-    tile_numbers = np.array(tile_numbers, dtype=str).squeeze()
+    # tile_numbers is a list of single-element tuples, convert to 1D list
+    tile_numbers = [str(tup[0]) for tup in tile_numbers]
+
     conn.close()
     canfar_tilenumbers = get_canfar_tiles(band_number=1)
 
@@ -158,7 +159,7 @@ def launch_band1_3Dpipeline():
 
         if len(tile_numbers) > len(canfar_tilenumbers):
             tiles_in_cadc_not_canfar = set(tile_numbers) - set(canfar_tilenumbers)
-            print(f"{len(tiles_in_cadc_not_canfar)} tiles processed by AUSSRC but not on CANFAR: {tiles_in_cadc_not_canfar}")
+            print(f"{len(tiles_in_cadc_not_canfar)} tiles processed by AUSSRC but not on CANFAR: First 5: {list(tiles_in_cadc_not_canfar)[:5]}")
         
         # else:
         # This set difference also returns the tiles on CANFAR that are already fully 3D processed, so not so useful
