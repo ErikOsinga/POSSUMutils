@@ -91,13 +91,13 @@ def launch_pipeline(tilenumber, band):
 
 def update_status(tile_number, band, Google_API_token, status):
     """
-    Update the status of the specified tile in the Google Sheet.
+    Update the status of the specified tile in Cameron's Google Sheet & the AUSSRC tile_state database.
     
     Args:
-    tile_number (str): The tile number to update.
-    band (str): The band of the tile. ('943MHz' or '1367MHz')
-    Google_API_token (str): The path to the Google API token JSON file.
-    status (str): The status to set in the '3d_pipeline' column.
+        tile_number (str): The tile number to update.
+        band (str): The band of the tile. ('943MHz' or '1367MHz')
+        Google_API_token (str): The path to the Google API token JSON file.
+        status (str): The status to set in the '3d_pipeline' column.
     """
     # Make sure its not int
     tile_number = str(tile_number)
@@ -125,7 +125,7 @@ def update_status(tile_number, band, Google_API_token, status):
         col_letter = gspread.utils.rowcol_to_a1(1, column_names.index('3d_pipeline') + 1)[0]
         # as of >v6.0.0 .update requires a list of lists
         tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
-        print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
+        print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column in Google Sheet.")
         # Also update the DB
         conn = db.get_database_connection(test=False)
         db.update_3d_pipeline_table(tile_number, band_number, status, "3d_pipeline_val", conn)
@@ -154,12 +154,13 @@ def launch_band1_3Dpipeline():
     canfar_tilenumbers = get_canfar_tiles(band_number=1)
 
     if len(tile_numbers) > 0:
-        print(f"Found {len(tile_numbers)} tiles in Band 1 ready to be processed with 3D pipeline")
-        print(f"On CANFAR, found {len(canfar_tilenumbers)} tiles in Band 1")
+        print(f"Found {len(tile_numbers)} tiles in AUSSRC database in Band 1 ready to be processed with 3D pipeline")
+        print(f"On CANFAR, found {len(canfar_tilenumbers)} tiles downloaded for Band 1")
 
         if len(tile_numbers) > len(canfar_tilenumbers):
             tiles_in_cadc_not_canfar = set(tile_numbers) - set(canfar_tilenumbers)
-            print(f"{len(tiles_in_cadc_not_canfar)} tiles processed by AUSSRC but not on CANFAR: First 5: {list(tiles_in_cadc_not_canfar)[:5]}")
+            print(f"{len(tiles_in_cadc_not_canfar)} tiles processed by AUSSRC but not on CANFAR")
+            print(f"    First 5: {list(tiles_in_cadc_not_canfar)[:5]}")
         
         # else:
         # This set difference also returns the tiles on CANFAR that are already fully 3D processed, so not so useful
@@ -167,7 +168,8 @@ def launch_band1_3Dpipeline():
         #     print(f"{len(tiles_on_canfar_not_cadc)} tiles on CANFAR but not processed by AUSSRC: {tiles_on_canfar_not_cadc}")
 
         tiles_on_both = set(tile_numbers) & set(canfar_tilenumbers)
-        print(f"Number of tiles both ready according to AUSSRC and available on CANFAR: {len(tiles_on_both)}")
+        print(f"\nNumber of tiles both ready according to AUSSRC and available on CANFAR: {len(tiles_on_both)}")
+        print(f"    First 5: {list(tiles_on_both)[:5]}")
 
         if tiles_on_both:
             # Launch the first tile number (assumes this script will be called many times)
