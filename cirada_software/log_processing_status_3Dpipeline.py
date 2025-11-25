@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import gspread
 import numpy as np
 import astropy.table as at
+from prefect import flow, task
 from automation import database_queries as db
 from possum_pipeline_control import util
 
@@ -75,6 +76,7 @@ def update_status_csv(tilenumber, status, band, csv_file_path, all_tiles):
             tilenumber, band = key.split("_")  # Extract the tilenumber and band from the key
             writer.writerow([tilenumber, value[0], value[1]])
 
+@task
 def update_status_spreadsheet(tile_number, band, Google_API_token, status):
     """
     Update the status of the specified tile in the Google Sheet.
@@ -117,6 +119,7 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 
+@task
 def update_3d_tile_database(tile_number, band, status):
     """
     Update the status of the specified tile in the VALIDATION database.
@@ -156,21 +159,13 @@ def update_3d_tile_database(tile_number, band, status):
 
     return
 
-if __name__ == "__main__":
-    # POSSUM Pipeline Status spreadsheet default loc on p1
-    Google_API_token = "/home/erik/.ssh/psm_gspread_token.json"
-    # on p1, token for accessing Erik's google sheets 
-    Google_API_token_psmval = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
 
+@flow(log_prints=True, name="log_3d_pipeline_status")
+def main():
     parser = argparse.ArgumentParser(description="Check pipeline status and update CSV file")
     parser.add_argument("tilenumber", type=int, help="The tile number to check")
     parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
     
-    # DEPRECATED
-    parser.add_argument("--psm_api_token", type=str, default=Google_API_token, help="Path to POSSUM status sheet Google API token JSON file")
-    parser.add_argument("--psm_val_api_token", type=str, default=Google_API_token_psmval, help="Path to POSSUM validation sheet sheet Google API token JSON file")
-    
-
     args = parser.parse_args()
     tilenumber = args.tilenumber
     band = args.band
@@ -208,14 +203,14 @@ if __name__ == "__main__":
 
     print(f"Tilenumber {tilenumber} status: {status}, band: {band}")
 
-    # Update the simple CANFAR status CSV file
+    # Update the simple CANFAR status CSV file (legacy)
     csv_file_path = "/arc/projects/CIRADA/polarimetry/pipeline_runs/pipeline_status.csv"
     update_status_csv(tilenumber, status, band, csv_file_path, all_tiles)
     
     # Load constants for google spreadsheet
     load_dotenv(dotenv_path='./automation/config.env')
     # Update the POSSUM status monitor google sheet
-    Google_API_token = os.getenv('POSSUM_STATUS_SHEET')
+    Google_API_token = os.getenv('POSSUM_STATUS_TOKEN')
 
     # Make sure it's clear that the status is only fully complete if 3D pipeline outputs have been ingested
     if status == "Completed":
@@ -224,3 +219,7 @@ if __name__ == "__main__":
     update_status_spreadsheet(tilenumber, band, Google_API_token, status)
     # Update the AUSSRC database possum.tile_state_band1 or possum.tile_state_band2 table
     update_3d_tile_database(tilenumber, band, status)
+
+
+if __name__ == "__main__":
+    main()
