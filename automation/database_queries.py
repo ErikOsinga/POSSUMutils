@@ -351,23 +351,40 @@ def get_observations_non_edge_rows(band_number, conn):
     disregarding those that have "crosses projection boundary" in its type.
     """
     sql = f"""
-        SELECT pt.observation, ob.sbid,
-            CASE
-               WHEN EXISTS (
-                   SELECT 1
-                   FROM possum.partial_tile_1d_pipeline_band{band_number} pt_inner
-                   JOIN possum.observation_state_band{band_number} ob_inner
-                       ON ob_inner.name = pt_inner.observation
-                   WHERE LOWER(pt_inner.type) NOT LIKE '%crosses projection boundary%'
-                   AND LOWER(pt_inner."1d_pipeline") = 'completed'
-                   AND (ob_inner."1d_pipeline_validation" IS NULL OR TRIM(ob_inner."1d_pipeline_validation") = '')
-                   AND pt_inner.observation = pt.observation  -- Ensure we match the outer observation
-               )
-               THEN true
-               ELSE false
-           END AS all_complete
-        FROM possum.partial_tile_1d_pipeline_band{band_number} pt, possum.observation ob
-        WHERE ob.name = pt.observation
+    SELECT
+        ob.name AS observation,
+        ob.sbid,
+        CASE
+            WHEN
+                -- Observation-level validation must be empty
+                (obs."1d_pipeline_validation" IS NULL
+                OR TRIM(obs."1d_pipeline_validation") = '')
+
+                -- And there must be NO NON-boundary-crossing tile that is not completed
+                -- i.e. all non-boundary-crossing tiles must be completed
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM possum.partial_tile_1d_pipeline_band{band_number} pt2
+                    WHERE pt2.observation = ob.name
+                    AND LOWER(pt2.type) NOT LIKE '%crosses projection boundary%'
+                    AND LOWER(pt2."1d_pipeline") != 'completed'
+                )
+
+                -- And there must be at least one relevant tile at all
+                -- otherwise, all complete would be true for observations not yet in the partial_tile_1d_pipeline_band table
+                AND EXISTS (
+                    SELECT 1
+                    FROM possum.partial_tile_1d_pipeline_band{band_number} pt3
+                    WHERE pt3.observation = ob.name
+                    AND LOWER(pt3.type) NOT LIKE '%crosses projection boundary%'
+                )
+            THEN true
+            ELSE false
+        END AS all_complete
+    FROM possum.observation ob
+    JOIN possum.observation_state_band{band_number} obs
+        ON obs.name = ob.name
+    ORDER BY ob.sbid;
     """
     return execute_query(sql, conn)
 
