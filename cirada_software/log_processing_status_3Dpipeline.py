@@ -114,14 +114,10 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, status):
         # as of >v6.0.0 the .update function requires a list of lists
         tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
         print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column.")
-        # Also update the DB
-        conn = db.get_database_connection(test=False)
-        db.update_3d_pipeline_table(tile_number, band_number, status, "3d_pipeline_val", conn)
-        conn.close()
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 
-def update_validation_spreadsheet(tile_number, band, status):
+def update_3d_tile_database(tile_number, band, status):
     """
     Update the status of the specified tile in the VALIDATION database.
 
@@ -132,6 +128,7 @@ def update_validation_spreadsheet(tile_number, band, status):
     """
 
     band_number = util.get_band_number(band)
+    
     # Find the validation file path
     psm_val = glob.glob(f"/arc/projects/CIRADA/polarimetry/pipeline_runs/{band}/tile{tile_number}/*validation.html")
     if len(psm_val) == 1:
@@ -141,17 +138,23 @@ def update_validation_spreadsheet(tile_number, band, status):
         validation_link = "MultipleHTMLFiles"
     else:
         validation_link = "HTMLFileNotFound"
+    
     # execute query
     conn = db.get_database_connection(test=False)
     rows_updated = db.update_3d_pipeline_table(tile_number, band_number, status, "3d_pipeline_val", conn)
     db.update_3d_pipeline_table(tile_number, band_number, validation_link, "3d_val_link", conn)
     conn.close()
+    
+    # Print results
     if rows_updated <= 0:
         print(f"Tile {tile_number} not found in the sheet.")
+    if rows_updated > 1:
+        print(f"Warning: Multiple rows updated for tile {tile_number}.")
     else:
         print(f"Updated tile {tile_number} status to {status} in '3d_pipeline_val' column.")
         print(f"Updated tile {tile_number} validation link to {validation_link}")
 
+    return
 
 if __name__ == "__main__":
     # POSSUM Pipeline Status spreadsheet default loc on p1
@@ -217,5 +220,7 @@ if __name__ == "__main__":
     # Make sure it's clear that the status is only fully complete if 3D pipeline outputs have been ingested
     if status == "Completed":
         status = "WaitingForValidation"
+    # Update Cameron's POSSUM status monitor spreadsheet
     update_status_spreadsheet(tilenumber, band, Google_API_token, status)
-    update_validation_spreadsheet(tilenumber, band, status)
+    # Update the AUSSRC database possum.tile_state_band1 or possum.tile_state_band2 table
+    update_3d_tile_database(tilenumber, band, status)
