@@ -362,12 +362,13 @@ def get_observations_non_edge_rows(band_number, conn):
 
                 -- And there must be NO NON-boundary-crossing tile that is not completed
                 -- i.e. all non-boundary-crossing tiles must be completed
+                -- important to test for IS NULL because != 'completed' does not catch NULLs
                 AND NOT EXISTS (
                     SELECT 1
                     FROM possum.partial_tile_1d_pipeline_band{band_number} pt2
                     WHERE pt2.observation = ob.name
                     AND LOWER(pt2.type) NOT LIKE '%crosses projection boundary%'
-                    AND LOWER(pt2."1d_pipeline") != 'completed'
+                    AND (LOWER(pt2."1d_pipeline") != 'completed' OR pt2."1d_pipeline" IS NULL)
                 )
 
                 -- And there must be at least one relevant tile at all
