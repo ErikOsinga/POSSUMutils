@@ -10,5 +10,7 @@ export PREFECT_API_URL="http://localhost:4200/api"
 echo "TEMPORARILY: adding RMtools[dev] to pythonpath until new release (>v1.4.6)"
 export PYTHONPATH="/arc/projects/CIRADA/polarimetry/software/RMtoolsdev/:$PYTHONPATH"
 
+# move to POSSUMutils base directory
+cd /arc/projects/CIRADA/polarimetry/software/POSSUMutils/
 # arguments: tile_number, band ("943MHz" or "1367MHz")
-python /arc/projects/CIRADA/polarimetry/software/ingest3Dpipeline.py $1 $2
+python -m possum_pipeline_control.ingest3Dpipeline $1 $2
