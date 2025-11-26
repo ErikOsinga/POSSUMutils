@@ -9,16 +9,16 @@ class LogProcessingStatus1DPartialTilesSummaryTest(PartialTile1DBaseTest):
     """
     Setup and tearDown is done in the PartialTile1DBaseTest class.
     """
-    def test_update_validation_spreadsheet(self):
+    def test_update_1d_database(self):
         """
-        Test update_validation_spreadsheet
+        Test update_1d_database
         """
         field_ID = "1136-62"
         SBid = "46946"
         band = "943MHz"
         status = "Failed"
         # has boundary issues
-        boundary_issues = log_processing_status_1D_PartialTiles_summary.update_validation_spreadsheet(field_ID, SBid, band, status, self.conn)
+        boundary_issues = log_processing_status_1D_PartialTiles_summary.update_1d_database(field_ID, SBid, band, status, self.conn)
         assert boundary_issues is True
         # check that the status was updated
         full_field_name = util.get_full_field_name(field_ID, band)
@@ -29,7 +29,7 @@ class LogProcessingStatus1DPartialTilesSummaryTest(PartialTile1DBaseTest):
         field_ID = "1136-61"
         SBid = "46950"
         status = "Completed"
-        boundary_issues = log_processing_status_1D_PartialTiles_summary.update_validation_spreadsheet(field_ID, SBid, band, status, self.conn)
+        boundary_issues = log_processing_status_1D_PartialTiles_summary.update_1d_database(field_ID, SBid, band, status, self.conn)
         assert boundary_issues is False
         full_field_name = util.get_full_field_name(field_ID, band)
         _1d_pipeline_validation = db_query.get_1d_pipeline_validation_status(field_name=full_field_name, band_number="1", conn=self.conn)[0][0]
@@ -37,7 +37,7 @@ class LogProcessingStatus1DPartialTilesSummaryTest(PartialTile1DBaseTest):
 
         # row doesn't exist
         field_ID = "1136-1000"
-        boundary_issues = log_processing_status_1D_PartialTiles_summary.update_validation_spreadsheet(field_ID, SBid, band, status, self.conn)
+        boundary_issues = log_processing_status_1D_PartialTiles_summary.update_1d_database(field_ID, SBid, band, status, self.conn)
         assert boundary_issues is False
 
     def test_update_status_spreadsheet(self):
