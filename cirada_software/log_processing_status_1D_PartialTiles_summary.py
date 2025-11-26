@@ -43,9 +43,9 @@ def check_pipeline_complete(log_file_path):
     else:
         return "Failed"
 
-def update_validation_spreadsheet(field_ID, SBid, band, status, conn):
+def update_1d_database(field_ID, SBid, band, status, conn):
     """
-    Update the status of the specified tile in the VALIDATION Google Sheet.
+    Update the status of the specified tile in the 1D pipeline table.
 
     Args:
     field_id         : the field id
@@ -200,7 +200,7 @@ def main(args):
     print(f"field {field_ID} sbid {SB_num} summary plot status: {status}, band: {band}")
 
     # Update the POSSUM Validation database table
-    t1 = task(update_validation_spreadsheet, name="update_validation_spreadsheet")
+    t1 = task(update_1d_database, name="update_1d_database")
     # execute tasks serially such that logging is preserved (instead of .submit)
     conn = db.get_database_connection(test=False, database_config_path=database_config_path)
     has_boundary_issue = t1(field_ID, SB_num, band, status, conn)
