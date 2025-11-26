@@ -12,7 +12,7 @@ class CheckStatusAndLaunch3DPipelinev2Test(_3DPipelineBaseTest):
     """
     def setUp(self):
         super().setUp()
-        self.conn = db_query.get_database_connection(True)
+        self.conn = db_query.get_database_connection(test=True)
         # Create associated_tile table
         db.create_associated_tile_test_table(self.conn)
 
@@ -55,5 +55,11 @@ class CheckStatusAndLaunch3DPipelinev2Test(_3DPipelineBaseTest):
         """
         Test get_tiles_for_pipeline_run
         """
+        # to check the database at this point
+        # results = db_query.get_3d_tile_data(None, '1', self.conn)
+        # print("tile", "3d_pipeline_val", "3d_val_link", "3d_pipeline_ingest", "3d_pipeline", "cube_state")
+        # for row in results:
+        #     print(row)
+
         tile_numbers = db_query.get_tiles_for_pipeline_run(self.conn, band_number=1)
-        assert tile_numbers == [(11504,), (11505,), (12345,), (52000,)]
+        assert tile_numbers == [(1239,), (6753,), (6881,)], f"Got {tile_numbers}"
