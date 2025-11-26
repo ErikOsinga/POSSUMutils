@@ -20,14 +20,25 @@ def run_script_intermittently(script_paths, interval, max_runs=None, max_pending
             df_sessions = get_open_sessions()
             print("Open sessions:")
             print(df_sessions)
+            print("\n")
 
             # Count the number of headless sessions with status 'Pending'
-            n_headless_pending = df_sessions[(df_sessions['type'] == 'headless') & (df_sessions['status'] == 'Pending')].shape[0]
+            mask_pending = (df_sessions['type'] == 'headless') & (df_sessions['status'] == 'Pending')
+            n_headless_pending = df_sessions[mask_pending].shape[0]
             print(f"Number of headless sessions with status 'Pending': {n_headless_pending}")
+            # and only the ones that are related to the 3D pipeline
+            mask_pending = mask_pending & (df_sessions['name'].str.contains('tile') | df_sessions['name'].str.contains('ingest'))
+            n_headless_pending = df_sessions[mask_pending].shape[0]
+            print(f"Number of *3D pipeline* headless sessions with status 'Pending': {n_headless_pending}")
 
             # Count the number of headless sessions with status 'Running'
-            n_headless_running = df_sessions[(df_sessions['type'] == 'headless') & (df_sessions['status'] == 'Running')].shape[0]
+            mask_running = (df_sessions['type'] == 'headless') & (df_sessions['status'] == 'Running')
+            n_headless_running = df_sessions[mask_running].shape[0]
             print(f"Number of headless sessions with status 'Running': {n_headless_running}")
+            # and only the ones that are related to the 3D pipeline
+            mask_running = mask_running & (df_sessions['name'].str.contains('tile') | df_sessions['name'].str.contains('ingest'))
+            n_headless_running = df_sessions[mask_running].shape[0]
+            print(f"Number of *3D pipeline* headless sessions with status 'Running': {n_headless_running}")
 
             # If the number of pending headless sessions is less than e.g. 10, run the script
             if n_headless_pending < max_pending and n_headless_running < max_running:
@@ -67,7 +78,7 @@ if __name__ == "__main__":
     max_pending = 5 # 3d pipeline jobs are quite heavy, so 5 pending is enough
 
     # Maximum number of headless jobs running. will not submit if theres more
-    max_running = 10
+    max_running = 10 # only for 3D pipeline jobs
 
     run_script_intermittently(script_paths, interval, max_runs, max_pending, max_running)
 
