@@ -106,7 +106,7 @@ def check_report(tile_workdir):
         return False
 
 @task
-def update_validation_spreadsheet(tile_number, band_str, status, test_flag, conn):
+def update_tile_database(tile_number, band_str, status, test_flag, conn):
     """
     Update the status of the specified tile in the VALIDATION database table.
     (see also log_processing_status.py)
@@ -155,7 +155,7 @@ def check_CADC(tilenumber, band):
     query=CADC_session.create_async("""SELECT observationID,Plane.productID,Observation.lastModified FROM caom2.Plane AS Plane 
     JOIN caom2.Observation AS Observation ON Plane.obsID = Observation.obsID 
     WHERE  (Observation.collection = 'POSSUM') AND (observationID NOT LIKE '%pilot1') """)
-    query.run().wait()  
+    query.run().wait()
     query.raise_if_error()
     result=query.fetch_result().to_table()
     result.add_column([x.split('_')[-2] for x in result['observationID']], name='tile_number')
@@ -270,6 +270,7 @@ def do_ingest(tilenumber, band, test=False):
         sleep(int(33*60)) ## not sure the exact time that we should wait...
 
     # Check the CADC also if indeed all files are there
+    # if this fails with SSLError, try to run cadc-get-cert -u <username> on CANFAR
     CADCsuccess, date = check_CADC(tilenumber, band)
 
     status = "IngestFailed"
@@ -283,7 +284,7 @@ def do_ingest(tilenumber, band, test=False):
 
     # Record the status in the POSSUM Validation database
     conn = db.get_database_connection(test=False)
-    update_validation_spreadsheet(tilenumber, band, status, test_flag=test, conn=conn)
+    update_tile_database(tilenumber, band, status, test_flag=test, conn=conn)
     conn.close()
 
     if status == "Ingested":
@@ -311,7 +312,7 @@ if __name__ == "__main__":
     # needs to be str for comparison
     tilenumber = str(tilenumber)
     
-	# load env for google spreadsheet constants
+    # load env for google spreadsheet constants
     load_dotenv(dotenv_path='./automation/config.env')
 
     do_ingest(tilenumber, band, test=test)
