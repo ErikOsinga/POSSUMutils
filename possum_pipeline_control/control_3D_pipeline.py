@@ -3,23 +3,8 @@ import time
 import pandas as pd
 # from skaha.session import Session
 from canfar.sessions import Session
+from print_all_open_sessions import get_open_sessions
 
-
-session = Session()
-
-def get_open_sessions():
-    """Return a table with information about currently open sessions"""
-    # Fetch open sessions
-    open_sessions = session.fetch()
-
-    # Convert the list of dictionaries to a pandas DataFrame
-    df_sessions = pd.DataFrame([{
-        'type': s['type'],
-        'status': s['status'],
-        'startTime': s['startTime']
-    } for s in open_sessions])
-
-    return df_sessions
 
 def run_script_intermittently(script_paths, interval, max_runs=None, max_pending=20, max_running=50):
     run_count = 0

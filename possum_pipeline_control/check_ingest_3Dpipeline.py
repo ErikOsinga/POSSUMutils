@@ -25,19 +25,6 @@ If the "3d_pipeline_val" column is marked as "Good", we can launch an ingest job
 @author: Erik Osinga
 """
 
-def get_open_sessions():
-    """Return a table with information about currently open sessions"""
-    # Fetch open sessions
-    open_sessions = session.fetch()
-
-    # Convert the list of dictionaries to a pandas DataFrame
-    df_sessions = pd.DataFrame([{
-        'type': s['type'],
-        'status': s['status'],
-        'startTime': s['startTime']
-    } for s in open_sessions])
-
-    return df_sessions
 
 def get_tiles_for_ingest(band_number, conn):
     """
