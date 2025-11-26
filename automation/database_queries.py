@@ -208,13 +208,9 @@ def get_tiles_for_pipeline_run(conn, band_number):
     validate_band_number(band_number)
     print(f"Fetching tiles ready for 3D pipeline run for band {band_number} from the database.")
     query = f"""
-        SELECT DISTINCT tile_3d.tile
-        FROM possum.tile_state_band{band_number} tile_3d
-        INNER JOIN possum.associated_tile ON associated_tile.tile = tile_3d.tile
-        INNER JOIN possum.observation_state_band{band_number} ob ON ob.name = associated_tile.name
-        WHERE UPPER(ob.cube_state) = 'COMPLETED'
-        AND (tile_3d."3d_pipeline_val" IS NULL OR TRIM(tile_3d."3d_pipeline_val") = '')
-        ORDER BY tile
+        SELECT tile FROM possum.tile_state_band{band_number}
+        WHERE cube_state = 'COMPLETED' 
+        AND ("3d_pipeline" IS NULL)
     """
     return execute_query(query, conn)
 
