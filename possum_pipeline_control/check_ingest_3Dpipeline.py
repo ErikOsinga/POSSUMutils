@@ -148,6 +148,9 @@ def ingest_3Dpipeline(band_number=1):
     else:
         print("Found no tiles ready to be processed.")
 
+    print("3D pipeline ingest check complete.")
+    print("\n")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Checks POSSUM validation status ('POSSUM Pipeline validation' google sheet) if 3D pipeline outputs can be ingested.")
     parser.add_argument("-b", "--band-number", type=int, choices=[1, 2], default=1, help="Band number to process: 1 for 943MHz or 2 for 1367MHz")

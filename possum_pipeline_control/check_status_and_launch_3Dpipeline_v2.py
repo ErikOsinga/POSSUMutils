@@ -187,6 +187,9 @@ def launch_band1_3Dpipeline():
     else:
         print("Found no tiles ready to be processed.")
 
+    print("3D pipeline check and launch complete.")
+    print("\n")
+
 if __name__ == "__main__":
     # load env for google spreadsheet constants
     load_dotenv(dotenv_path='./automation/config.env')

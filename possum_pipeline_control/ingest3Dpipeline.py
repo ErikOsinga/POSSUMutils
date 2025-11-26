@@ -1,6 +1,4 @@
 """
-To be put on CANFAR /software/
-
 Calls Sharon Goliath's ingest script ("possum_run") for a specific tile number and band
 to ingest 3D pipeline products.
 
