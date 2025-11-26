@@ -137,14 +137,13 @@ def update_tile_database(tile_number, band_str, status, test_flag, conn):
             raise ValueError(f"Tile {tile_number} not found in the database.")
 
 @task
-def check_CADC(tilenumber, band):
+def check_CADC(tilenumber, band, CADC_cert_file = "/arc/home/ErikOsinga/.ssl/cadcproxy.pem"):
     """
     query CADC for 3D pipeline products
     
     Based on Cameron's update_CADC_tile_status.py
     """
     ## cadc-get-cert on CANFAR
-    CADC_cert_file = "/arc/home/ErikOsinga/.ssl/cadcproxy.pem"
     ## if I want to test on p1
     # CADC_cert_file = '/home/erik/.ssl/cadcproxy.pem'
     # use the same service link as the ingest script to have updated records
@@ -237,7 +236,7 @@ def update_status_spreadsheet(tile_number, band, Google_API_token, date):
         print(f"Tile {tile_number} not found in the sheet.")
 
 @flow(log_prints=True, name="3D pipeline ingest")
-def do_ingest(tilenumber, band, test=False):
+def do_ingest(tilenumber, band, test=False, CADC_cert_file = "/arc/home/ErikOsinga/.ssl/cadcproxy.pem"):
     """Does the ingest script
     
     1. Create config.yml based on template
@@ -271,7 +270,7 @@ def do_ingest(tilenumber, band, test=False):
 
     # Check the CADC also if indeed all files are there
     # if this fails with SSLError, try to run cadc-get-cert -u <username> on CANFAR
-    CADCsuccess, date = check_CADC(tilenumber, band)
+    CADCsuccess, date = check_CADC(tilenumber, band, CADC_cert_file)
 
     status = "IngestFailed"
     if success:
@@ -302,11 +301,13 @@ if __name__ == "__main__":
     parser.add_argument("tilenumber", type=int, help="The tile number to ingest")
     parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
     parser.add_argument("-test", action="store_true", help="Test already ingested tile? (Default False)")
+    parser.add_argument("-CADC_cert_file", type=str, default="/arc/home/ErikOsinga/.ssl/cadcproxy.pem", help="Path to CADC certificate file")
 
     args = parser.parse_args()
     tilenumber = args.tilenumber
     band = args.band
     test = args.test
+    CADC_cert_file = args.CADC_cert_file
     # test = True
 
     # needs to be str for comparison
@@ -315,4 +316,4 @@ if __name__ == "__main__":
     # load env for google spreadsheet constants
     load_dotenv(dotenv_path='./automation/config.env')
 
-    do_ingest(tilenumber, band, test=test)
+    do_ingest(tilenumber, band, test=test, CADC_cert_file = CADC_cert_file)
