@@ -9,20 +9,20 @@ class Ingest3DPipelineTest(_3DPipelineBaseTest):
     """
     Setup and tearDown is done in the 3DPipelineBaseTest class.
     """
-    def test_update_validation_spreadsheet(self):
+    def test_update_tile_database(self):
         """
         Test updating 3d_pipeline_ingest status in ingest3dpipeline
         """
         tilenumber = '1241'
         # When status is not 'IngestRunning', you should get an error
         with self.assertRaises(ValueError):
-            ingest3Dpipeline.update_validation_spreadsheet.fn(tilenumber, "943MHz", 'Ingested', test_flag=False, conn=self.conn)
+            ingest3Dpipeline.update_tile_database.fn(tilenumber, "943MHz", 'Ingested', test_flag=False, conn=self.conn)
         ingest_status = db_query.get_3d_tile_data(tilenumber, '1', self.conn)[0][3]
         assert(ingest_status == '') # 3d_pipeline_ingest
 
         # Status is IngestRunning
         tilenumber = '1242'
-        ingest3Dpipeline.update_validation_spreadsheet.fn(tilenumber, "943MHz", 'Ingested', test_flag=False, conn=self.conn)
+        ingest3Dpipeline.update_tile_database.fn(tilenumber, "943MHz", 'Ingested', test_flag=False, conn=self.conn)
         ingest_status = db_query.get_3d_tile_data(tilenumber, '1', self.conn)[0][3]
         assert(ingest_status == 'Ingested') # 3d_pipeline_ingest
 
