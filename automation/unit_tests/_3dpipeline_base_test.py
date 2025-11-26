@@ -20,7 +20,7 @@ class _3DPipelineBaseTest(unittest.TestCase, ABC):
             for query in queries:
                 db_query.execute_query(query[0], self.conn, query[1], True)
 
-        # Columns: tile_id, 3d_pipeline, 3d_pipeline_val, 3d_pipeline_ingest
+        # Columns: tile_id, 3d_pipeline, 3d_pipeline_val, 3d_pipeline_ingest, cube_state
         _3d_data = 'automation/unit_tests/csv/tile_state_band1.csv'
         # Open and stream rows
         with open(_3d_data, newline='', encoding='utf-8') as csvfile:
@@ -36,7 +36,7 @@ class _3DPipelineBaseTest(unittest.TestCase, ABC):
                     # we're going to separate them
                         timestamp = row[1]
                     _3d_val = row[2]
-                    db.insert_3d_pipeline_test_data(row[0], timestamp, _3d_val, row[3], self.conn)
+                    db.insert_3d_pipeline_test_data(row[0], timestamp, _3d_val, row[3], row[4], self.conn)
 
     def tearDown(self):
         sql = []

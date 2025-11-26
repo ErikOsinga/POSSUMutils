@@ -195,7 +195,8 @@ def get_tiles_for_pipeline_run(conn, band_number):
     Get a list of tile numbers that should be ready to be processed by the 3D pipeline
 
     In the database, this is when:
-    observation.cube_state = 'COMPLETED' and tile.3d_pipeline_val = [null]
+    tile_state_band.cube_state = 'COMPLETED' and tile.3d_pipeline_val = [null]
+    
     In POSSUM pipeline status sheet, this is the equivalent of:
     'aus_src' column is not empty and '3d_pipeline' column is empty for the given band number.
 
@@ -209,8 +210,8 @@ def get_tiles_for_pipeline_run(conn, band_number):
     print(f"Fetching tiles ready for 3D pipeline run for band {band_number} from the database.")
     query = f"""
         SELECT tile FROM possum.tile_state_band{band_number}
-        WHERE cube_state = 'COMPLETED' 
-        AND ("3d_pipeline" IS NULL)
+        WHERE UPPER(cube_state) = 'COMPLETED' 
+        AND ("3d_pipeline_val" IS NULL OR TRIM("3d_pipeline_val") = '')
     """
     return execute_query(query, conn)
 
@@ -394,9 +395,15 @@ def get_3d_tile_data(tile_id, band_number, conn):
     - tile_id: tile number
     - band_number: 1 or 2
     """
-    sql = f"""SELECT tile, "3d_pipeline_val", "3d_val_link", "3d_pipeline_ingest", "3d_pipeline"
-              from possum.tile_state_band{band_number} WHERE tile = %s"""
-    return execute_query(sql, conn, (tile_id,))
+    if tile_id is None:
+        sql = f"""SELECT tile, "3d_pipeline_val", "3d_val_link", "3d_pipeline_ingest", "3d_pipeline", "cube_state"
+                FROM possum.tile_state_band{band_number}"""
+        return execute_query(sql, conn)
+
+    else:
+        sql = f"""SELECT tile, "3d_pipeline_val", "3d_val_link", "3d_pipeline_ingest", "3d_pipeline", "cube_state"
+                from possum.tile_state_band{band_number} WHERE tile = %s"""
+        return execute_query(sql, conn, (tile_id,))
 
 def get_1d_pipeline_validation_status(field_name, band_number, conn):
     """
