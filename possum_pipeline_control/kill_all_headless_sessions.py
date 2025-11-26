@@ -5,29 +5,8 @@ import time
 import pandas as pd
 # from skaha.session import Session
 from canfar.sessions import Session
+from print_all_open_sessions import get_open_sessions
 
-
-def get_open_sessions():
-    """
-    Fetch and return a pandas DataFrame of all open CANFAR sessions.
-    Columns: type, status, startTime, name, id
-    """
-    session = Session()
-    open_sessions = session.fetch()
-
-    if not open_sessions:
-        return pd.DataFrame(columns=['type', 'status', 'startTime', 'name', 'id'])
-
-    df = pd.DataFrame([{
-        'type': s.get('type', ''),
-        'status': s.get('status', ''),
-        'startTime': s.get('startTime', ''),
-        'name': s.get('name', ''),
-        'id': s.get('id', '')
-    } for s in open_sessions])
-
-    df = df.sort_values(by='startTime', ascending=False).reset_index(drop=True)
-    return df
 
 def kill_headless_sessions(also_pending: bool, pause_seconds=1):
     """
