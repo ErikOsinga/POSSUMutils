@@ -81,7 +81,7 @@ def launch_ingest(tilenumber, band):
     ram = 32  # Check allowed values at canfar.net/science-portal
 
     # Template bash script to run
-    args = f"/arc/projects/CIRADA/polarimetry/software/ingest_3Dpipeline_band{band_number}_prefect.sh {tilenumber} {band}"
+    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/ingest_3Dpipeline_band{band_number}_prefect.sh {tilenumber} {band}"
 
     print("Launching session")
     print(f"Command: bash {args}")
