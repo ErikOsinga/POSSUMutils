@@ -24,6 +24,7 @@ from time import sleep
 try:
     from possum2caom2.composable import _run as possum_run # type: ignore
 except ImportError:
+    print("Could not import possum_run from possum2caom2.composable. Make sure possum2caom2 is installed.")
     possum_run = None
 from automation import database_queries as db
 from possum_pipeline_control import util
@@ -70,9 +71,9 @@ def replace_working_directory_and_save(file_path, tile_workdir):
 def launch_ingestscript(tile_workdir):
     """change workdir and launch ingest script"""
 
-    # Start possum_run in correct workdir
-    os.chdir(tile_workdir)
-    result = possum_run()
+    # Start possum_run in correct workdir!!
+    with util.TemporaryWorkingDirectory(tile_workdir):
+        result = possum_run()
     return result
 
 @task

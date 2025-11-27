@@ -1,4 +1,6 @@
 from __future__ import annotations
+from pathlib import Path
+import os
 """
 Utility methods shared across the scripts
 """
@@ -34,3 +36,29 @@ def get_sbid_num(sbid: str | None) -> str | None:
         return sbid.replace('ASKAP-', '')
     
     return sbid
+
+
+class TemporaryWorkingDirectory:
+    """Context manager to temporarily change the current working directory."""
+
+    def __init__(self, path: str | os.PathLike):
+        self.new_path = Path(path).expanduser().resolve()
+        self._original_path: Path | None = None
+
+    def __enter__(self) -> Path:
+        # Store the original working directory
+        self._original_path = Path.cwd()
+
+        # Change to the new directory
+        os.chdir(self.new_path)
+
+        # Optionally return the new path for use inside the with-block
+        return self.new_path
+
+    def __exit__(self, exc_type, exc_value, traceback) -> bool:
+        # Always restore the original directory, even if an exception occurred
+        if self._original_path is not None:
+            os.chdir(self._original_path)
+
+        # Returning False means exceptions are not suppressed
+        return False
