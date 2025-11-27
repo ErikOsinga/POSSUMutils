@@ -311,6 +311,8 @@ if __name__ == "__main__":
 
     # needs to be str for comparison
     tilenumber = str(tilenumber)
+
+    print(f"Starting 3D pipeline ingest for tile {tilenumber}, band {band}")
     
     # load env for google spreadsheet constants
     load_dotenv(dotenv_path='./automation/config.env')
