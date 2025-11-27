@@ -28,7 +28,7 @@ def get_database_parameters(test=False, database_config_path: str = "automation/
             raise ValueError("Database config path should not point to a test environment when test=False")
 
         if not os.path.exists(database_config_path):
-            raise FileNotFoundError(f"Database config file not found at {database_config_path}")
+            raise FileNotFoundError(f"Database config file not found at {database_config_path}. Current working directory: {os.getcwd()}")
         
         # Get database connection details from config.env file
         load_dotenv(dotenv_path=database_config_path)
