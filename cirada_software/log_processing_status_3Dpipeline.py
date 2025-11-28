@@ -221,5 +221,10 @@ def main():
     update_3d_tile_database(tilenumber, band, status)
 
 
+    if status != "WaitingForValidation":
+        # Make sure prefect dashboard show crashed run
+        raise ValueError(f"Status is {status} for tile number {tilenumber}. Please check the log file {log_file_path} for details.")
+
+
 if __name__ == "__main__":
     main()
