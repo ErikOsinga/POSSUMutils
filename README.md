@@ -1,8 +1,35 @@
 # POSSUMutils
-A set of handy scripts related to POSSUM
+A set of control tools related to running the POSSUM 1D and 3D pipelines on the CANFAR science platform. 
+
+With everything set up (credentials, pip install -r requirements.txt) on the virtual machine, start running the 1D pipeline as follows:
+
+```
+screen -r 1Dpipeline # or screen -S 1Dpipeline the first time
+cd POSSUMutils/
+bash go_1Dpipeline.sh
+```
+
+or the 3D pipeline:
+
+```
+screen -r 3Dpipeline # or screen -S 3Dpipeline the first time
+cd POSSUMutils/
+bash go_3Dpipeline
+```
 
 
-## Main directory
+## cirada_software/
+
+A set of scripts meant to live on CANFAR where they can be called to start headless jobs.
+
+
+## possum_pipeline_control/
+
+A set of scripts meant to live on the virtual machine 'p1' to operate the control logic for launching POSSUM pipelines on CANFAR.
+
+
+## root directory (./)
+For quick looks at the POSSUM processing status or data availability.
 
 ### Grab closest POSSUM field and tile
 ```get_POSSUM_field_sbid_and_tile.py``` 
@@ -30,17 +57,14 @@ and checks whether coordinates fall inside one of the field with a certain statu
 Assumes flat sky, so might not work for sources on boundary of observations? Probably superseded by `get_POSSUM_field_sbid_and_tile.py`
 
 
-## cirada_software/
-
-A set of scripts meant to live on CANFAR where they can be called to start headless jobs 
-
-
-## possum_pipeline_control
-
-A set of scripts meant to live on 'p1' meant to control logic for launching POSSUM pipelines on CANFAR
-
-
 ## handy_scripts/
 
-Some handy scripts not necessarily related to POSSUM
+Some handy scripts not necessarily related to POSSUM.
+
+
+
+## TODO:
+
+- Should move to dev/test/prod env for the pipelines
+- Should implement CANDIAPL best practices, and make this a proper python package.
 
