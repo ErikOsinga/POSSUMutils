@@ -1,7 +1,11 @@
 echo "Preparing pipeline run name $1 tile number $2"
 echo "Creating config file"
 # arguments: template file, output_filename, run_name, tile_number, data_dir
-python /arc/projects/CIRADA/polarimetry/ASKAP/Pipeline_logs/config_templates/create_config.py /arc/projects/CIRADA/polarimetry/ASKAP/Pipeline_logs/config_templates/config_template_3d_band1.ini config_$2.ini $1 $2 /arc/projects/CIRADA/polarimetry/ASKAP/Tiles/943MHz/$2 
+python /arc/projects/CIRADA/polarimetry/ASKAP/Pipeline_logs/config_templates/create_config.py \
+    /arc/projects/CIRADA/polarimetry/software/POSSUM_Polarimetry_Pipeline/pipeline/canfar_config_templates/config_template_3d_band1.ini \
+    config_$2.ini \
+    $1 $2 \
+    /arc/projects/CIRADA/polarimetry/ASKAP/Tiles/943MHz/$2
 # band 1
 
 echo "Opening SSH tunnel to prefect server host (p1)"
