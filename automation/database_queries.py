@@ -313,7 +313,7 @@ def get_partial_tiles_for_1d_pipeline_run(band_number, conn):
 
 def get_observations_with_complete_partial_tiles(band_number, conn):
     """
-    For each observation, check if all '1d_pipeline' is "Completed" and 1d_pipeline_validation' is empty
+    For each observation, check if all '1d_pipeline' is "Completed" and '1d_pipeline_validation' is empty
     Return rows of: (observation, sbid, all_complete)
     for which all_complete is True if all partial tiles for that observation and sbid
     have '1d_pipeline' marked as "Completed" and '1d_pipeline_validation' for the observation is NULL
@@ -325,7 +325,7 @@ def get_observations_with_complete_partial_tiles(band_number, conn):
                 SELECT 1
                 FROM possum.partial_tile_1d_pipeline_band{band_number} pt2
                 WHERE pt2.observation = pt.observation
-                AND LOWER(pt2."1d_pipeline") != 'completed'
+                AND (LOWER(pt2."1d_pipeline") != 'completed' OR pt2."1d_pipeline" IS NULL)
                 ) THEN false
             WHEN (ob."1d_pipeline_validation" IS NULL OR TRIM(ob."1d_pipeline_validation") = '') AND LOWER(pt."1d_pipeline") = 'completed'
                 THEN true
