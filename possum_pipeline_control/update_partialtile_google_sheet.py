@@ -85,13 +85,17 @@ def create_progress_plot(full_table):
      - A cumulative plot showing the total number of fields processed vs. date.
     """
     # how many SBids are observed
-    n_total_observed = np.sum(full_table['sbid'] != '')
+    n_total_observed_incl_reject = np.sum(full_table['sbid'] != '')
+    print(f"Total number of observed fields (including REJECTED): {n_total_observed_incl_reject}")
 
     # Remove rows where the "validated" column contains "REJECTED"
     full_table = full_table[['REJECTED' not in str(val).upper() for val in full_table['validated']]]
 
     # Remove rows where the row is equal to ''
     full_table = full_table[[not all(str(val).strip() == '' for val in row) for row in full_table['validated']]]
+
+    n_total_observed = np.sum(full_table['sbid'] != '')
+    print(f"Number of observed fields (excluding REJECTED): {n_total_observed} / {n_total_observed_incl_reject}")
 
     # Extract validated times
     valid_times = [datetime.strptime(t, '%Y-%m-%d') 
@@ -284,6 +288,9 @@ def create_progress_plot(full_table):
     txt_60 = f"Using last 60 days: {days_left_60:.1f} days"
     ax.text(0.05, 0.90, txt_60, transform=ax.transAxes, va='top')
 
+    txt_summary = f"Fields processed: {proc_counts[-1]} / {n_total_observed}"
+    ax.text(0.05, 0.85, txt_summary, transform=ax.transAxes, va='top')
+
     # --- Smarter x-axis locator & limits ---
     xmin = -30
     # include all relevant candidates: observed maxima and both intersections (if finite)
@@ -311,6 +318,9 @@ def create_progress_plot(full_table):
     ax.set_ylabel("Cumulative count")
     ax.legend()
 
+    # Also plot a vline at today
+    today_days_since_start = (datetime.now() - obs_start).days
+    plt.axvline(x=today_days_since_start, color='gray', linestyle='--', label=f'Today ({today_days_since_start} days)')
 
     plt.title(f'Fields Processed & Validated vs Days Since Observing Start ({obs_start:%Y-%m-%d})')
     plt.xlabel('Days Since Observing Start')
