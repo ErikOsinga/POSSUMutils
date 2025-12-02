@@ -3,8 +3,22 @@ Database query functions for interacting with the ausSRC database.
 """
 import os
 import psycopg2
+from astropy.table import Table
 from dotenv import load_dotenv
 
+def rows_to_table(rows, colnames=None):
+    """
+    Convert a list of row tuples and column names into an astropy Table.
+    """
+    if not rows:
+        # Empty table, but we might still know the column names
+        return Table(names=colnames or [])
+
+    if colnames is None:
+        ncols = len(rows[0])
+        colnames = [f"col{i}" for i in range(ncols)]
+
+    return Table(rows=rows, names=colnames)
 
 def get_database_connection(test: bool, database_config_path: str = "automation/config.env"):
     """
@@ -70,33 +84,42 @@ def execute_update_query(query, conn, params=None, verbose=False):
         raise
     return rows_affected
 
-def execute_query(query, database_connection, params=None, verbose=False):
+def execute_query(query, database_connection, params=None, verbose=False, return_colnames=False):
     """
     Execute a SQL query and return the results.
 
     Args:
-    query (str): The SQL query to execute.
-    params (tuple): Optional parameters for the SQL query.
+        query (str): The SQL query to execute.
+        database_connection: An open DB-API 2.0 connection.
+        params (tuple): Optional parameters for the SQL query.
+        verbose (bool): If True, print the query before executing.
+        return_colnames (bool): If True, also return the column names.
 
     Returns:
-    list: The results of the query.
+        list or (list, list): The results of the query, and optionally
+        a list of column names.
     """
     results = []
+    colnames = []
     try:
         with database_connection.cursor() as cursor:
-        # Execute the query
             if verbose:
                 if params:
                     print(f"Executing database query: {query} with {params}")
                 else:
                     print(f"Executing database query: {query}")
+
             cursor.execute(query, params)
-            # Fetch all results
+
             if cursor.description is not None:
-                results = cursor.fetchall() # select query
+                colnames = [desc[0] for desc in cursor.description]
+                results = cursor.fetchall()
     except Exception as e:
         print(f"An error occurred: {e}")
         raise
+
+    if return_colnames:
+        return results, colnames
     return results
 
 def update_3d_pipeline_table(tile_number, band_number, status, column_name, conn):
@@ -441,3 +464,31 @@ def get_1d_pipeline_status(field_name, tilenumbers, band_number, conn):
             sql += f" AND tile{i} = '{tile}'"
 
     return execute_query(sql, conn, (field_name,))
+
+def get_fields_ready_single_SB_pipeline(band_number, conn) -> Table:
+    """
+    Get fields that are ready for 1D Partial Tile pipeline processing:
+    i.e. single_sb_1d_pipeline is NULL/empty and cube_state = 'COMPLETED'
+
+    returns a table with columns ["name", "sbid"]
+    """
+    sql = f"""
+    SELECT name, sbid FROM possum.observation_state_band{band_number}
+    WHERE ("single_sb_1d_pipeline" IS NULL or "single_sb_1d_pipeline" = '')
+    AND UPPER("cube_state") = 'COMPLETED';
+    """
+    rows, colnames = execute_query(sql, conn, return_colnames=True)
+    return rows_to_table(rows, colnames=colnames)
+
+def get_full_table_single_SB_pipeline(band_number, conn, as_table=True) -> list | Table:
+    """
+    Get single_sb_1d_pipeline status as either raw rows or an astropy Table.
+    """
+    sql = f"""
+        SELECT * FROM possum.observation_state_band{band_number}
+    """
+    rows, colnames = execute_query(sql, conn, return_colnames=True)
+
+    if as_table:
+        return rows_to_table(rows, colnames=colnames)
+    return rows
