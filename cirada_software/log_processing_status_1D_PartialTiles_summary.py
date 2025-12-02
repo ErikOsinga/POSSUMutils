@@ -74,7 +74,8 @@ def update_1d_database(field_ID, SBid, band, status, conn):
 
 def update_status_spreadsheet(field_ID, SBid, band, Google_API_token, status, status_column, database_config_path='./automation/config.env'):
     """
-    Update the status of the specified tile in the STATUS Google Sheet (Cameron's sheet).
+    Update the status of the specified tile in the STATUS Google Sheet (Cameron's sheet) 
+                                and in the observation_state_band1 database table.
     
     Args:
     field_id         : the field id

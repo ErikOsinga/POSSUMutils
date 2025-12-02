@@ -15,6 +15,7 @@ import matplotlib.ticker as ticker
 import time
 from datetime import datetime
 from pathlib import Path
+from automation import database_queries as db
 
 """
 Run "check_status_and_launch_1Dpipeline_PartialTiles.py 'pre' " based on Camerons' POSSUM Pipeline Status google sheet.
@@ -22,7 +23,7 @@ That will download the tiles in a CANFAR job and populate the google sheet.
 
 """
 
-def get_ready_fields(band):
+def get_sheet_table(band):
     """
     Connects to the POSSUM Status Monitor Google Sheet and returns a sub-table
     containing only the rows where the 'sbid' and 'aus_src' fields are not empty and 'single_SB_1D_pipeline' is empty.
@@ -43,7 +44,12 @@ def get_ready_fields(band):
     ps = gc.open_by_url(os.getenv('POSSUM_STATUS_SHEET'))
     
     # Select the worksheet for the given band number
-    band_number = '1' if band == '943MHz' else '2'
+    if band == '943MHz':
+        band_number = '1'
+    elif band == '1367MHz':
+        band_number = '2'
+    else:
+        raise ValueError("Band must be either '943MHz' or '1367MHz'")
     tile_sheet = ps.worksheet(f'Survey Fields - Band {band_number}')
     tile_data = tile_sheet.get_all_values()
     column_names = tile_data[0]
@@ -54,14 +60,59 @@ def get_ready_fields(band):
     ready_table = tile_table[mask]
     return ready_table, tile_table
 
-def launch_pipeline_command(fieldname, SBID):
+
+def get_ready_fields(band: str) -> tuple[at.Table, at.Table]:
     """
-    Launches the 1D pipeline pre-or-post script for a given field and SBID.
+    Get fields ready for single SB partial tile pipeline processing from the database.
+
+    Returns a list of fieldnames ready and the full pipeline summary table from Cameron as astropy Tables.
+
+    the latter is only used to make progress plots.
+    """
+
+    if band == '943MHz':
+        band_number = '1'
+    elif band == '1367MHz':
+        band_number = '2'
+    else:
+        raise ValueError("Band must be either '943MHz' or '1367MHz'")
+
+    load_dotenv(dotenv_path='./automation/config.env')
+    conn = db.get_database_connection(test=False)
+    ready_table = db.get_fields_ready_single_SB_pipeline(band_number, conn)
+    conn.close()
+    # get rid of the ASKAP- prefix in sbid for easier matching with google sheet
+    sbids = [row['sbid'].strip("ASKAP-") for row in ready_table]
+    ready_table['sbid'] = sbids
+
+    ready_table_sheet, full_table_sheet = get_sheet_table(band)
+
+    if len(ready_table_sheet) != len(ready_table):
+        print("Warning: Mismatch between database and Google Sheet for ready fields.")
+        print(f"Database ready fields: {len(ready_table)}, Google Sheet ready fields: {len(ready_table_sheet)}")
+        print("    Fields in database but not in Google Sheet:")
+        sheet_fieldnames = set(ready_table_sheet['name'])
+        for fn in ready_table['name']:
+            if fn not in sheet_fieldnames:
+                print(f"     - {fn}")
+        print("    Fields in Google Sheet but not in database:")
+        for fn in sheet_fieldnames:
+            if fn not in ready_table['name']:
+                print(f"     - {fn}")
+
+    ## getting full table from the database works also, but its a different table structure than Camerons sheet.
+    # full_table: at.Table = db.get_full_table_single_SB_pipeline(band_number, conn, as_table=True)
+
+    return ready_table, full_table_sheet
+
+def launch_pipeline_command(fieldname, sbid):
+    """
+    Launches the 1D pipeline pre-or-post script for a given field and sbid.
     
     The command executed is:
-        python -m possum_pipeline_control.launch_1Dpipeline_PartialTiles_band1_pre_or_post {fieldname} {SBID} pre
+        python -m possum_pipeline_control.launch_1Dpipeline_PartialTiles_band1_pre_or_post {fieldname} {sbid} pre
     """
-    command = f"python -m possum_pipeline_control.launch_1Dpipeline_PartialTiles_band1_pre_or_post {fieldname} {SBID} pre"
+    command = f"python -m possum_pipeline_control.launch_1Dpipeline_PartialTiles_band1_pre_or_post {fieldname} {sbid} pre"
     print(f"Executing command: {command}")
     subprocess.run(command, shell=True, check=True)
 
@@ -384,7 +435,7 @@ if __name__ == "__main__":
     Google_API_token = os.getenv('POSSUM_STATUS_SHEET')
     # consider chmod 600 <POSSUM_STATUS_TOKEN_FILE> to prevent access!!!
 
-    # Get fields ready for processing according to Cameron's status sheet.
+    # Get fields ready for processing according to the AUSSRC database.
     ready_table, full_table = get_ready_fields(band)
     print(f"Found {len(ready_table)} fields ready for single SB partial tile pipeline processing in band {band}")
     
@@ -392,31 +443,32 @@ if __name__ == "__main__":
     local_file = "./plots/1D_pipeline_progress_cumulative.png"
     if not os.path.exists(local_file):
         print("Creating 1D pipeline progress plot")
+        # create progress plot from Cameron's status sheet.
         create_progress_plot(full_table)
-        # print("Collating all the 1D pipeline outputs")
-        # launch_collate_job()
     else:
         file_mod_time = os.path.getmtime(local_file)
         if (time.time() - file_mod_time) > 86400:  # 86400 seconds = 1 day
             print("Updating 1D pipeline progress plot")
             create_progress_plot(full_table)
-            # print("Collating all the 1D pipeline outputs")
-            # launch_collate_job()
 
     # Loop over each row in the returned table to launch the pipeline command.
     # The 'fieldname' is taken from the column "name" with "EMU_" stripped if present.
-    # The SBID is taken from the column "sbid".
+    # The sbid is taken from the column "sbid".
     for row in ready_table:
         fieldname = row["name"]
+        sbid = str(row["sbid"])
+
         if fieldname.startswith("EMU_"):
             fieldname = fieldname[len("EMU_"):]
-        SBID = row["sbid"]
-        # Launch the job that downloads the tiles and populates Erik's google sheet
-        launch_pipeline_command(fieldname, SBID)
+        if fieldname.startswith("WALLABY_"):
+            fieldname = fieldname[len("WALLABY_"):]
+        
+        # Launch the job that downloads the tiles and populates the partial tile database
+        launch_pipeline_command(fieldname, sbid)
         
         ## NOTE: moved to do this in the launched script to make sure it only happens if the job is actually launched
         # # update the status in Cameron's spreadsheet
         # status_to_put = "PartialTiles - Running"
-        # update_status_spreadsheet(fieldname, SBID, band, Google_API_token, status_to_put, 'single_SB_1D_pipeline')
+        # update_status_spreadsheet(fieldname, sbid, band, Google_API_token, status_to_put, 'single_SB_1D_pipeline')
     
         break # only do one every time the script is called
