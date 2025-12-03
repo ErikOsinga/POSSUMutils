@@ -3,15 +3,14 @@ Base class for setting up Partial Tile 1D test cases. This is to reduce repetiti
 because the setup is all the same.
 """
 import csv
-import unittest
-from abc import ABC
 from automation import insert_database_script as db
 from automation import database_queries as db_query
+from automation.unit_tests.database_test_base import DatabaseTestBase
 
-class PartialTile1DBaseTest(unittest.TestCase, ABC):
+class PartialTile1DBaseTest(DatabaseTestBase):
     "Setup the tables for partial_tile 1D pipeline cases"
     def setUp(self):
-        self.conn = db_query.get_database_connection(test=True)
+        super().setUp()
         queries = []
         queries.append(db.drop_test_schema())
         queries.append(db.create_test_schema())
@@ -35,18 +34,6 @@ class PartialTile1DBaseTest(unittest.TestCase, ABC):
                 db_query.execute_query(query[0], self.conn, query[1], True)        
         # insert observation data: name, sbid, 1d_pipeline_validation, single_sb_1d_pipeline
         insert_observation_state_csv_data(self.conn)
-
-    def tearDown(self):
-        if self.conn:
-            queries = []
-            queries.extend(db.drop_test_tables())
-            queries.append(db.drop_test_schema())
-            # using with statement to auto commit and rollback if there's exception
-            with self.conn:
-                for query in queries:
-                    db_query.execute_query(query[0], self.conn, query[1], True)
-            self.conn.close()
-            self.conn = None
 
 def insert_observation_state_csv_data(conn):
     """

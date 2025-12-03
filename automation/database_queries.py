@@ -33,8 +33,16 @@ def get_database_parameters(test=False, database_config_path: str = "automation/
     """
     Get database parameters from env file (test.env for test, config.env otherwise)
     """
+    possum_db_name = 'possum'
+    possum_db_host = '192.9.183.211'
+
     if test:
         load_dotenv(dotenv_path='automation/unit_tests/test.env')
+        # Check that we're not accidentally connecting to prod DB in test mode
+        if (possum_db_name == os.getenv('DATABASE_NAME')
+                and possum_db_host == os.getenv('DATABASE_HOST')):
+            raise ConnectionError("Refusing to connect to the production database in test mode!"
+                             "Please use an empty test database.")
     else:
         print(f"Attempting to load database config from {database_config_path}")
 
@@ -219,7 +227,7 @@ def get_tiles_for_pipeline_run(conn, band_number):
 
     In the database, this is when:
     tile_state_band.cube_state = 'COMPLETED' and tile.3d_pipeline_val = [null]
-    
+
     In POSSUM pipeline status sheet, this is the equivalent of:
     'aus_src' column is not empty and '3d_pipeline' column is empty for the given band number.
 
@@ -233,7 +241,7 @@ def get_tiles_for_pipeline_run(conn, band_number):
     print(f"Fetching tiles ready for 3D pipeline run for band {band_number} from the database.")
     query = f"""
         SELECT tile FROM possum.tile_state_band{band_number}
-        WHERE UPPER(cube_state) = 'COMPLETED' 
+        WHERE UPPER(cube_state) = 'COMPLETED'
         AND ("3d_pipeline_val" IS NULL OR TRIM("3d_pipeline_val") = '')
     """
     return execute_query(query, conn)

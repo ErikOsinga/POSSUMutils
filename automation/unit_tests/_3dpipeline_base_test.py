@@ -4,14 +4,13 @@ because the setup is all the same.
 """
 from datetime import datetime
 import csv
-import unittest
-from abc import ABC
+from automation.unit_tests.database_test_base import DatabaseTestBase
 from automation import insert_database_script as db
 from automation import database_queries as db_query
 
-class _3DPipelineBaseTest(unittest.TestCase, ABC):
+class _3DPipelineBaseTest(DatabaseTestBase):
     def setUp(self):
-        self.conn = db_query.get_database_connection(True)
+        super().setUp()
         queries = []
         queries.append(db.drop_test_schema())
         queries.append(db.create_test_schema())
@@ -38,13 +37,3 @@ class _3DPipelineBaseTest(unittest.TestCase, ABC):
                     _3d_val = row[2]
                     db.insert_3d_pipeline_test_data(row[0], timestamp, _3d_val, row[3], row[4], self.conn)
 
-    def tearDown(self):
-        sql = []
-        sql.extend(db.drop_test_tables())
-        sql.append(db.drop_test_schema())
-        # using with statement to auto commit and rollback if there's exception
-        with self.conn:
-            for query in sql:
-                db_query.execute_query(query[0], self.conn, query[1], True)
-
-        self.conn.close()
