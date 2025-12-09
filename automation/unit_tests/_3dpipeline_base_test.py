@@ -36,7 +36,7 @@ class _3DPipelineBaseTest(unittest.TestCase, ABC):
                     # we're going to separate them
                         timestamp = row[1]
                     _3d_val = row[2]
-                    db.insert_3d_pipeline_test_data(row[0], timestamp, _3d_val, row[3], row[4], self.conn)
+                    db.insert_3d_pipeline_test_data(row[0], timestamp, _3d_val, row[3], row[4], row[5], self.conn)
 
     def tearDown(self):
         sql = []

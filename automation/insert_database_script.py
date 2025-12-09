@@ -448,16 +448,16 @@ def insert_associated_tile_data(name, tile, conn):
     """
     return db.execute_query(sql, conn, (name, tile))
 
-def insert_3d_pipeline_test_data(tile_id, _3d_pipeline, val, ingest, cube_state, conn):
+def insert_3d_pipeline_test_data(tile_id, _3d_pipeline, val, ingest, cube_state, mfs_state, conn):
     """
     Insert test data into tile_state_band1 table
     """
     sql = """
         INSERT INTO possum.tile_state_band1
-        (tile, "3d_pipeline", "3d_pipeline_val", "3d_pipeline_ingest", "cube_state")
-        VALUES(%s, %s, %s, %s, %s)
+        (tile, "3d_pipeline", "3d_pipeline_val", "3d_pipeline_ingest", "cube_state", "mfs_state")
+        VALUES(%s, %s, %s, %s, %s, %s)
     """
-    return db.execute_query(sql, conn, (tile_id, _3d_pipeline, val, ingest, cube_state))
+    return db.execute_query(sql, conn, (tile_id, _3d_pipeline, val, ingest, cube_state, mfs_state))
 
 def create_test_schema():
     """
