@@ -233,7 +233,8 @@ def get_tiles_for_pipeline_run(conn, band_number):
     print(f"Fetching tiles ready for 3D pipeline run for band {band_number} from the database.")
     query = f"""
         SELECT tile FROM possum.tile_state_band{band_number}
-        WHERE UPPER(cube_state) = 'COMPLETED' 
+        WHERE UPPER(cube_state) = 'COMPLETED'
+        AND UPPER(mfs_state) = 'COMPLETED'
         AND ("3d_pipeline_val" IS NULL OR TRIM("3d_pipeline_val") = '')
     """
     return execute_query(query, conn)
