@@ -62,4 +62,5 @@ class CheckStatusAndLaunch3DPipelinev2Test(_3DPipelineBaseTest):
         #     print(row)
 
         tile_numbers = db_query.get_tiles_for_pipeline_run(self.conn, band_number=1)
-        assert tile_numbers == [(1239,), (6753,), (6881,)], f"Got {tile_numbers}"
+        # checks for cube_state completed, mfs_state completed, and nothing in "3d_pipeline_val"
+        assert tile_numbers == [(1239,), (6753,)], f"Got {tile_numbers}"
