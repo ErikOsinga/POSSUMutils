@@ -1,13 +1,3 @@
-import os
-from dotenv import load_dotenv
-from vos import Client
-import subprocess
-import argparse
-import gspread
-import astropy.table as at
-import numpy as np
-from automation import database_queries as db
-from possum_pipeline_control import util
 
 """
 Checks POSSUM tile status (Cameron's survey overview google sheet) if 3D pipeline can be started.
@@ -33,6 +23,20 @@ into time-blocked directories.
 
 @author: Erik Osinga
 """
+
+import os
+from dotenv import load_dotenv
+from vos import Client
+import subprocess
+from canfar.sessions import Session
+import gspread
+import astropy.table as at
+import numpy as np
+from automation import database_queries as db
+from possum_pipeline_control import util
+from print_all_open_sessions import get_open_sessions
+
+session = Session()
 
 def get_tiles_for_pipeline_run_old(band_number, Google_API_token):
     """
@@ -133,6 +137,81 @@ def update_status(tile_number, band, Google_API_token, status):
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 
+def check_download_running(jobname="3dtile-dl"):
+    """
+    Check whether a 3d pipeline tile download session (i.e. possum_run_remote) is running
+    
+    returns True if it is, False if not.
+    """
+    df_sessions = get_open_sessions()
+
+    if len(df_sessions) == 0:
+        # no sessions running
+        return False
+    
+    # corresponds to jobname as set in launch_download_session()
+    if df_sessions[df_sessions['status'] == 'Running']['name'].str.contains(jobname).any() or df_sessions[df_sessions['status'] == 'Pending']['name'].str.contains(jobname).any():
+        return True
+    
+    # didnt find any running jobs with the jobname
+    return False
+
+def launch_download_session(jobname="3dtile-dl"):
+    # Template bash script to run
+    args = "/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/3d_pipeline_tile_download_ingest.sh"
+
+    print("Launching download session")
+    print(f"Command: bash {args}")
+
+    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.15.2"
+    # download can use flexible resources
+    session_id = session.create(
+        name=jobname.replace('_', '-'),  # Prevent Error 400: name can only contain alpha-numeric chars and '-'
+        image=image,
+        cores=None, # flexible mode
+        ram=None, # flexible mode
+        kind="headless",
+        cmd="bash",
+        args=args,
+        replicas=1,
+        env={},
+    )
+
+    print("Check sessions at https://ws-uv.canfar.net/skaha/v1/session")
+    print(f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs")
+
+
+def launch_create_symlinks(jobname="3dsymlinks"):
+    """
+    Launch session on CANFAR to create symbolic links after possum_run_remote has downloaded
+    the tiles into "timeblocked" directories.
+
+    This sorts the tiles into symbolic links in a much more readable format.    
+    """
+
+    # Template bash script to run
+    args = "/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/create_symlinks.sh"
+
+    print("Launching symlinks session")
+    print(f"Command: bash {args}")
+
+    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.15.2"
+    # download can use flexible resources
+    session_id = session.create(
+        name=jobname.replace('_', '-'),  # Prevent Error 400: name can only contain alpha-numeric chars and '-'
+        image=image,
+        cores=None, # flexible mode
+        ram=None, # flexible mode
+        kind="headless",
+        cmd="bash",
+        args=args,
+        replicas=1,
+        env={},
+    )
+
+    print("Check sessions at https://ws-uv.canfar.net/skaha/v1/session")
+    print(f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs")
+
 def launch_band1_3Dpipeline():
     """
     Check for Band 1 tiles that are ready to be processed with the 3D pipeline and launch the pipeline for the first available tile.
@@ -141,9 +220,17 @@ def launch_band1_3Dpipeline():
     band = "943MHz"
     # on p1
     Google_API_token = os.getenv('POSSUM_STATUS_TOKEN')
-    
-    # Check database for band 1 tiles that have been ingested into CADC 
-    # (and thus available on CANFAR) but not yet processed with 3D pipeline
+
+    dl_jobname = "3dtile-dl"
+    # First check whether a download session is running (i.e. possum_run_remote)
+    # Get information about currently open sessions
+    download_running = check_download_running(dl_jobname)
+
+    if not download_running:
+        launch_download_session(dl_jobname)
+
+    # Check database for band 1 tiles that have been processed by AUSSRC 
+    # but not yet processed with 3D pipeline
     conn = db.get_database_connection(test=False)
     # We are getting the tiles from the DB instead of the sheet now
     tile_numbers = db.get_tiles_for_pipeline_run(conn, band_number=1)
@@ -151,6 +238,8 @@ def launch_band1_3Dpipeline():
     tile_numbers = [str(tup[0]) for tup in tile_numbers]
 
     conn.close()
+
+    # Also check whether the tiles have been downloaded to CANFAR
     canfar_tilenumbers = get_canfar_tiles(band_number=1)
 
     if len(tile_numbers) > 0:
