@@ -85,14 +85,13 @@ def create_symlinks():
 
                 for file in files:
                     link_name = os.path.join(tiledir, os.path.basename(file))
-                    if not os.path.islink(link_name):
+                    if os.path.islink(link_name) or os.path.exists(link_name):
+                        print(f"File or symbolic link {link_name} already exists. Skipping...")
+                    else:
                         # Create a symbolic link
-                        # This could error if there is a link but it points towards a deleted file.
-                        # in that case user should delete the link manually
                         os.symlink(file, link_name)
                         created_links.append(link_name)
-                    else:
-                        print(f"Symbolic link {link_name} already exists. Skipping...")
+
             elif len(bandfiles)>0: # if there are zero files it doesnt have to be logged
                 # tile number, how many files, which band
                 skipped_tiles.append((tile_number, len(bandfiles), band))
