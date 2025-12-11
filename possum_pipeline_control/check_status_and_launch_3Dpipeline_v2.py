@@ -227,7 +227,14 @@ def launch_band1_3Dpipeline():
     download_running = check_download_running(dl_jobname)
 
     if not download_running:
+        print("A download job (possum_run_remote) is not running anymore.")
+        # launch a job to download more tiles from AUSSRC and ingest them into CADC from CANFAR.
         launch_download_session(dl_jobname)
+        
+        # also launch a job to create new symlinks since the previous download job finished.
+        launch_create_symlinks()
+    else:
+        print("A download job (possum_run_remote) is already running.")
 
     # Check database for band 1 tiles that have been processed by AUSSRC 
     # but not yet processed with 3D pipeline
