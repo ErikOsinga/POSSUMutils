@@ -1,6 +1,8 @@
 import os
+import argparse
 import glob
-import time 
+import time
+from possum_pipeline_control.util import TemporaryWorkingDirectory 
 
 """
 Python script to run after downloading tiles with "possum_run_remote"
@@ -9,7 +11,7 @@ create symbolic links in the Tiles/ directory for easy access per tile.
 """
 
 def create_symlinks():
-    # Meant to be run in the directory its placed on CANFAR
+    # Meant to be run in the following directory on CANFAR
     assert os.getcwd() == '/arc/projects/CIRADA/polarimetry/ASKAP/Tiles', "Meant to be run in the current wd"
 
     print("Creating symbolic links for the tile files from the timeblocked directories")
@@ -23,7 +25,7 @@ def create_symlinks():
 
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     # Log file path
-    log_file_path = f'symbolic_links_log_{timestamp}.txt'
+    log_file_path = f'./symlink_logs/symbolic_links_log_{timestamp}.txt'
 
     # Create a dictionary to store tile numbers and their associated files
     tile_files = {}
@@ -132,4 +134,12 @@ def create_symlinks():
         print("No tiles were skipped due to insufficient files.")
 
 if __name__ == "__main__":
-    create_symlinks()
+    parser = argparse.ArgumentParser(description="Create symlinks to the tiles in the 'Tiledir' ")
+    parser.add_argument("--tiledir", type=str, help="Where the symbolic links should be created"
+                        ,default="/arc/projects/CIRADA/polarimetry/ASKAP/Tiles/")
+    args = parser.parse_args()
+
+    assert os.path.exists(args.tiledir), f"Input {args.tiledir=} does not exist"
+
+    with TemporaryWorkingDirectory(args.tiledir):
+        create_symlinks()
