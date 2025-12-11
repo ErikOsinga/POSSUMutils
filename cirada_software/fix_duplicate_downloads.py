@@ -157,7 +157,7 @@ def run_deduplication(
             tile,
             nfiles,
         )
-        pattern = f"202*-0*/*/*/*{tile}*"
+        pattern = r"20*-0*/*/*/*{tile}*"
         dedupe_tiles(
             tile=tile,
             root=download_dir,
