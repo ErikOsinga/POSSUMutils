@@ -85,7 +85,7 @@ def create_symlinks():
 
                 for file in files:
                     link_name = os.path.join(tiledir, os.path.basename(file))
-                    if not os.path.exists(link_name):
+                    if not os.path.islink(link_name):
                         # Create a symbolic link
                         # This could error if there is a link but it points towards a deleted file.
                         # in that case user should delete the link manually

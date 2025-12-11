@@ -12,5 +12,5 @@ python -m cirada_software.fix_duplicate_downloads \
   --downloaddir /arc/projects/CIRADA/polarimetry/ASKAP/Tiles/downloads \
   --logdir /arc/projects/CIRADA/polarimetry/ASKAP/Tiles/symlink_logs/
 
-
-
+# Create symbolic links again now that duplicates are removed
+python -m cirada_software.create_symlinks --tiledir /arc/projects/CIRADA/polarimetry/ASKAP/Tiles
