@@ -123,7 +123,9 @@ def run_deduplication(
     LOGGER.info("Using log directory: %s", log_dir)
 
     if not download_dir.is_dir():
-        LOGGER.error("Download directory does not exist or is not a directory: %s", download_dir)
+        LOGGER.error(
+            "Download directory does not exist or is not a directory: %s", download_dir
+        )
         sys.exit(1)
 
     if not log_dir.is_dir():
@@ -132,7 +134,9 @@ def run_deduplication(
 
     latest_log = latest_file(log_dir, log_glob)
     if latest_log is None:
-        LOGGER.error("No log files found in %s matching pattern '%s'", log_dir, log_glob)
+        LOGGER.error(
+            "No log files found in %s matching pattern '%s'", log_dir, log_glob
+        )
         sys.exit(1)
 
     LOGGER.info("Latest log file: %s", latest_log)
