@@ -13,7 +13,7 @@ Should be executed on p1
 
 Assumes that it's called from the POSSUMutils root dir as
 
-python -m possum_pipeline_control.test3dpipeline_job
+python -m possum_pipeline_control.test_3dpipeline_job
 
 
 @author: Erik Osinga
@@ -35,7 +35,7 @@ def launch_test_session(jobname="testjob"):
     # Template bash script to run
     args = "/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/test_3dpipeline_job.sh"
 
-    print("Launching download session")
+    print("Launching test 3D pipeline session")
     print(f"Command: bash {args}")
 
     image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.15.2"
@@ -58,6 +58,7 @@ def launch_test_session(jobname="testjob"):
     print(
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
     )
+    print(f"Also check the prefect dashboard at localhost:4200")
 
     return
 
