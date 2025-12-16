@@ -8,7 +8,6 @@ e.g. from the command line:
 python tilenumbers_with_ntiles.py --logfile symbolic_links_log_20251205_140648.txt --ntiles 5
 """
 
-
 #!/usr/bin/env python3
 import argparse
 import re

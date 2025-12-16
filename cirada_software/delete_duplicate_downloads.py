@@ -20,14 +20,13 @@ from typing import Dict, List, Optional, Iterable, Tuple
 import shutil
 
 
-TIMESTAMP_RE = re.compile(
-    r"\d{4}-\d{2}-\d{2}T\d{2}_\d{2}_\d{2}(?:_\d+)?"
-)
+TIMESTAMP_RE = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}_\d{2}_\d{2}(?:_\d+)?")
 
 
 # ---------------------------------------------------------------------
 # Timestamp utilities
 # ---------------------------------------------------------------------
+
 
 def parse_timestamp(token: str) -> Optional[datetime]:
     parts = token.split("_")
@@ -56,6 +55,7 @@ def extract_best_datetime(path: Path) -> Optional[datetime]:
 # ---------------------------------------------------------------------
 # Matching, grouping, dedupe logic
 # ---------------------------------------------------------------------
+
 
 def find_matches(root: Path, tile: str, pattern: str) -> List[Path]:
     glob_pat = pattern.format(tile=tile)
@@ -103,6 +103,7 @@ def plan_deletions(groups: Dict[str, List[Path]]) -> Dict[str, List[Path]]:
 # File operations
 # ---------------------------------------------------------------------
 
+
 def delete_paths(paths: Iterable[Path]) -> None:
     for p in paths:
         try:
@@ -132,7 +133,9 @@ def safe_target_path(dest: Path, root: Path, src: Path) -> Path:
         i += 1
 
 
-def move_paths(paths: Iterable[Path], dest: Path, root: Path) -> List[Tuple[Path, Path]]:
+def move_paths(
+    paths: Iterable[Path], dest: Path, root: Path
+) -> List[Tuple[Path, Path]]:
     moved: List[Tuple[Path, Path]] = []
     for p in paths:
         t = safe_target_path(dest, root, p)
@@ -144,6 +147,7 @@ def move_paths(paths: Iterable[Path], dest: Path, root: Path) -> List[Tuple[Path
 # ---------------------------------------------------------------------
 # High-level planner class (importable API)
 # ---------------------------------------------------------------------
+
 
 class DedupePlanner:
     """
@@ -179,6 +183,7 @@ class DedupePlanner:
 # ---------------------------------------------------------------------
 # Simple programmatic API
 # ---------------------------------------------------------------------
+
 
 def dedupe_tiles(
     tile: str,
@@ -236,6 +241,7 @@ def dedupe_tiles(
 # CLI
 # ---------------------------------------------------------------------
 
+
 def _setup_logging(verbosity: int) -> None:
     level = logging.WARNING
     if verbosity == 1:
@@ -243,6 +249,7 @@ def _setup_logging(verbosity: int) -> None:
     elif verbosity >= 2:
         level = logging.DEBUG
     logging.basicConfig(level=level, format="%(levelname)s: %(message)s")
+
 
 def _print_cli_summary(result: dict) -> None:
     """
@@ -263,7 +270,9 @@ def _print_cli_summary(result: dict) -> None:
         deletions = result.get("deletions", {})
         count = sum(len(v) for v in deletions.values())
         groups = len(deletions)
-        print(f"Dry-run: found {groups} duplicated basenames; {count} files would be removed or moved.")
+        print(
+            f"Dry-run: found {groups} duplicated basenames; {count} files would be removed or moved."
+        )
         return
 
     if status == "deleted":
@@ -313,6 +322,7 @@ def main() -> None:
     print("")
     print("Raw result:")
     print(result)
+
 
 if __name__ == "__main__":
     main()
