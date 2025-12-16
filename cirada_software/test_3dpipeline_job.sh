@@ -21,5 +21,5 @@ pipeline=/arc/projects/CIRADA/polarimetry/software/POSSUM_Polarimetry_Pipeline/p
 psrecord "python $pipeline $testdir/config_11224_zoom_test_all_modules.ini test3d" --include-children --log $testdir/psrecord_test.txt --plot $testdir/psrecord_test.png --interval 1
 
 # Check database access, will report to dashboard as flow "test_db_access"
-cd /arc/projects/CIRADA/polarimetry/software/POSSUMUtils
+cd /arc/projects/CIRADA/polarimetry/software/POSSUMutils
 python -m possum_pipeline_control.test_database_access --run_as_flow

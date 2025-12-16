@@ -6,7 +6,7 @@ This script:
 - Checks whether it can access the POSSUM database (only reads)
 - Checks whether it can access the POSSUM Status Sheet Google Sheet (only reads)
 
-Should be executed on p1 and CANFAR. 
+Should be executed on p1 and CANFAR.
 
 But this script is called by test_3dpipeline_job.py, so see that module instead.
 
@@ -82,11 +82,10 @@ def check_acces_to_google_spread():
 
     return
 
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description=(
-            "Test access to AUSSRC Database and POSSUM Status Sheet"
-        )
+        description=("Test access to AUSSRC Database and POSSUM Status Sheet")
     )
     parser.add_argument(
         "--run_as_flow",
@@ -95,9 +94,9 @@ def parse_args() -> argparse.Namespace:
     )
     return parser.parse_args()
 
+
 @flow(name="test_db_access", log_prints=True)
 def mainflow():
-
     # load env for database credentials and google spreadsheet credential
     load_dotenv_task = task(load_dotenv)
     load_dotenv_task(dotenv_path="./automation/config.env")
@@ -112,7 +111,6 @@ def mainflow():
 
 
 if __name__ == "__main__":
-
     args = parse_args()
 
     if not args.run_as_flow:
@@ -126,5 +124,4 @@ if __name__ == "__main__":
         check_acces_to_google_spread()
 
     else:
-
         mainflow()
