@@ -1,8 +1,10 @@
 """Convenience script to print all open sessions on CANFAR"""
+
 import pandas as pd
 from canfar.sessions import Session
 
 session = Session()
+
 
 def get_open_sessions():
     """Return a table with information about currently open sessions"""
@@ -13,20 +15,26 @@ def get_open_sessions():
         return pd.DataFrame()
 
     # Convert the list of dictionaries to a pandas DataFrame
-    df_sessions = pd.DataFrame([{
-        'type': s['type'],
-        'status': s['status'],
-        'startTime': s['startTime'] if 'startTime' in s else 'Pending',
-        'name': s['name'],
-        'id': s['id'],
-    } for s in open_sessions])
+    df_sessions = pd.DataFrame(
+        [
+            {
+                "type": s["type"],
+                "status": s["status"],
+                "startTime": s["startTime"] if "startTime" in s else "Pending",
+                "name": s["name"],
+                "id": s["id"],
+            }
+            for s in open_sessions
+        ]
+    )
 
     # sort by startTime
-    df_sessions = df_sessions.sort_values(by='startTime', ascending=False)
+    df_sessions = df_sessions.sort_values(by="startTime", ascending=False)
     # Reset the index
     df_sessions = df_sessions.reset_index(drop=True)
 
     return df_sessions
+
 
 if __name__ == "__main__":
     df_sessions = get_open_sessions()
