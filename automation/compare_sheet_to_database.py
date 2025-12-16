@@ -11,6 +11,7 @@ import gspread
 import astropy.table as at
 import numpy as np
 import tqdm
+
 # assume this script is run as a module from the POSSUMutils package
 from automation import database_queries as db  # noqa: E402
 
@@ -131,7 +132,9 @@ def get_partial_tiles_database(band_number: int = 1) -> list[tuple]:
     return rows
 
 
-def build_column_indices(tile_table: at.Table, sample_db_entry: tuple) -> dict[str, int]:
+def build_column_indices(
+    tile_table: at.Table, sample_db_entry: tuple
+) -> dict[str, int]:
     """
     Build a mapping from logical column names to indices in the DB entry tuple.
 
@@ -259,7 +262,9 @@ def build_db_indexes(
     field_sbid_index: dict[tuple[str, str], list[tuple]] = {}
 
     for entry in db_rows:
-        field_name, sbid, tiles, tile_type = extract_db_key_parts(entry, columns_to_index)
+        field_name, sbid, tiles, tile_type = extract_db_key_parts(
+            entry, columns_to_index
+        )
 
         full_key = (field_name, sbid, tiles, tile_type)
         field_sbid_key = (field_name, sbid)
@@ -304,10 +309,11 @@ def get_observation_state_validation(band_number: int = 1) -> dict[str, str]:
     return state_by_field
 
 
-
 def compare_database_to_sheet(
     db_rows: list[tuple],
-    sheet_full_index: dict[tuple[str, str, tuple[str, str, str, str], str], list[at.Row]],
+    sheet_full_index: dict[
+        tuple[str, str, tuple[str, str, str, str], str], list[at.Row]
+    ],
     sheet_field_sbid_index: dict[tuple[str, str], list[at.Row]],
     columns_to_index: dict[str, int],
 ) -> list[tuple[str, str, str]]:
@@ -330,10 +336,10 @@ def compare_database_to_sheet(
     """
     mismatches: list[tuple[str, str, str]] = []
 
-    for entry in tqdm.tqdm(
-        db_rows, desc="Comparing database entries to Google Sheet"
-    ):
-        field_name, sbid, tiles, tile_type = extract_db_key_parts(entry, columns_to_index)
+    for entry in tqdm.tqdm(db_rows, desc="Comparing database entries to Google Sheet"):
+        field_name, sbid, tiles, tile_type = extract_db_key_parts(
+            entry, columns_to_index
+        )
 
         field_sbid_key = (field_name, sbid)
         if field_sbid_key not in sheet_field_sbid_index:
@@ -348,7 +354,9 @@ def compare_database_to_sheet(
             continue
 
         if len(matches) > 1:
-            mismatches.append((field_name, sbid, "Multiple matching rows found in sheet"))
+            mismatches.append(
+                (field_name, sbid, "Multiple matching rows found in sheet")
+            )
             continue
 
         # At this point we have exactly one matching row; check additional columns.
@@ -403,9 +411,7 @@ def compare_sheet_to_database(
     """
     mismatches: list[tuple[str, str, str]] = []
 
-    for row in tqdm.tqdm(
-        tile_table, desc="Checking Google Sheet entries in database"
-    ):
+    for row in tqdm.tqdm(tile_table, desc="Checking Google Sheet entries in database"):
         field_name = row["field_name"]
         sbid = get_sbid_num(row["sbid"])
 
@@ -427,7 +433,11 @@ def compare_sheet_to_database(
 
         if not matches:
             mismatches.append(
-                (field_name, sbid, "Tile numbers or type mismatch (missing in database)")
+                (
+                    field_name,
+                    sbid,
+                    "Tile numbers or type mismatch (missing in database)",
+                )
             )
             continue
 
@@ -443,7 +453,9 @@ def compare_sheet_to_database(
         db_entry = matches[0]
 
         sheet_number_sources = normalize_value(row["number_sources"])
-        db_number_sources = normalize_value(db_entry[columns_to_index["number_sources"]])
+        db_number_sources = normalize_value(
+            db_entry[columns_to_index["number_sources"]]
+        )
 
         if sheet_number_sources != db_number_sources:
             mismatches.append(
@@ -557,9 +569,9 @@ def main() -> None:
     partial_tiles_db = get_partial_tiles_database(band_number=band_number)
 
     # Quick sanity check: same number of rows
-    assert len(tile_table) == len(
-        partial_tiles_db
-    ), "Number of entries in sheet and database do not match."
+    assert len(tile_table) == len(partial_tiles_db), (
+        "Number of entries in sheet and database do not match."
+    )
 
     # Build column index mapping for DB tuples
     columns_to_index = build_column_indices(tile_table, partial_tiles_db[0])
@@ -601,8 +613,6 @@ def main() -> None:
             print(field_name, sbid, "-", reason)
     else:
         print(" ====== All Google Sheet entries are present in the database. =====")
-
-
 
     # Compare "1d_pipeline_validation" column from sheet -> to new "possum.observation_state_band1" table
     validation_mismatches = compare_sheet_validation_to_observation_state(
