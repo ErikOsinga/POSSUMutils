@@ -1,8 +1,10 @@
 import argparse
+
 # from skaha.session import Session
 from canfar.sessions import Session
 
 session = Session()
+
 
 def launch_session(run_name, tilenumber, image, cores, ram):
     """Launch 3D pipeline run"""
@@ -14,7 +16,9 @@ def launch_session(run_name, tilenumber, image, cores, ram):
     print(f"Command: bash {args}")
 
     session_id = session.create(
-        name=run_name.replace('_', '-'),  # Prevent Error 400: name can only contain alpha-numeric chars and '-'
+        name=run_name.replace(
+            "_", "-"
+        ),  # Prevent Error 400: name can only contain alpha-numeric chars and '-'
         image=image,
         cores=cores,
         ram=ram,
@@ -26,9 +30,12 @@ def launch_session(run_name, tilenumber, image, cores, ram):
     )
 
     print("Check sessions at https://ws-uv.canfar.net/skaha/v1/session")
-    print(f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs")
+    print(
+        f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
+    )
 
     return
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Launch a 3D pipeline run")
@@ -36,7 +43,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     tilenumber = args.tilenumber
-    run_name = f"tile{tilenumber}"  # Run name has to match the working directory on CANFAR
+    run_name = (
+        f"tile{tilenumber}"  # Run name has to match the working directory on CANFAR
+    )
 
     # optionally :latest for always the latest version
     # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"

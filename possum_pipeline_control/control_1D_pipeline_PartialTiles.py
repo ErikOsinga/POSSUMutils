@@ -2,12 +2,15 @@ import argparse
 import subprocess
 import time
 import pandas as pd
+
 # from skaha.session import Session
 from canfar.sessions import Session
 from print_all_open_sessions import get_open_sessions
 
 
-def run_script_intermittently(script_paths, interval, max_runs=None, max_pending=20, max_running=50, args=None):
+def run_script_intermittently(
+    script_paths, interval, max_runs=None, max_pending=20, max_running=50, args=None
+):
     """
     Execute all scripts in script_paths intermittently
     """
@@ -21,19 +24,29 @@ def run_script_intermittently(script_paths, interval, max_runs=None, max_pending
             if len(df_sessions) == 0:
                 print("No open sessions.")
                 n_headless_pending = 0
-                n_headless_running = 0 
+                n_headless_running = 0
 
             else:
                 print("Open sessions:")
                 print(df_sessions)
 
                 # Count the number of headless sessions with status 'Pending'
-                n_headless_pending = df_sessions[(df_sessions['type'] == 'headless') & (df_sessions['status'] == 'Pending')].shape[0]
-                print(f"Number of headless sessions with status 'Pending': {n_headless_pending}")
+                n_headless_pending = df_sessions[
+                    (df_sessions["type"] == "headless")
+                    & (df_sessions["status"] == "Pending")
+                ].shape[0]
+                print(
+                    f"Number of headless sessions with status 'Pending': {n_headless_pending}"
+                )
 
                 # Count the number of headless sessions with status 'Running'
-                n_headless_running = df_sessions[(df_sessions['type'] == 'headless') & (df_sessions['status'] == 'Running')].shape[0]
-                print(f"Number of headless sessions with status 'Running': {n_headless_running}")
+                n_headless_running = df_sessions[
+                    (df_sessions["type"] == "headless")
+                    & (df_sessions["status"] == "Running")
+                ].shape[0]
+                print(
+                    f"Number of headless sessions with status 'Running': {n_headless_running}"
+                )
 
             # If the number of pending headless sessions is less than e.g. 10, run the script
             if n_headless_pending < max_pending and n_headless_running < max_running:
@@ -41,7 +54,10 @@ def run_script_intermittently(script_paths, interval, max_runs=None, max_pending
                     print(f"Running script: {script_path}")
                     cmd_list = ["python", "-m", script_path]
                     if args.database_config_path is not None:
-                        cmd_list += ["--database_config_path", args.database_config_path]
+                        cmd_list += [
+                            "--database_config_path",
+                            args.database_config_path,
+                        ]
 
                     subprocess.run(cmd_list, check=True)
             else:
@@ -54,36 +70,41 @@ def run_script_intermittently(script_paths, interval, max_runs=None, max_pending
             print(f"Error occurred while running the script: {e}")
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
-        
+
         run_count += 1
         if max_runs is not None and run_count >= max_runs:
             break
-        
+
         print(f"Sleeping for {interval} seconds...")
         print("\n ============================== \n")
         time.sleep(interval)
 
+
 if __name__ == "__main__":
-
-
     parser = argparse.ArgumentParser(description="Update Partial Tile Google Sheet")
-    parser.add_argument("--database_config_path", type=str, default="../automation/config.env", help="Path to .env file with database connection parameters.")
+    parser.add_argument(
+        "--database_config_path",
+        type=str,
+        default="../automation/config.env",
+        help="Path to .env file with database connection parameters.",
+    )
     args = parser.parse_args()
 
     # Path to the script to be run intermittently
-    script_paths = ["possum_pipeline_control.update_partialtile_google_sheet" # Check POSSUM Pipeline Status sheet and create queue of jobs in POSSUM Pipeline Validation sheet. 
-                                                         # This is done via "check_status_and_launch_1Dpipeline_PartialTiles.py 'pre'"
-                                                         # which also downloads the tiles in a CANFAR job.
-                    ,"possum_pipeline_control.check_status_and_launch_1Dpipeline_PartialTiles" # Check POSSUM Pipeline Validation sheet and launch jobs
-                    # ,"check_ingest_1Dpipeline_PartialTiles.py" # TODO: Check POSSUM Pipeline Validation sheet and ingest results
-                                                            # actually, Craig will validate, and Cameron will ingest into YouCat
-                    ]  
-    
+    script_paths = [
+        "possum_pipeline_control.update_partialtile_google_sheet",  # Check POSSUM Pipeline Status sheet and create queue of jobs in POSSUM Pipeline Validation sheet.
+        # This is done via "check_status_and_launch_1Dpipeline_PartialTiles.py 'pre'"
+        # which also downloads the tiles in a CANFAR job.
+        "possum_pipeline_control.check_status_and_launch_1Dpipeline_PartialTiles",  # Check POSSUM Pipeline Validation sheet and launch jobs
+        # ,"check_ingest_1Dpipeline_PartialTiles.py" # TODO: Check POSSUM Pipeline Validation sheet and ingest results
+        # actually, Craig will validate, and Cameron will ingest into YouCat
+    ]
+
     # Interval between each run in seconds
-    #interval = 300  # 5 minutes
-    interval = 60 #1min
-    #interval = 10*60 # 10 min
-    #interval = 0.5*60*60 # 0.5 hours (download is slow atm)
+    # interval = 300  # 5 minutes
+    interval = 60  # 1min
+    # interval = 10*60 # 10 min
+    # interval = 0.5*60*60 # 0.5 hours (download is slow atm)
 
     # Maximum number of runs for this script, set to None for infinite
     max_runs = None
@@ -92,8 +113,11 @@ if __name__ == "__main__":
     max_pending = 15
 
     # Maximum number of headless jobs running. will not submit if theres more
-    max_running = 15 # probably good to set low to limit parallel downloads of separate tiles
+    max_running = (
+        15  # probably good to set low to limit parallel downloads of separate tiles
+    )
 
-    # start 
-    run_script_intermittently(script_paths, interval, max_runs, max_pending, max_running, args)
-
+    # start
+    run_script_intermittently(
+        script_paths, interval, max_runs, max_pending, max_running, args
+    )
