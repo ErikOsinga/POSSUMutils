@@ -13,7 +13,7 @@ Should be executed on p1
 
 Assumes that it's called from the POSSUMutils root dir as
 
-python -m possum_pipeline_control.test3dpipeline_job.py
+python -m possum_pipeline_control.test3dpipeline_job
 
 
 @author: Erik Osinga
