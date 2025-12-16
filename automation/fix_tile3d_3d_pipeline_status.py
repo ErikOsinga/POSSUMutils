@@ -17,8 +17,8 @@ from astropy import table as at
 # assume this script is run as a module from the POSSUMutils package
 from automation import database_queries as db
 
-GOOGLE_API_TOKEN = '/home/erik/.ssh/psm_gspread_token.json'
-VALIDATION_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0/'
+GOOGLE_API_TOKEN = "/home/erik/.ssh/psm_gspread_token.json"
+VALIDATION_SHEET_URL = "https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0/"
 
 
 def build_update_query(
@@ -113,7 +113,9 @@ def load_tile_validation_sheet(band: str = "943MHz") -> at.Table:
     ps = gc.open_by_url(VALIDATION_SHEET_URL)
 
     if band not in ["943MHz", "1367MHz"]:
-        raise ValueError("Unsupported band. Supported values are '943MHz' and '1367MHz'.")
+        raise ValueError(
+            "Unsupported band. Supported values are '943MHz' and '1367MHz'."
+        )
 
     band_number = "1" if band == "943MHz" else "2"
     tile_sheet = ps.worksheet(f"Survey Tiles - Band {band_number}")
@@ -123,15 +125,17 @@ def load_tile_validation_sheet(band: str = "943MHz") -> at.Table:
     tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
     return tile_table
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     # Load the validation sheet for Band 1 (943MHz)
     tile_table = load_tile_validation_sheet(band="943MHz")
 
     # Find tiles that have been processed (3d_pipeline == 'WaitingForValidation')
-    processed_tiles = tile_table[
-        (tile_table['3d_pipeline'] == 'WaitingForValidation')
-    ]['tile_id'].astype(int).data
+    processed_tiles = (
+        tile_table[(tile_table["3d_pipeline"] == "WaitingForValidation")]["tile_id"]
+        .astype(int)
+        .data
+    )
 
     print(f"Number of tiles to update: {len(processed_tiles)}")
 
