@@ -1,4 +1,3 @@
-
 """
 Checks POSSUM tile status (Cameron's survey overview google sheet) if 3D pipeline can be started.
 Updates the POSSUM tile status (Cameron's survey overview google sheet) to "running" if 3D pipeline is submitted.
@@ -35,68 +34,98 @@ import numpy as np
 from automation import database_queries as db
 from possum_pipeline_control import util
 from print_all_open_sessions import get_open_sessions
+from pathlib import Path
+from datetime import datetime, timedelta, timezone
 
 session = Session()
 
+
 def get_tiles_for_pipeline_run_old(band_number, Google_API_token):
     """
-    Get a list of tile numbers that should be ready to be processed by the 3D pipeline 
-    
+    Get a list of tile numbers that should be ready to be processed by the 3D pipeline
+
     i.e.  'aus_src' column is not empty and '3d_pipeline' column is empty for the given band number.
-    
+
     Args:
     band_number (int): The band number (1 or 2) to check.
     Google_API_token (str): The path to the Google API token JSON file.
-    
+
     Returns:
     list: A list of tile numbers that satisfy the conditions.
     """
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
     # Cameron's survey overview
-    ps = gc.open_by_url('https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0')
+    ps = gc.open_by_url(
+        "https://docs.google.com/spreadsheets/d/1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0"
+    )
 
     # Select the worksheet for the given band number
-    tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_number}')
+    tile_sheet = ps.worksheet(f"Survey Tiles - Band {band_number}")
     tile_data = tile_sheet.get_all_values()
     column_names = tile_data[0]
     tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
 
     # Find the tiles that satisfy the conditions
-    tiles_to_run = [row['tile_id'] for row in tile_table if row['aus_src'] != '' and row['3d_pipeline'] == '']
+    tiles_to_run = [
+        row["tile_id"]
+        for row in tile_table
+        if row["aus_src"] != "" and row["3d_pipeline"] == ""
+    ]
 
     return tiles_to_run
+
 
 def get_canfar_tiles(band_number):
     client = Client()
     # force=True to not use cache
     # assumes directory structure doesnt change and symlinks are created
     if band_number == 1:
-        canfar_tilenumbers = client.listdir("vos://cadc.nrc.ca~arc/projects/CIRADA/polarimetry/ASKAP/Tiles/943MHz/",force=True)
+        canfar_tilenumbers = client.listdir(
+            "vos://cadc.nrc.ca~arc/projects/CIRADA/polarimetry/ASKAP/Tiles/943MHz/",
+            force=True,
+        )
     elif band_number == 2:
-        canfar_tilenumbers = client.listdir("vos://cadc.nrc.ca~arc/projects/CIRADA/polarimetry/ASKAP/Tiles/1367MHz/",force=True)
+        canfar_tilenumbers = client.listdir(
+            "vos://cadc.nrc.ca~arc/projects/CIRADA/polarimetry/ASKAP/Tiles/1367MHz/",
+            force=True,
+        )
     else:
         raise ValueError(f"Band number {band_number} not defined")
     return canfar_tilenumbers
 
+
 def launch_pipeline(tilenumber, band):
     # Launch the appropriate 3D pipeline script based on the band
     if band == "943MHz":
-        command = ["python", "-m", "possum_pipeline_control.launch_3Dpipeline_band1", str(tilenumber)]
+        command = [
+            "python",
+            "-m",
+            "possum_pipeline_control.launch_3Dpipeline_band1",
+            str(tilenumber),
+        ]
     elif band == "1367MHz":
-        command = ["python", "-m", "possum_pipeline_control.launch_3Dpipeline_band2", str(tilenumber)]
+        command = [
+            "python",
+            "-m",
+            "possum_pipeline_control.launch_3Dpipeline_band2",
+            str(tilenumber),
+        ]
         command = ""
-        print("Temporarily disabled launching band 2 because need to write that run script")
+        print(
+            "Temporarily disabled launching band 2 because need to write that run script"
+        )
     else:
         raise ValueError(f"Unknown band: {band}")
 
     print(f"Running command: {' '.join(command)}")
     subprocess.run(command, check=True)
 
+
 def update_status(tile_number, band, Google_API_token, status):
     """
     Update the status of the specified tile in Cameron's Google Sheet & the AUSSRC tile_state database.
-    
+
     Args:
         tile_number (str): The tile number to update.
         band (str): The band of the tile. ('943MHz' or '1367MHz')
@@ -108,11 +137,11 @@ def update_status(tile_number, band, Google_API_token, status):
 
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
-    ps = gc.open_by_url(os.getenv('POSSUM_STATUS_SHEET'))
-    
+    ps = gc.open_by_url(os.getenv("POSSUM_STATUS_SHEET"))
+
     # Select the worksheet for the given band number
     band_number = util.get_band_number(band)
-    tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_number}')
+    tile_sheet = ps.worksheet(f"Survey Tiles - Band {band_number}")
     tile_data = tile_sheet.get_all_values()
     column_names = tile_data[0]
     tile_table = at.Table(np.array(tile_data)[1:], names=column_names)
@@ -120,27 +149,36 @@ def update_status(tile_number, band, Google_API_token, status):
     # Find the row index for the specified tile number
     tile_index = None
     for idx, row in enumerate(tile_table):
-        if row['tile_id'] == tile_number:
-            tile_index = idx + 2  # +2 because gspread index is 1-based and we skip the header row
+        if row["tile_id"] == tile_number:
+            tile_index = (
+                idx + 2
+            )  # +2 because gspread index is 1-based and we skip the header row
             break
-    
+
     if tile_index is not None:
         # Update the status in the '3d_pipeline' column
-        col_letter = gspread.utils.rowcol_to_a1(1, column_names.index('3d_pipeline') + 1)[0]
+        col_letter = gspread.utils.rowcol_to_a1(
+            1, column_names.index("3d_pipeline") + 1
+        )[0]
         # as of >v6.0.0 .update requires a list of lists
-        tile_sheet.update(range_name=f'{col_letter}{tile_index}', values=[[status]])
-        print(f"Updated tile {tile_number} status to {status} in '3d_pipeline' column in Google Sheet.")
+        tile_sheet.update(range_name=f"{col_letter}{tile_index}", values=[[status]])
+        print(
+            f"Updated tile {tile_number} status to {status} in '3d_pipeline' column in Google Sheet."
+        )
         # Also update the DB
         conn = db.get_database_connection(test=False)
-        db.update_3d_pipeline_table(tile_number, band_number, status, "3d_pipeline_val", conn)
+        db.update_3d_pipeline_table(
+            tile_number, band_number, status, "3d_pipeline_val", conn
+        )
         conn.close()
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 
+
 def check_download_running(jobname="3dtile-dl"):
     """
     Check whether a 3d pipeline tile download session (i.e. possum_run_remote) is running
-    
+
     returns True if it is, False if not.
     """
     df_sessions = get_open_sessions()
@@ -148,13 +186,21 @@ def check_download_running(jobname="3dtile-dl"):
     if len(df_sessions) == 0:
         # no sessions running
         return False
-    
+
     # corresponds to jobname as set in launch_download_session()
-    if df_sessions[df_sessions['status'] == 'Running']['name'].str.contains(jobname).any() or df_sessions[df_sessions['status'] == 'Pending']['name'].str.contains(jobname).any():
+    if (
+        df_sessions[df_sessions["status"] == "Running"]["name"]
+        .str.contains(jobname)
+        .any()
+        or df_sessions[df_sessions["status"] == "Pending"]["name"]
+        .str.contains(jobname)
+        .any()
+    ):
         return True
-    
+
     # didnt find any running jobs with the jobname
     return False
+
 
 def launch_download_session(jobname="3dtile-dl"):
     # Template bash script to run
@@ -166,10 +212,12 @@ def launch_download_session(jobname="3dtile-dl"):
     image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.15.2"
     # download can use flexible resources
     session_id = session.create(
-        name=jobname.replace('_', '-'),  # Prevent Error 400: name can only contain alpha-numeric chars and '-'
+        name=jobname.replace(
+            "_", "-"
+        ),  # Prevent Error 400: name can only contain alpha-numeric chars and '-'
         image=image,
-        cores=None, # flexible mode
-        ram=None, # flexible mode
+        cores=None,  # flexible mode
+        ram=None,  # flexible mode
         kind="headless",
         cmd="bash",
         args=args,
@@ -178,7 +226,9 @@ def launch_download_session(jobname="3dtile-dl"):
     )
 
     print("Check sessions at https://ws-uv.canfar.net/skaha/v1/session")
-    print(f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs")
+    print(
+        f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
+    )
 
 
 def launch_create_symlinks(jobname="3dsymlinks"):
@@ -186,7 +236,7 @@ def launch_create_symlinks(jobname="3dsymlinks"):
     Launch session on CANFAR to create symbolic links after possum_run_remote has downloaded
     the tiles into "timeblocked" directories.
 
-    This sorts the tiles into symbolic links in a much more readable format.    
+    This sorts the tiles into symbolic links in a much more readable format.
     """
 
     # Template bash script to run
@@ -198,10 +248,12 @@ def launch_create_symlinks(jobname="3dsymlinks"):
     image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.15.2"
     # download can use flexible resources
     session_id = session.create(
-        name=jobname.replace('_', '-'),  # Prevent Error 400: name can only contain alpha-numeric chars and '-'
+        name=jobname.replace(
+            "_", "-"
+        ),  # Prevent Error 400: name can only contain alpha-numeric chars and '-'
         image=image,
-        cores=None, # flexible mode
-        ram=None, # flexible mode
+        cores=None,  # flexible mode
+        ram=None,  # flexible mode
         kind="headless",
         cmd="bash",
         args=args,
@@ -210,7 +262,43 @@ def launch_create_symlinks(jobname="3dsymlinks"):
     )
 
     print("Check sessions at https://ws-uv.canfar.net/skaha/v1/session")
-    print(f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs")
+    print(
+        f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
+    )
+
+
+def needs_prefect_sqlite_backup(
+    home_dir: str | Path,
+    *,
+    max_age_days: int = 14,
+    backups_subdir: str = "prefect-backups",
+    suffix: str = ".db",
+) -> bool:
+    """
+    Check for Prefect SQLite backup files in <home_dir>/<backups_subdir>/.
+
+    Returns True if:
+      - the backups directory does not exist, or
+      - no matching backup files exist, or
+      - the newest backup is older than max_age_days.
+    Otherwise returns False.
+    """
+    home_path = Path(home_dir).expanduser().resolve()
+    backups_dir = home_path / backups_subdir
+
+    if not backups_dir.is_dir():
+        return True
+
+    db_files = [p for p in backups_dir.iterdir() if p.is_file() and p.name.endswith(suffix)]
+    if not db_files:
+        return True
+
+    newest = max(db_files, key=lambda p: p.stat().st_mtime)
+    newest_mtime = datetime.fromtimestamp(newest.stat().st_mtime, tz=timezone.utc)
+
+    cutoff = datetime.now(tz=timezone.utc) - timedelta(days=max_age_days)
+    return newest_mtime < cutoff
+
 
 def launch_band1_3Dpipeline():
     """
@@ -219,7 +307,7 @@ def launch_band1_3Dpipeline():
     """
     band = "943MHz"
     # on p1
-    Google_API_token = os.getenv('POSSUM_STATUS_TOKEN')
+    Google_API_token = os.getenv("POSSUM_STATUS_TOKEN")
 
     dl_jobname = "3dtile-dl"
     # First check whether a download session is running (i.e. possum_run_remote)
@@ -230,13 +318,22 @@ def launch_band1_3Dpipeline():
         print("A download job (possum_run_remote) is not running anymore.")
         # launch a job to download more tiles from AUSSRC and ingest them into CADC from CANFAR.
         launch_download_session(dl_jobname)
-        
+
         # also launch a job to create new symlinks since the previous download job finished.
         launch_create_symlinks()
     else:
         print("A download job (possum_run_remote) is already running.")
 
-    # Check database for band 1 tiles that have been processed by AUSSRC 
+    
+    # Check whether we've made a backup of the database less than two weeks ago
+    if needs_prefect_sqlite_backup(Path.home()):
+        bkpscript = "backup_prefect_server.sh"
+        print(f"Prefect database should be backed up. Running {bkpscript}")
+        cmd = ["bash", bkpscript]
+        subprocess.run(cmd, check=True)
+
+
+    # Check database for band 1 tiles that have been processed by AUSSRC
     # but not yet processed with 3D pipeline
     conn = db.get_database_connection(test=False)
     # We are getting the tiles from the DB instead of the sheet now
@@ -250,21 +347,27 @@ def launch_band1_3Dpipeline():
     canfar_tilenumbers = get_canfar_tiles(band_number=1)
 
     if len(tile_numbers) > 0:
-        print(f"Found {len(tile_numbers)} tiles in AUSSRC database in Band 1 ready to be processed with 3D pipeline")
+        print(
+            f"Found {len(tile_numbers)} tiles in AUSSRC database in Band 1 ready to be processed with 3D pipeline"
+        )
         print(f"On CANFAR, found {len(canfar_tilenumbers)} tiles downloaded for Band 1")
 
         if len(tile_numbers) > len(canfar_tilenumbers):
             tiles_in_cadc_not_canfar = set(tile_numbers) - set(canfar_tilenumbers)
-            print(f"{len(tiles_in_cadc_not_canfar)} tiles processed by AUSSRC but not on CANFAR")
+            print(
+                f"{len(tiles_in_cadc_not_canfar)} tiles processed by AUSSRC but not on CANFAR"
+            )
             print(f"    First 5: {list(tiles_in_cadc_not_canfar)[:5]}")
-        
+
         # else:
         # This set difference also returns the tiles on CANFAR that are already fully 3D processed, so not so useful
         #     tiles_on_canfar_not_cadc = set(canfar_tilenumbers) - set(tile_numbers)
         #     print(f"{len(tiles_on_canfar_not_cadc)} tiles on CANFAR but not processed by AUSSRC: {tiles_on_canfar_not_cadc}")
 
         tiles_on_both = set(tile_numbers) & set(canfar_tilenumbers)
-        print(f"\nNumber of tiles both ready according to AUSSRC and available on CANFAR: {len(tiles_on_both)}")
+        print(
+            f"\nNumber of tiles both ready according to AUSSRC and available on CANFAR: {len(tiles_on_both)}"
+        )
         print(f"    First 5: {list(tiles_on_both)[:5]}")
 
         if tiles_on_both:
@@ -274,10 +377,10 @@ def launch_band1_3Dpipeline():
 
             # Launch the pipeline
             launch_pipeline(tilenumber, band)
-            
+
             # Update the status to "Running"
             update_status(tilenumber, band, Google_API_token, "Running")
-            
+
         else:
             print("No tiles are available on both CADC and CANFAR.")
     else:
@@ -286,7 +389,8 @@ def launch_band1_3Dpipeline():
     print("3D pipeline check and launch complete.")
     print("\n")
 
+
 if __name__ == "__main__":
     # load env for google spreadsheet constants
-    load_dotenv(dotenv_path='./automation/config.env')
+    load_dotenv(dotenv_path="./automation/config.env")
     launch_band1_3Dpipeline()
