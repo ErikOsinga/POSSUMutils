@@ -71,7 +71,7 @@ def launch_ingest(tilenumber, band):
     run_name = f"ingest{tilenumber}"
     # optionally :latest for always the latest version (SEEMS TO BE BROKEN)
     # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.15.2"
+    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.16.0"
     # good default values for ingest script
     cores = 2
     ram = 32  # Check allowed values at canfar.net/science-portal
