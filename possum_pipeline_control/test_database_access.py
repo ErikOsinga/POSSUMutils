@@ -5,16 +5,18 @@ This script:
 
 - Checks whether it can access the POSSUM database (only reads)
 - Checks whether it can access the POSSUM Status Sheet Google Sheet (only reads)
+- Checks whether it can access files in pawsey data storage (only reads)
 
-Should be executed on p1 and CANFAR.
+Should be executed on CANFAR, it will be send there by test_3dpipeline_job.py, so see that module instead
 
-But this script is called by test_3dpipeline_job.py, so see that module instead.
+(The module test_3dpipeline_job.py should be executed on p1.)
 
 @author: Erik Osinga
 """
 
 import os
 import argparse
+import subprocess
 from astropy.table import Table
 import numpy as np
 from dotenv import load_dotenv
@@ -83,6 +85,37 @@ def check_acces_to_google_spread():
     return
 
 
+def check_access_to_pawsey():
+    """
+    Check whether user can see files in the pawsey file storage
+
+    This is where the POSSUM data lives that's processed by AUSSRC
+    """
+
+    rclone_test_cmd = "rclone ls pawsey0980:possum --include tiles/*/11708/*"
+
+    try:
+        result = subprocess.run(
+            rclone_test_cmd.split(' '),
+            capture_output=True
+        )
+
+        assert result.returncode == 0, f"Found returncode {result.returncode} for rclone command."
+
+    except Exception as e:
+        print("Failed to access pawsey. Did you configure rclone correctly (on CANFAR)?")
+        print("Failed with exception:")
+        print(e)
+
+
+    print("Rclone workings verified. ")
+    print(f"Ran the command {rclone_test_cmd}")
+    print("Found the following output:")
+    print(result.stdout.decode())
+
+    return
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=("Test access to AUSSRC Database and POSSUM Status Sheet")
@@ -109,6 +142,10 @@ def mainflow():
     check_acces_to_google_spread_task = task(check_acces_to_google_spread)
     check_acces_to_google_spread_task()
 
+    # Check access to pawsey
+    check_access_to_pawsey_task = task(check_access_to_pawsey)
+    check_access_to_pawsey_task()
+
 
 if __name__ == "__main__":
     args = parse_args()
@@ -122,6 +159,9 @@ if __name__ == "__main__":
 
         # Check access to Cameron's sheet
         check_acces_to_google_spread()
+
+        # Check access to pawsey for file download
+        check_access_to_pawsey()
 
     else:
         mainflow()
