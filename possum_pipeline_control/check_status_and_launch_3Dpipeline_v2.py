@@ -209,7 +209,7 @@ def launch_download_session(jobname="3dtile-dl"):
     print("Launching download session")
     print(f"Command: bash {args}")
 
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.15.2"
+    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.16.0"
     # download can use flexible resources
     session_id = session.create(
         name=jobname.replace(
@@ -245,7 +245,7 @@ def launch_create_symlinks(jobname="3dsymlinks"):
     print("Launching symlinks session")
     print(f"Command: bash {args}")
 
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.15.2"
+    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.16.0"
     # download can use flexible resources
     session_id = session.create(
         name=jobname.replace(

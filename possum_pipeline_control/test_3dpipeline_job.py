@@ -38,7 +38,7 @@ def launch_test_session(jobname="testjob"):
     print("Launching test 3D pipeline session")
     print(f"Command: bash {args}")
 
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.15.2"
+    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.16.0"
     # could also use flexible resources ?
     session_id = session.create(
         name=jobname.replace(
@@ -58,7 +58,7 @@ def launch_test_session(jobname="testjob"):
     print(
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
     )
-    print(f"Also check the prefect dashboard at localhost:4200")
+    print("Also check the prefect dashboard at localhost:4200")
 
     return
 
