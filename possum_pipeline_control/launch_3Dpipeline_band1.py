@@ -1,4 +1,5 @@
 import argparse
+import getpass
 
 # from skaha.session import Session
 from canfar.sessions import Session
@@ -9,8 +10,10 @@ session = Session()
 def launch_session(run_name, tilenumber, image, cores, ram):
     """Launch 3D pipeline run"""
 
+    p1user = getpass.getuser()
+
     # Template bash script to run
-    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_3Dpipeline_band1_prefect.sh {run_name} {tilenumber}"
+    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_3Dpipeline_band1_prefect.sh {run_name} {tilenumber} {p1user}"
 
     print("Launching session")
     print(f"Command: bash {args}")

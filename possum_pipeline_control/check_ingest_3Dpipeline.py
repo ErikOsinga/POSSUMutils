@@ -1,9 +1,8 @@
 from dotenv import load_dotenv
 from vos import Client
 import argparse
-from time import sleep
-import pandas as pd
 from possum_pipeline_control import util
+import getpass
 
 # from skaha.session import Session
 from canfar.sessions import Session
@@ -76,8 +75,10 @@ def launch_ingest(tilenumber, band):
     cores = 2
     ram = 32  # Check allowed values at canfar.net/science-portal
 
+    p1user = getpass.getuser()
+
     # Template bash script to run
-    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/ingest_3Dpipeline_band{band_number}_prefect.sh {tilenumber} {band}"
+    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/ingest_3Dpipeline_band{band_number}_prefect.sh {tilenumber} {band} {p1user}"
 
     print("Launching session")
     print(f"Command: bash {args}")
