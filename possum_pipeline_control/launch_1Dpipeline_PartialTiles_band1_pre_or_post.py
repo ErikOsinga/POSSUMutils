@@ -1,6 +1,7 @@
 import argparse
 import ast
 from datetime import datetime
+import getpass
 
 # from skaha.session import Session
 from canfar.sessions import Session
@@ -41,12 +42,14 @@ def launch_session(
 
     df_sessions = get_open_sessions()
 
+    p1user = getpass.getuser()
+
     if ptype == "post":
         # Template bash script to run
-        args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1_summary.sh {run_name} {field_ID} {SBnumber}"
+        args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1_summary.sh {run_name} {field_ID} {SBnumber} {p1user}"
     elif ptype == "pre":
         # Template bash script to run
-        args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1_srl_and_googlesheet.sh {run_name} {field_ID} {SBnumber}"
+        args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1_srl_and_googlesheet.sh {run_name} {field_ID} {SBnumber} {p1user}"
 
         if len(df_sessions) == 0:
             print("No open sessions. Can launch a pre-dl job.")

@@ -8,9 +8,11 @@ python /arc/projects/CIRADA/polarimetry/ASKAP/Pipeline_logs/config_templates/cre
     /arc/projects/CIRADA/polarimetry/ASKAP/Tiles/943MHz/$2
 # band 1
 
-echo "Opening SSH tunnel to prefect server host (p1)"
+p1user=$3
+
+echo "Opening SSH tunnel to prefect server host (p1) as user $p1user"
 # open connection
-ssh -fNT -L 4200:localhost:4200 erik@206.12.93.32
+ssh -fNT -L 4200:localhost:4200 $p1user@206.12.93.32
 # set which port to communicate results to 
 export PREFECT_API_URL="http://localhost:4200/api"
 
