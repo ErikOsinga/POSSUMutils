@@ -1,15 +1,13 @@
 """
-This script is called periodically from p1 with cron
+This script is DEPRECATED. Superseded by launch_download_session() in the module check_status_and_launch_3Dpipeline_v2.py
 
-see
+        It used to be called periodically from p1 with cron
 
-crontab -e
+        see
 
+        crontab -e
 
-It submits a download job to CANFAR which will pull new files off' the pawsey storage.
-
-TODO: what if job gets killed?
-the particular flow run might show what happens?
+        It submits a download job to CANFAR which will pull new files off' the pawsey storage.
 
 """
 
