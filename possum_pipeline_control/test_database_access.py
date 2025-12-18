@@ -24,6 +24,9 @@ import gspread
 from pathlib import Path
 from automation import database_queries as db
 from prefect import flow, task
+from cirada_software.download_all_MFS_images import get_casda_username_password
+from astropy.coordinates import SkyCoord
+import astropy.units as u
 
 # expected number of tiles in POSSUM band 1
 NTILES_BAND1_AUSSRC = 6497  # total expected number of tiles for Band 1
@@ -116,6 +119,54 @@ def check_access_to_pawsey():
     return
 
 
+def check_access_to_casda():
+    """
+    Check whether user can see download files from CASDA
+
+    This should be configured via ~/.ssh/casdapass on CANFAR
+    which is a file that stores the CASDA username and password on separate lines
+    """
+
+    import astroquery
+    from astroquery.casda import Casda
+
+    print("Checking access to CASDA from CANFAR...")
+
+    print(
+        f"     astroquery version {astroquery.__version__}, {astroquery.__version__.split('.')}"
+    )
+    print(f"     astroquery file {astroquery.__file__}")
+
+    if int(astroquery.__version__.split(".")[2]) < 7:
+        # before 0.4.7, it required putting a password directly
+        # this is the only way to interact with headless jobs
+
+        print("Attempting to grab credentials from ~/.ssh/casdapass")
+        username, pw = (
+            get_casda_username_password()
+        )  # get password from ~/.ssh/casdapass
+        casda = Casda(username, pw)
+
+        print("Trying a random query...")
+        # try a random query
+        sc = SkyCoord(103 * u.deg, -60 * u.deg)
+        result = casda.query_region(sc, radius=30 * u.arcmin)
+
+        if len(result) == 0:
+            raise ValueError("Found empty result for CASDA query. Something is wrong")
+        else:
+            print(f"Found {len(result)} results for CASDA query.")
+
+    else:
+        msg = f"Found astroquery version {astroquery.__version__}. Has to be <0.4.7 to log in headlessly."
+        print(msg)
+        raise ValueError(msg)
+
+    print("CASDA connection verified. ")
+
+    return
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=("Test access to AUSSRC Database and POSSUM Status Sheet")
@@ -145,6 +196,10 @@ def mainflow():
     # Check access to pawsey
     check_access_to_pawsey_task = task(check_access_to_pawsey)
     check_access_to_pawsey_task()
+
+    # Check access to CASDA
+    check_acces_to_casda_task = task(check_access_to_casda)
+    check_acces_to_casda_task()
 
 
 if __name__ == "__main__":
