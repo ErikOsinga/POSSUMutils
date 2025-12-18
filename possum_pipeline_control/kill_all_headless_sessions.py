@@ -2,7 +2,6 @@
 
 import argparse
 import time
-import pandas as pd
 
 # from skaha.session import Session
 from canfar.sessions import Session

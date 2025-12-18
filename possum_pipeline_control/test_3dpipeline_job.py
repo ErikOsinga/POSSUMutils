@@ -23,8 +23,6 @@ import getpass
 from dotenv import load_dotenv
 from canfar.sessions import Session
 from possum_pipeline_control.test_database_access import (
-    NTILES_BAND1_GSPREAD,
-    NTILES_BAND1_AUSSRC,
     check_acces_to_google_spread,
     check_acces_to_prod_db,
 )
@@ -33,7 +31,6 @@ session = Session()
 
 
 def launch_test_session(jobname="testjob"):
-
     p1user = getpass.getuser()
 
     # Template bash script to run

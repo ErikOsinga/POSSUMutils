@@ -1,11 +1,9 @@
 # clusters_in_POSSUM.py
 
 import numpy as np
-from astropy.io import fits
 from astropy.table import Table
 from query_status import (
     check_coordinates_in_overlay,
-    get_coordinates_from_simbad,
     get_overlay_polygons,
 )
 import tqdm

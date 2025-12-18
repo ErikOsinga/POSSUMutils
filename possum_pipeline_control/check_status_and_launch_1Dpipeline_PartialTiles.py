@@ -478,7 +478,7 @@ def launch_band1_1Dpipeline(database_config_path: str = "automation/config.env")
             f"Field IDs ready according to the sheet but sourcelist not on CANFAR: {tiles_ready_but_not_canfar}"
         )
         # else:
-        tiles_canfar_not_ready = set(sourcelist_fieldIDs_no_prefix) - set(
+        tiles_canfar_not_ready = set(sourcelist_fieldIDs_no_prefix) - set(  # noqa: F841
             field_IDs_no_prefix
         )  # noqa: F841
         # print(f"Field ID sourcelists on CANFAR but not ready to run: {tiles_canfar_not_ready}")

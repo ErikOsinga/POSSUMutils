@@ -95,18 +95,18 @@ def check_access_to_pawsey():
     rclone_test_cmd = "rclone ls pawsey0980:possum --include tiles/*/11708/*"
 
     try:
-        result = subprocess.run(
-            rclone_test_cmd.split(' '),
-            capture_output=True
+        result = subprocess.run(rclone_test_cmd.split(" "), capture_output=True)
+
+        assert result.returncode == 0, (
+            f"Found returncode {result.returncode} for rclone command."
         )
 
-        assert result.returncode == 0, f"Found returncode {result.returncode} for rclone command."
-
     except Exception as e:
-        print("Failed to access pawsey. Did you configure rclone correctly (on CANFAR)?")
+        print(
+            "Failed to access pawsey. Did you configure rclone correctly (on CANFAR)?"
+        )
         print("Failed with exception:")
         print(e)
-
 
     print("Rclone workings verified. ")
     print(f"Ran the command {rclone_test_cmd}")

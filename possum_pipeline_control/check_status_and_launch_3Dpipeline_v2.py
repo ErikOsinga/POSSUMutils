@@ -289,7 +289,9 @@ def needs_prefect_sqlite_backup(
     if not backups_dir.is_dir():
         return True
 
-    db_files = [p for p in backups_dir.iterdir() if p.is_file() and p.name.endswith(suffix)]
+    db_files = [
+        p for p in backups_dir.iterdir() if p.is_file() and p.name.endswith(suffix)
+    ]
     if not db_files:
         return True
 
@@ -324,14 +326,12 @@ def launch_band1_3Dpipeline():
     else:
         print("A download job (possum_run_remote) is already running.")
 
-    
     # Check whether we've made a backup of the database less than two weeks ago
     if needs_prefect_sqlite_backup(Path.home()):
         bkpscript = "backup_prefect_server.sh"
         print(f"Prefect database should be backed up. Running {bkpscript}")
         cmd = ["bash", bkpscript]
         subprocess.run(cmd, check=True)
-
 
     # Check database for band 1 tiles that have been processed by AUSSRC
     # but not yet processed with 3D pipeline

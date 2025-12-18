@@ -1,10 +1,6 @@
 import argparse
 import subprocess
 import time
-import pandas as pd
-
-# from skaha.session import Session
-from canfar.sessions import Session
 from print_all_open_sessions import get_open_sessions
 
 
