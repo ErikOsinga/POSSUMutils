@@ -4,7 +4,7 @@ from astroquery.utils.tap.core import Tap
 from astroquery.casda import Casda
 import argparse
 import os
-import getpass
+import getpass  # noqa: F401
 import re
 import gspread
 import astropy.table as at

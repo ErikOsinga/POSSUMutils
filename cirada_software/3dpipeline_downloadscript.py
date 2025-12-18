@@ -37,7 +37,7 @@ def launch_possum_run_remote():
     # Start possum_run in correct workdir
     os.chdir(download_workdir)
 
-    result = possum_run_remote()
+    result = possum_run_remote()  # noqa: F841
 
     # Print the results to view them in Prefect
     report_file = f"{download_workdir}/download_logs/downloads_report.txt"
