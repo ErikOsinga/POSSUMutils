@@ -1,10 +1,17 @@
+"""
+Handy file to pre-download all available MFS images from CASDA to CANFAR.
+
+Meant to be run manually in a CANFAR notebook sessions, since CASDA will prompt for your password.
+"""
+
+
 #!/usr/bin/env python
 import numpy as np
 from astroquery.utils.tap.core import Tap
 from astroquery.casda import Casda
 import argparse
 import os
-import getpass  # noqa: F401
+from pathlib import Path
 import re
 import gspread
 import astropy.table as at
@@ -108,10 +115,28 @@ def getEvalURLs(casda_tap, sb):
     return tar_urls
 
 
+def get_casda_username_password(path: str =None) -> tuple[str,str]:
+    """
+    Docstring for get_casda_username_password
+    
+    :param path: Path to file that stores CASDA username as password
+                
+                first line is assumed to be username
+                second line is assumed to be password
+
+    returns: username, password 
+    """
+    
+    path = path or os.path.expanduser("~/.ssh/casdapass")
+    with open(path, 'r') as f:
+        username, passw = f.read().strip().splitlines()
+
+    return username, passw
+
 if __name__ == "__main__":
-    # POSSUM Status Monitor
-    # on CANFAR
-    Google_API_token = "/arc/home/ErikOsinga/.ssh/psm_gspread_token.json"
+    # default location for PSM token on CANFAR
+    homedir = Path.home()
+    Google_API_token = homedir / ".ssh/psm_gspread_token.json"
 
     parser = argparse.ArgumentParser(description="Download all EMU MFS images")
     parser.add_argument(
@@ -126,10 +151,10 @@ if __name__ == "__main__":
 
     band = "943MHz"  # hardcode for now
 
-    username = "erik.osinga@utoronto.ca"
+    username, _ = get_casda_username_password()
 
+    # Meant to be run in notebook, where user will be prompted for their password
     casda_tap = Tap(url="https://casda.csiro.au/casda_vo_tools/tap")
-    # passw = getpass.getpass(str("Enter password for user "+username+": "))
     casda = Casda()
     casda.login(username=username)
 
