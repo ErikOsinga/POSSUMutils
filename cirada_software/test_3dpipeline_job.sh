@@ -19,7 +19,7 @@ export PYTHONPATH="/arc/projects/CIRADA/polarimetry/software/RMtoolsdev/:$PYTHON
 
 pipeline=/arc/projects/CIRADA/polarimetry/software/POSSUM_Polarimetry_Pipeline/pipeline/pipeline_prefect.py
 # Start actual pipeline with psrecord
-psrecord "python $pipeline $testdir/config_11224_zoom_test_all_modules.ini test3d" --include-children --log $testdir/psrecord_test.txt --plot $testdir/psrecord_test.png --interval 1
+psrecord "python $pipeline $testdir/config_11224_zoom_test_all_modules.ini test3d" --include-children --log $testdir/psrecord_test_$p1user.txt --plot $testdir/psrecord_test_$p1user.png --interval 1
 
 # Check database access, will report to dashboard as flow "test_db_access"
 cd /arc/projects/CIRADA/polarimetry/software/POSSUMutils
