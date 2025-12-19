@@ -12,3 +12,4 @@ astropy
 astroquery
 matplotlib
 prefect
+tqdm
