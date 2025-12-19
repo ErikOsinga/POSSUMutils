@@ -11,11 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     
     env:
-      DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
-      DATABASE_USER: ${{ secrets.DATABASE_USER }}
-      DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
-      DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
-      DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
+      TEST_DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+      TEST_DATABASE_USER: ${{ secrets.DATABASE_USER }}
+      TEST_DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+      TEST_DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
+      TEST_DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
 
     steps:
       - name: Checkout code
