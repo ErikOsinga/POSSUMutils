@@ -1,25 +1,12 @@
 #!/usr/bin/env python3
 """
-dedupe_tiles.py — keep the newest copy of each matching file, delete older duplicates.
+dedupe_tiles — programmatic and CLI interface for removing or relocating
+older duplicate files for a given tile.
 
-Assumes a directory structure like:
-  YYYY-MM-DDThh_mm_ss[_ms]_YYYY-MM-DDThh_mm_ss[_ms]/.../<tile>/...<tile>...fits
-
-Examples:
-  # Show what would be deleted for tile 10997 (dry-run)
-  python dedupe_tiles.py 10997
-
-  # Actually delete the older duplicates
-  python dedupe_tiles.py 10997 --delete
-
-  # move to a safe place instead of deleting
-  python dedupe_tiles.py 10997 --moveto /path/to/safe/place
-
-  # Restrict search to a root
-  python dedupe_tiles.py 10997 --root /arc/projects/CIRADA/polarimetry/ASKAP/Tiles/downloads
-
-  # Narrow/adjust the glob if needed
-  python dedupe_tiles.py 10997 --pattern '202*-0*/*/*/*{tile}*'
+Exposed API:
+    - dedupe_tiles(...)
+    - DedupePlanner(...)
+    - utility functions (parse_timestamp, extract_best_datetime, etc.)
 """
 
 from __future__ import annotations
@@ -29,28 +16,20 @@ import logging
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Iterable
+from typing import Dict, List, Optional, Iterable, Tuple
 import shutil
 
 
-# Matches timestamps like 2025-04-29T03_28_45 or 2025-04-28T22_01_08_879291
-TIMESTAMP_RE = re.compile(
-    r"\d{4}-\d{2}-\d{2}T\d{2}_\d{2}_\d{2}(?:_\d+)?"
-)
+TIMESTAMP_RE = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}_\d{2}_\d{2}(?:_\d+)?")
+
+
+# ---------------------------------------------------------------------
+# Timestamp utilities
+# ---------------------------------------------------------------------
 
 
 def parse_timestamp(token: str) -> Optional[datetime]:
-    """
-    Convert a token like '2025-04-28T22_01_08_879291' to a datetime.
-    Microseconds are optional and represented as an extra '_######' chunk.
-
-    Strategy:
-      - replace underscores with separators where appropriate
-      - try microsecond-aware first, then without.
-    """
-    base = token.replace("T", "T")
     parts = token.split("_")
-    # parts: [YYYY-MM-DDThh, mm, ss, (optional usec)]
     try:
         if len(parts) == 4:
             fmt = "%Y-%m-%dT%H_%M_%S_%f"
@@ -64,37 +43,26 @@ def parse_timestamp(token: str) -> Optional[datetime]:
 
 
 def extract_best_datetime(path: Path) -> Optional[datetime]:
-    """
-    Find ALL timestamp-like tokens in the full path and return the latest one.
-
-    Rationale:
-      The top-level dir encodes a start_end time block, and some paths include
-      microseconds. Taking the maximum timestamp across the path is a robust
-      proxy for "newest run". This avoids relying on filesystem mtimes.
-    """
     text = str(path)
-    candidates = []
+    candidates: List[datetime] = []
     for m in TIMESTAMP_RE.finditer(text):
         dt = parse_timestamp(m.group(0))
-        if dt is not None:
+        if dt:
             candidates.append(dt)
-    if not candidates:
-        return None
-    return max(candidates)
+    return max(candidates) if candidates else None
+
+
+# ---------------------------------------------------------------------
+# Matching, grouping, dedupe logic
+# ---------------------------------------------------------------------
 
 
 def find_matches(root: Path, tile: str, pattern: str) -> List[Path]:
-    """
-    Expand a glob pattern that includes '{tile}' and return matching files.
-    """
     glob_pat = pattern.format(tile=tile)
     return [p for p in root.glob(glob_pat) if p.is_file()]
 
 
 def group_by_basename(paths: Iterable[Path]) -> Dict[str, List[Path]]:
-    """
-    Group paths by their basename (the filename) so we can dedupe per product.
-    """
     groups: Dict[str, List[Path]] = {}
     for p in paths:
         groups.setdefault(p.name, []).append(p)
@@ -102,12 +70,9 @@ def group_by_basename(paths: Iterable[Path]) -> Dict[str, List[Path]]:
 
 
 def choose_latest(paths: List[Path]) -> Path:
-    """
-    Pick the path with the newest (max) extracted timestamp; if none parse,
-    fall back to latest modification time.
-    """
-    with_dt = []
-    without_dt = []
+    with_dt: List[Tuple[datetime, Path]] = []
+    without_dt: List[Path] = []
+
     for p in paths:
         dt = extract_best_datetime(p)
         if dt is None:
@@ -119,14 +84,10 @@ def choose_latest(paths: List[Path]) -> Path:
         with_dt.sort(key=lambda x: x[0])
         return with_dt[-1][1]
 
-    # Fallback: mtime
     return max(paths, key=lambda p: p.stat().st_mtime)
 
 
 def plan_deletions(groups: Dict[str, List[Path]]) -> Dict[str, List[Path]]:
-    """
-    For each basename group, keep the newest and mark others for deletion.
-    """
     to_delete: Dict[str, List[Path]] = {}
     for fname, paths in groups.items():
         if len(paths) < 2:
@@ -138,6 +99,11 @@ def plan_deletions(groups: Dict[str, List[Path]]) -> Dict[str, List[Path]]:
     return to_delete
 
 
+# ---------------------------------------------------------------------
+# File operations
+# ---------------------------------------------------------------------
+
+
 def delete_paths(paths: Iterable[Path]) -> None:
     for p in paths:
         try:
@@ -145,19 +111,16 @@ def delete_paths(paths: Iterable[Path]) -> None:
         except Exception as exc:
             logging.error("Failed to delete %s: %s", p, exc)
 
+
 def safe_target_path(dest: Path, root: Path, src: Path) -> Path:
-    """
-    Build a destination path inside 'dest' that preserves the relative path
-    under --root. If that exact target exists, append .dupN to avoid clobbering.
-    """
     try:
-        rel = src.resolve().relative_to(Path(root).resolve())
+        rel = src.resolve().relative_to(root.resolve())
         target = dest / rel
     except Exception:
-        # Fallback if src is outside root or cannot be relativized
         target = dest / src.name
 
     target.parent.mkdir(parents=True, exist_ok=True)
+
     if not target.exists():
         return target
 
@@ -169,17 +132,115 @@ def safe_target_path(dest: Path, root: Path, src: Path) -> Path:
             return cand
         i += 1
 
-def move_paths(paths: Iterable[Path], dest: Path, root: Path) -> list[tuple[Path, Path]]:
-    """
-    Move files into 'dest', preserving relative paths under --root.
-    Returns list of (src, final_dest) pairs.
-    """
-    moved: list[tuple[Path, Path]] = []
+
+def move_paths(
+    paths: Iterable[Path], dest: Path, root: Path
+) -> List[Tuple[Path, Path]]:
+    moved: List[Tuple[Path, Path]] = []
     for p in paths:
         t = safe_target_path(dest, root, p)
         shutil.move(str(p), str(t))
         moved.append((p, t))
     return moved
+
+
+# ---------------------------------------------------------------------
+# High-level planner class (importable API)
+# ---------------------------------------------------------------------
+
+
+class DedupePlanner:
+    """
+    Encapsulates the dedupe workflow so it can be reused programmatically.
+    """
+
+    def __init__(self, tile: str, root: Path, pattern: str):
+        self.tile = tile
+        self.root = root
+        self.pattern = pattern
+        self.matches: List[Path] = []
+        self.groups: Dict[str, List[Path]] = {}
+        self.deletions: Dict[str, List[Path]] = {}
+
+    def run_discovery(self) -> None:
+        self.matches = find_matches(self.root, self.tile, self.pattern)
+        self.groups = group_by_basename(self.matches)
+        self.deletions = plan_deletions(self.groups)
+
+    def candidates(self) -> List[Path]:
+        return sorted([p for plist in self.deletions.values() for p in plist], key=str)
+
+    def execute_delete(self) -> int:
+        to_delete = self.candidates()
+        delete_paths(to_delete)
+        return len(to_delete)
+
+    def execute_move(self, dest: Path) -> List[Tuple[Path, Path]]:
+        dest.mkdir(parents=True, exist_ok=True)
+        return move_paths(self.candidates(), dest, self.root)
+
+
+# ---------------------------------------------------------------------
+# Simple programmatic API
+# ---------------------------------------------------------------------
+
+
+def dedupe_tiles(
+    tile: str,
+    root: str | Path = ".",
+    pattern: str = r"20*-0*/*/*/*_{tile}_*",
+    delete: bool = False,
+    moveto: Optional[str | Path] = None,
+) -> dict:
+    """
+    Programmatic API for deduping tiles.
+
+    Returns a dictionary describing the action.
+    """
+    root = Path(root).resolve()
+
+    if "{tile}" not in pattern:
+        raise ValueError("pattern must contain '{tile}'")
+
+    planner = DedupePlanner(tile=tile, root=root, pattern=pattern)
+    planner.run_discovery()
+
+    if not planner.matches:
+        return {
+            "status": "no_matches",
+            "matches": [],
+        }
+
+    if not planner.deletions:
+        return {
+            "status": "no_duplicates",
+            "matches": planner.matches,
+        }
+
+    if delete:
+        n = planner.execute_delete()
+        return {
+            "status": "deleted",
+            "count": n,
+        }
+
+    if moveto is not None:
+        moved = planner.execute_move(Path(moveto).resolve())
+        return {
+            "status": "moved",
+            "moved": moved,
+        }
+
+    return {
+        "status": "dry_run",
+        "deletions": planner.deletions,
+    }
+
+
+# ---------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------
+
 
 def _setup_logging(verbosity: int) -> None:
     level = logging.WARNING
@@ -190,93 +251,78 @@ def _setup_logging(verbosity: int) -> None:
     logging.basicConfig(level=level, format="%(levelname)s: %(message)s")
 
 
+def _print_cli_summary(result: dict) -> None:
+    """
+    Human-readable summary for CLI use.
+    """
+    status = result.get("status")
+
+    if status == "no_matches":
+        print("No matching files found.")
+        return
+
+    if status == "no_duplicates":
+        n = len(result.get("matches", []))
+        print(f"Found {n} files, but no duplicates. Nothing to do.")
+        return
+
+    if status == "dry_run":
+        deletions = result.get("deletions", {})
+        count = sum(len(v) for v in deletions.values())
+        groups = len(deletions)
+        print(
+            f"Dry-run: found {groups} duplicated basenames; {count} files would be removed or moved."
+        )
+        return
+
+    if status == "deleted":
+        print(f"Deleted {result.get('count', 0)} files.")
+        return
+
+    if status == "moved":
+        moved = result.get("moved", [])
+        print(f"Moved {len(moved)} files.")
+        # Pretty-print first few pairs
+        for src, dst in moved[:5]:
+            print(f"  {src} -> {dst}")
+        if len(moved) > 5:
+            print(f"  ... +{len(moved) - 5} more")
+        return
+
+    print(f"Unknown status: {status}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Delete older duplicates of tile files, keeping only the newest copy per filename."
+        description="Delete or move older duplicates of tile files, keeping only the newest copy per filename."
     )
-    parser.add_argument("tile", help="Tile number or token to search for (e.g., 10997).")
-    parser.add_argument(
-        "--root",
-        default=".",
-        help="Root directory to search (default: current directory).",
-    )
-    parser.add_argument(
-        "--pattern",
-        default="202*-0*/*/*/*{tile}*",
-        help="Glob pattern relative to --root; must include '{tile}'. (default: %(default)s)",
-    )
+    parser.add_argument("tile")
+    parser.add_argument("--root", default=".")
+    parser.add_argument("--pattern", default=r"20*-0*/*/*/*_{tile}_*")
     group = parser.add_mutually_exclusive_group()
-    group.add_argument(
-        "--delete",
-        action="store_true",
-        help="Actually delete files. Without this flag, performs a dry-run."
-    )
-    group.add_argument(
-        "--moveto",
-        metavar="DIR",
-        help="Move older duplicates into DIR (preserves path relative to --root)."
-    )
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        action="count",
-        default=0,
-        help="Increase verbosity (-v for INFO, -vv for DEBUG).",
-    )
+    group.add_argument("--delete", action="store_true")
+    group.add_argument("--moveto", metavar="DIR")
+    parser.add_argument("-v", "--verbose", action="count", default=0)
     args = parser.parse_args()
+
     _setup_logging(args.verbose)
 
-    root = Path(args.root).resolve()
-    if "{tile}" not in args.pattern:
-        parser.error("--pattern must include '{tile}' placeholder.")
+    result = dedupe_tiles(
+        tile=args.tile,
+        root=args.root,
+        pattern=args.pattern,
+        delete=args.delete,
+        moveto=args.moveto,
+    )
 
-    matches = find_matches(root, args.tile, args.pattern)
-    if not matches:
-        print(f"No matches found under {root} for tile '{args.tile}' with pattern '{args.pattern}'.")
-        return
+    # Print human readable summary
+    _print_cli_summary(result)
 
-    logging.info("Found %d matching files.", len(matches))
-    groups = group_by_basename(matches)
-    deletions = plan_deletions(groups)
-
-    if not deletions:
-        print("No duplicate basenames found; nothing to delete or move.")
-        return
-
-    total = sum(len(v) for v in deletions.values())
-    print(f"Found {len(deletions)} duplicated filenames; {total} files are candidates.\n")
-
-    # Preview
-    if args.moveto:
-        dest = Path(args.moveto).resolve()
-        print(f"Planned moves to {dest}:\n")
-    else:
-        print("Dry-run (no changes). Use --delete to remove, or --moveto DIR to move.\n")
-
-    for fname, paths in sorted(deletions.items()):
-        newest = choose_latest(groups[fname])  # keep newest among all copies
-        print(f"[KEEP]   {newest}")
-        for p in sorted(paths):
-            if args.moveto:
-                preview = safe_target_path(Path(args.moveto).resolve(), root, p)
-                print(f"[MOVE]   {p} -> {preview}")
-            else:
-                print(f"[DELETE] {p}")
-        print("")
-
-    # Execute
-    all_to_delete = sorted([p for plist in deletions.values() for p in plist], key=lambda x: str(x))
-
-    if args.delete:
-        delete_paths(all_to_delete)
-        print(f"Deleted {len(all_to_delete)} files.")
-    elif args.moveto:
-        dest = Path(args.moveto).resolve()
-        dest.mkdir(parents=True, exist_ok=True)
-        moved = move_paths(all_to_delete, dest, root)
-        print(f"Moved {len(moved)} files into {dest} (paths preserved under --root).")
+    # Also print the raw dict for scripting/logging
+    print("")
+    print("Raw result:")
+    print(result)
 
 
 if __name__ == "__main__":
     main()
-

@@ -1,7 +1,7 @@
 astropy
 gspread
 pandas
-psycopg2
+psycopg2-binary==2.9.10
 python-dotenv
 canfar
 vos
@@ -12,4 +12,3 @@ astropy
 astroquery
 matplotlib
 prefect
-psycopg2

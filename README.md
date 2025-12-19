@@ -17,6 +17,13 @@ cd POSSUMutils/
 bash go_3Dpipeline
 ```
 
+High-level overview of the 1D pipeline (updated on 2025-12-11)
+<img width="4402" height="1942" alt="POSSUM_1d_PartialTiles light" src="https://github.com/user-attachments/assets/10c95097-d37e-4a9c-9309-a40f994d1c21" />
+
+High-level overview of the 3D pipeline (updated on 2025-12-11)
+<img width="4102" height="1754" alt="POSSUM_3d_pipeline_control light" src="https://github.com/user-attachments/assets/2f14253a-5ee4-4e79-86f5-a38ae33cfce3" />
+
+
 
 ## cirada_software/
 

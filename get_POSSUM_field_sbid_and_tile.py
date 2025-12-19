@@ -49,15 +49,17 @@ from astroquery.simbad import Simbad
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 
+
 def remove_prefix(field_name):
     """
     Remove the prefix "EMU_" or "WALLABY_" from the field name.
-    
-    e.g. 
+
+    e.g.
       s = "EMU_2108-09A"
       remove_prefix(s) -> "2108-09A"
     """
-    return re.sub(r'^(EMU_|WALLABY_)', '', field_name)
+    return re.sub(r"^(EMU_|WALLABY_)", "", field_name)
+
 
 def fetch_field_centers(band):
     """
@@ -66,33 +68,38 @@ def fetch_field_centers(band):
     """
     sheet_name = f"Survey Fields - Band {band}"
     encoded_sheet_name = quote(sheet_name)
-    url = (f"https://docs.google.com/spreadsheets/d/"
-           f"1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0/gviz/tq?tqx=out:csv&sheet={encoded_sheet_name}")
+    url = (
+        f"https://docs.google.com/spreadsheets/d/"
+        f"1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0/gviz/tq?tqx=out:csv&sheet={encoded_sheet_name}"
+    )
     response = requests.get(url)
     if response.status_code != 200:
-        sys.exit(f"Error: Unable to fetch data from Google Sheets ({response.status_code}).")
-    
-    csv_data = response.content.decode('utf-8')
+        sys.exit(
+            f"Error: Unable to fetch data from Google Sheets ({response.status_code})."
+        )
+
+    csv_data = response.content.decode("utf-8")
     reader = csv.DictReader(io.StringIO(csv_data))
     field_centers = []
     for row in reader:
         try:
-            ra = float(row['ra_deg'])
-            dec = float(row['dec_deg'])
+            ra = float(row["ra_deg"])
+            dec = float(row["dec_deg"])
         except ValueError:
             continue
         marker = {
-            'name': row['name'],
-            'ra': ra,
-            'dec': dec,
-            'sbid': row['sbid'],
-            'processed': row.get('processed', '').strip(),
-            'validated': row.get('validated', '').strip(),
-            'aus_src': row.get('aus_src', '').strip(),
-            'single_SB_1D_pipeline': row.get('single_SB_1D_pipeline', '').strip()
+            "name": row["name"],
+            "ra": ra,
+            "dec": dec,
+            "sbid": row["sbid"],
+            "processed": row.get("processed", "").strip(),
+            "validated": row.get("validated", "").strip(),
+            "aus_src": row.get("aus_src", "").strip(),
+            "single_SB_1D_pipeline": row.get("single_SB_1D_pipeline", "").strip(),
         }
         field_centers.append(marker)
     return field_centers
+
 
 def fetch_tile_centers(band):
     """
@@ -101,30 +108,35 @@ def fetch_tile_centers(band):
     """
     sheet_name = f"Survey Tiles - Band {band}"
     encoded_sheet_name = quote(sheet_name)
-    url = (f"https://docs.google.com/spreadsheets/d/"
-           f"1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0/gviz/tq?tqx=out:csv&sheet={encoded_sheet_name}")
+    url = (
+        f"https://docs.google.com/spreadsheets/d/"
+        f"1sWCtxSSzTwjYjhxr1_KVLWG2AnrHwSJf_RWQow7wbH0/gviz/tq?tqx=out:csv&sheet={encoded_sheet_name}"
+    )
     response = requests.get(url)
     if response.status_code != 200:
-        sys.exit(f"Error: Unable to fetch data from Google Sheets ({response.status_code}).")
-    
-    csv_data = response.content.decode('utf-8')
+        sys.exit(
+            f"Error: Unable to fetch data from Google Sheets ({response.status_code})."
+        )
+
+    csv_data = response.content.decode("utf-8")
     reader = csv.DictReader(io.StringIO(csv_data))
     tile_centers = []
     for row in reader:
         try:
-            ra = float(row['ra_deg'])
-            dec = float(row['dec_deg'])
+            ra = float(row["ra_deg"])
+            dec = float(row["dec_deg"])
         except ValueError:
             continue
         marker = {
-            'tile_id': row['tile_id'],
-            'ra': ra,
-            'dec': dec,
-            'aus_src': row.get('aus_src', '').strip(),
-            '3d_pipeline': row.get('3d_pipeline', '').strip()
+            "tile_id": row["tile_id"],
+            "ra": ra,
+            "dec": dec,
+            "aus_src": row.get("aus_src", "").strip(),
+            "3d_pipeline": row.get("3d_pipeline", "").strip(),
         }
         tile_centers.append(marker)
     return tile_centers
+
 
 def get_coordinates_from_simbad(target_name):
     """
@@ -133,43 +145,52 @@ def get_coordinates_from_simbad(target_name):
     """
     simbad = Simbad()
     result_table = simbad.query_object(target_name)
-    if result_table is not None and 'ra' in result_table.colnames and 'dec' in result_table.colnames:
+    if (
+        result_table is not None
+        and "ra" in result_table.colnames
+        and "dec" in result_table.colnames
+    ):
         # SIMBAD returns coordinates in degrees (per the update)
-        assert result_table['ra'].unit == u.deg
-        assert result_table['dec'].unit == u.deg
-        coords = SkyCoord(result_table['ra'][0], result_table['dec'][0], unit=(u.deg, u.deg))
+        assert result_table["ra"].unit == u.deg
+        assert result_table["dec"].unit == u.deg
+        coords = SkyCoord(
+            result_table["ra"][0], result_table["dec"][0], unit=(u.deg, u.deg)
+        )
         return coords.ra.deg, coords.dec.deg
     else:
         print(f"Error: Target '{target_name}' not found in SIMBAD.")
         sys.exit(1)
+
 
 def compute_field_status(marker):
     """
     Determines the most relevant status of a field center based on the status columns.
     The hierarchy is (from lowest to highest): processed < validated < aus_src < single_SB_1D_pipeline.
     """
-    if marker['single_SB_1D_pipeline']:
+    if marker["single_SB_1D_pipeline"]:
         return "Fully Processed (1D Partial Tile pipeline)"
-    elif marker['aus_src']:
+    elif marker["aus_src"]:
         return "Post-Processed (AUS SRC)"
-    elif marker['validated']:
+    elif marker["validated"]:
         return "Validated (POSSUM)"
-    elif marker['processed']:
+    elif marker["processed"]:
         return "Processed (ASKAP)"
     else:
         return "Not processed"
+
 
 def compute_tile_status(marker):
     """
     Determines the most relevant status of a tile center.
     The hierarchy is: aus_src < 3d_pipeline.
     """
-    if marker['3d_pipeline']:
+    if marker["3d_pipeline"]:
         return "Processed (3D pipeline)"
-    elif marker['aus_src']:
+    elif marker["aus_src"]:
         return "Post-Processed (AUS SRC). 1D/3D pipeline not yet available."
     else:
         return "Not processed (1D/3D pipeline). Tile not yet available"
+
 
 def find_closest_marker(target_ra, target_dec, markers):
     """
@@ -181,48 +202,69 @@ def find_closest_marker(target_ra, target_dec, markers):
     closest = None
     min_sep = None
     for marker in markers:
-        marker_coord = SkyCoord(ra=marker['ra'] * u.deg, dec=marker['dec'] * u.deg)
+        marker_coord = SkyCoord(ra=marker["ra"] * u.deg, dec=marker["dec"] * u.deg)
         sep = target_coord.separation(marker_coord).deg
         if min_sep is None or sep < min_sep:
             min_sep = sep
             closest = marker
-            closest['separation'] = sep
+            closest["separation"] = sep
     return closest
+
 
 def main():
     parser = argparse.ArgumentParser(
         description="Find the closest survey field center and tile to a given target (by name or coordinates)."
     )
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("-t", "--target", type=str,
-                       help="Target name for SIMBAD query (e.g. 'Abell 3627').")
-    group.add_argument("--coords", nargs=2, type=float, metavar=("RA", "DEC"),
-                       help="Directly provide coordinates in decimal degrees.")
-    
-    parser.add_argument("-b", "--band", type=int, default=1, choices=[1, 2],
-                        help="Observing band (1 or 2) to select the correct survey sheet (default: 1).")
-    
-    parser.add_argument("-maxdist", "--maxdist", type=float, default=4.0,
-                        help="Maximum distance to the field center. If closest field is further than this, it will not be reported (default: 4.0 degrees).")
+    group.add_argument(
+        "-t",
+        "--target",
+        type=str,
+        help="Target name for SIMBAD query (e.g. 'Abell 3627').",
+    )
+    group.add_argument(
+        "--coords",
+        nargs=2,
+        type=float,
+        metavar=("RA", "DEC"),
+        help="Directly provide coordinates in decimal degrees.",
+    )
+
+    parser.add_argument(
+        "-b",
+        "--band",
+        type=int,
+        default=1,
+        choices=[1, 2],
+        help="Observing band (1 or 2) to select the correct survey sheet (default: 1).",
+    )
+
+    parser.add_argument(
+        "-maxdist",
+        "--maxdist",
+        type=float,
+        default=4.0,
+        help="Maximum distance to the field center. If closest field is further than this, it will not be reported (default: 4.0 degrees).",
+    )
 
     args = parser.parse_args()
-    
+
     # Get target coordinates via SIMBAD query or direct input
     if args.coords:
         target_ra, target_dec = args.coords
     else:
         target_ra, target_dec = get_coordinates_from_simbad(args.target)
-    
+
     header = "=" * 60
     print(header)
     print(f"Target: {args.target if args.target else 'Provided Coordinates'}")
     print(f"Coordinates: RA = {target_ra:.6f} deg | DEC = {target_dec:.6f} deg")
     print(header)
-    
+
     # Fetch field and tile centers from the Google Sheet
     field_centers = fetch_field_centers(args.band)
     tile_centers = fetch_tile_centers(args.band)
-    
+
     # Determine and report the closest field center
     if not field_centers:
         print("No field centers found. Please check the Google Sheet.")
@@ -231,9 +273,13 @@ def main():
         field_status = compute_field_status(closest_field)
 
         # Check if the closest field is within the maximum distance
-        if closest_field['separation'] > args.maxdist:
-            print(f"\n[Info] Closest field center is {closest_field['separation']:.2f} degrees away, which exceeds the maximum distance of {args.maxdist} degrees.")
-            print("No POSSUM field center found within the specified maximum distance (--maxdist).")
+        if closest_field["separation"] > args.maxdist:
+            print(
+                f"\n[Info] Closest field center is {closest_field['separation']:.2f} degrees away, which exceeds the maximum distance of {args.maxdist} degrees."
+            )
+            print(
+                "No POSSUM field center found within the specified maximum distance (--maxdist)."
+            )
             sys.exit(0)
 
         print("Closest Field Center:")
@@ -244,27 +290,27 @@ def main():
         print(f" DEC        : {closest_field.get('dec'):.6f} deg")
         print(f" Separation : {closest_field.get('separation'):.6f} deg")
         print(f" Status     : {field_status}")
-        
+
         # If Fully Processed, construct and print pipeline & file links
         if field_status == "Fully Processed (1D Partial Tile pipeline)":
             base_url = "https://www.canfar.net/storage/arc/list/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/"
             band_str = "943MHz" if args.band == 1 else "1367MHz"
-            field_id = remove_prefix(closest_field.get('name', ''))
-            sbid = closest_field.get('sbid', '').strip()
+            field_id = remove_prefix(closest_field.get("name", ""))
+            sbid = closest_field.get("sbid", "").strip()
             pipeline_link = f"{base_url}{band_str}/{field_id}/{sbid}"
-            
+
             base_url_files = "https://ws-uv.canfar.net/arc/files/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/"
             catalog_link = f"{base_url_files}{band_str}/{field_id}/{sbid}/PSM.{field_id}.{sbid}.catalog.fits"
-            fdf_link = f"{base_url_files}{band_str}/{field_id}/{sbid}/PSM.{field_id}.{sbid}.FDF.fits"   
+            fdf_link = f"{base_url_files}{band_str}/{field_id}/{sbid}/PSM.{field_id}.{sbid}.FDF.fits"
             spectra_link = f"{base_url_files}{band_str}/{field_id}/{sbid}/PSM.{field_id}.{sbid}.spectra.fits"
-            
+
             print("\n Pipeline Data:")
             print(f"  Pipeline Link : {pipeline_link}")
             print("  Additional Files:")
             print(f"   Catalog : {catalog_link}")
             print(f"   FDF     : {fdf_link}")
             print(f"   Spectra : {spectra_link}")
-            
+
             # Write the extra links to a local file called links_{fieldid}.txt
             filename = f"links_{field_id}.txt"
             with open(filename, "w") as outfile:
@@ -275,7 +321,7 @@ def main():
                 outfile.write(f"FDF Link      : {fdf_link}\n")
                 outfile.write(f"Spectra Link  : {spectra_link}\n")
             print(f"\n [Info] Pipeline file links written to: {filename}")
-    
+
     # Determine and report the closest tile center
     if not tile_centers:
         print("\nNo tile centers found.")
@@ -292,5 +338,6 @@ def main():
         print(f" Status     : {tile_status}")
         print("=" * 60)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

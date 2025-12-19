@@ -2,7 +2,7 @@
 
 import argparse
 import time
-import pandas as pd
+
 # from skaha.session import Session
 from canfar.sessions import Session
 from print_all_open_sessions import get_open_sessions
@@ -22,16 +22,14 @@ def kill_headless_sessions(also_pending: bool, pause_seconds=1):
 
     if also_pending:
         # Filter for headless sessions that are still running
-        mask = (
-            (df_sessions['type'].str.lower() == 'headless') &
-            ( (df_sessions['status'].str.lower() == 'running') |
-            (df_sessions['status'].str.lower() == 'pending') )
+        mask = (df_sessions["type"].str.lower() == "headless") & (
+            (df_sessions["status"].str.lower() == "running")
+            | (df_sessions["status"].str.lower() == "pending")
         )
     else:
         # Filter for headless sessions that are still running
-        mask = (
-            (df_sessions['type'].str.lower() == 'headless') &
-            (df_sessions['status'].str.lower() == 'running')
+        mask = (df_sessions["type"].str.lower() == "headless") & (
+            df_sessions["status"].str.lower() == "running"
         )
 
     headless_running = df_sessions[mask]
@@ -44,8 +42,8 @@ def kill_headless_sessions(also_pending: bool, pause_seconds=1):
         return
 
     for idx, row in headless_running.iterrows():
-        sess_id = row['id']
-        sess_name = row['name']
+        sess_id = row["id"]
+        sess_name = row["name"]
         try:
             session.destroy(sess_id)
             print(f"Killed headless session: name='{sess_name}', id='{sess_id}'")
@@ -53,17 +51,21 @@ def kill_headless_sessions(also_pending: bool, pause_seconds=1):
             print(f"Failed to kill session id='{sess_id}': {e}")
         time.sleep(pause_seconds)
 
+
 def main(also_pending: bool):
     """
     Entry point: kill all running 'headless' CANFAR sessions.
     """
     kill_headless_sessions(also_pending)
 
+
 if __name__ == "__main__":
-    
     parser = argparse.ArgumentParser(description="Update Partial Tile Google Sheet")
-    parser.add_argument("--also-pending", action="store_true", help="Also kill 'headless' sessions that are pending.")
+    parser.add_argument(
+        "--also-pending",
+        action="store_true",
+        help="Also kill 'headless' sessions that are pending.",
+    )
     args = parser.parse_args()
 
     main(args.also_pending)
-

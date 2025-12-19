@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-Creates POSSUM pipeline config file (and working directory) for a single 
+Creates POSSUM pipeline config file (and working directory) for a single
 tile pipeline run from a given template file.
 
 The output_filename must be different for band 1 and 2, otherwise it'll be
@@ -16,30 +16,33 @@ import os
 import numpy as np
 import ast
 
+
 def arg_as_list(s):
     v = ast.literal_eval(s)
     if type(v) is not list:
-        raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (s))
+        raise argparse.ArgumentTypeError('Argument "%s" is not a list' % (s))
     return v
 
-def modify_config_file(template_filename, field_ID, working_dir,
-                       output_filename, SB_num):
-    with open(template_filename,'r') as f:
-        template=np.array(f.readlines())
 
-    #Create working directory (to write config file)
+def modify_config_file(
+    template_filename, field_ID, working_dir, output_filename, SB_num
+):
+    with open(template_filename, "r") as f:
+        template = np.array(f.readlines())
+
+    # Create working directory (to write config file)
     if not os.path.exists((working_dir)):
         print(f"Creating directory {working_dir} for config file")
         os.makedirs(working_dir)
 
-    template=np.char.replace(template,'[field_ID]',str(field_ID),count=1)
-    template=np.char.replace(template,'[SB_num]',str(SB_num),count=1)
+    template = np.char.replace(template, "[field_ID]", str(field_ID), count=1)
+    template = np.char.replace(template, "[SB_num]", str(SB_num), count=1)
 
-    with open(os.path.join(working_dir, output_filename),'w') as f:
+    with open(os.path.join(working_dir, output_filename), "w") as f:
         f.writelines(template)
 
+
 if __name__ == "__main__":
-    
     import argparse
 
     descStr = """
@@ -80,6 +83,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # Create config file from template 
-    modify_config_file(args.template_file, args.field_ID, args.working_dir,
-                       args.output_filename, args.SB_num)
+    # Create config file from template
+    modify_config_file(
+        args.template_file,
+        args.field_ID,
+        args.working_dir,
+        args.output_filename,
+        args.SB_num,
+    )

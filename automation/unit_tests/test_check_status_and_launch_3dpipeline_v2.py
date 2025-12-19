@@ -1,15 +1,18 @@
 """
 Test possum_pipeline_control: check_status_and_launch_3Dpipeline_v2.py
 """
+
 import csv
-from automation import (database_queries as db_query, insert_database_script as db)
+from automation import database_queries as db_query, insert_database_script as db
 from automation.unit_tests._3dpipeline_base_test import _3DPipelineBaseTest
 from automation.unit_tests import partial_tile_1d_base_test
+
 
 class CheckStatusAndLaunch3DPipelinev2Test(_3DPipelineBaseTest):
     """
     Test check_status_and_launch_3Dpipeline_v2.py
     """
+
     def setUp(self):
         super().setUp()
         self.conn = db_query.get_database_connection(test=True)
@@ -17,9 +20,9 @@ class CheckStatusAndLaunch3DPipelinev2Test(_3DPipelineBaseTest):
         db.create_associated_tile_test_table(self.conn)
 
         # Columns: observation name, tile id, row id
-        _data = 'automation/unit_tests/csv/associated_tile.csv'
+        _data = "automation/unit_tests/csv/associated_tile.csv"
         # Insert associated_tile data
-        with open(_data, newline='', encoding='utf-8') as csvfile:
+        with open(_data, newline="", encoding="utf-8") as csvfile:
             reader = csv.reader(csvfile)
             # Skip header
             next(reader)
@@ -37,19 +40,23 @@ class CheckStatusAndLaunch3DPipelinev2Test(_3DPipelineBaseTest):
     def test_update_status(self):
         "Test update_status"
         tile_number = 1239
-        row_num = db_query.update_3d_pipeline_table(tile_number, "1", "Running", "3d_pipeline_val", self.conn)
+        row_num = db_query.update_3d_pipeline_table(
+            tile_number, "1", "Running", "3d_pipeline_val", self.conn
+        )
         assert row_num == 1
 
-        tile_number = '1240'
-        row_num = db_query.update_3d_pipeline_table(tile_number, "1", "Running", "3d_pipeline_val", self.conn)
+        tile_number = "1240"
+        row_num = db_query.update_3d_pipeline_table(
+            tile_number, "1", "Running", "3d_pipeline_val", self.conn
+        )
         assert row_num == 1
 
-        #check that the update works
-        results = db_query.get_3d_tile_data('1239', '1', self.conn)
-        assert results[0][1] == 'Running' #3d_pipeline_val
+        # check that the update works
+        results = db_query.get_3d_tile_data("1239", "1", self.conn)
+        assert results[0][1] == "Running"  # 3d_pipeline_val
 
-        results = db_query.get_3d_tile_data(1240, '1', self.conn)
-        assert results[0][1] == 'Running' #3d_pipeline_val
+        results = db_query.get_3d_tile_data(1240, "1", self.conn)
+        assert results[0][1] == "Running"  # 3d_pipeline_val
 
     def test_get_tiles_for_pipeline_run(self):
         """

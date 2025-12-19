@@ -19,25 +19,28 @@ In the Google sheet, either record
     "NotStarted"           - pipeline not started for some reason
 """
 
+
 def arg_as_list(s):
     v = ast.literal_eval(s)
     if type(v) is not list:
-        raise argparse.ArgumentTypeError("Argument \"%s\" is not a list" % (s))
+        raise argparse.ArgumentTypeError('Argument "%s" is not a list' % (s))
     return v
 
+
 def check_pipeline_complete(log_file_path):
-    with open(log_file_path, 'r') as file:
+    with open(log_file_path, "r") as file:
         log_contents = file.read()
-        
+
     if "Pipeline complete." in log_contents:
         return "Completed"
     else:
         return "Failed"
 
+
 def update_partial_tile_1d_pipeline(field_ID, tile_numbers, band, status, conn):
     """
     Update the status of the specified tile in the partial_tile_1d_pipeline database table.
-    
+
     Args:
     field_ID (str): The field ID.
     tile_number (str): The tile number to update.
@@ -45,10 +48,12 @@ def update_partial_tile_1d_pipeline(field_ID, tile_numbers, band, status, conn):
     status (str): The status to set in the '1d_pipeline' column.
     """
     fieldname = util.get_full_field_name(field_ID, band)
-    band_number = util.get_band_number(band)    
-    db.update_partial_tile_1d_pipeline_status(fieldname, tile_numbers, band_number, status, conn)
+    band_number = util.get_band_number(band)
+    db.update_partial_tile_1d_pipeline_status(
+        fieldname, tile_numbers, band_number, status, conn
+    )
     ## TODO: validation in case all tiles have been completed
-     
+
     # # Find the validation file path
     # psm_val = glob.glob(f"/arc/projects/CIRADA/polarimetry/pipeline_runs/{bxand}/tile{tilenumber}/*validation.html")
     # if len(psm_val) == 1:
@@ -63,19 +68,23 @@ def update_partial_tile_1d_pipeline(field_ID, tile_numbers, band, status, conn):
     # tile_sheet.update(range_name=f'{col_link_letter}{tile_index}', values=[[validation_link]])
     # print(f"Updated tile {tilenumber} validation link to {validation_link}")
 
+
 def tilenumbers_to_tilestr(tilenumbers):
     """
     Parse a list of 4 to a single tilestr
-    
+
     e.g. ['8716','8891', '', '']
-    
+
     becomes "8716+8891"
     """
-    tilestr = ("+").join([ t for t in tilenumbers if t != ''])
+    tilestr = ("+").join([t for t in tilenumbers if t != ""])
     return tilestr
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Check pipeline status and update CSV file")
+    parser = argparse.ArgumentParser(
+        description="Check pipeline status and update CSV file"
+    )
     parser.add_argument(
         "field_ID",
         metavar="field",
@@ -90,11 +99,18 @@ if __name__ == "__main__":
     parser.add_argument(
         "tilenumbers",
         type=arg_as_list,
-        help="A list of 4 tile numbers to process. Empty strings for less tilenumbers. e.g. ['8843','8971','',''] "
+        help="A list of 4 tile numbers to process. Empty strings for less tilenumbers. e.g. ['8843','8971','',''] ",
     )
-    parser.add_argument("band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile")
+    parser.add_argument(
+        "band", choices=["943MHz", "1367MHz"], help="The frequency band of the tile"
+    )
 
-    parser.add_argument("--database_config_path", type=str, default="automation/config.env", help="Path to .env file with database connection parameters.")
+    parser.add_argument(
+        "--database_config_path",
+        type=str,
+        default="automation/config.env",
+        help="Path to .env file with database connection parameters.",
+    )
     # consider chmod 600 <file> to prevent access
 
     args = parser.parse_args()
@@ -121,7 +137,9 @@ if __name__ == "__main__":
 
         # Write the warning to file
         with open(f"{basedir}/log_processing_status.log", "a") as log_file:
-            log_file.write("WARNING: Multiple log files found. Taking the last log file.\n")
+            log_file.write(
+                "WARNING: Multiple log files found. Taking the last log file.\n"
+            )
             log_file.write(f"{log_file_path} \n")
 
         status = check_pipeline_complete(log_file_path)
@@ -135,7 +153,8 @@ if __name__ == "__main__":
     print(f"Tilenumbers {tilestr} status: {status}, band: {band}")
 
     # Update the POSSUM partial_tile_1d_pipeline database table
-    conn = db.get_database_connection(test=False, database_config_path=database_config_path)
+    conn = db.get_database_connection(
+        test=False, database_config_path=database_config_path
+    )
     update_partial_tile_1d_pipeline(field_ID, tilenumbers, band, status, conn)
     conn.close()
-

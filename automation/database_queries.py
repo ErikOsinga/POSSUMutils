@@ -1,10 +1,12 @@
 """
 Database query functions for interacting with the ausSRC database.
 """
+
 import os
 import psycopg2
 from astropy.table import Table
 from dotenv import load_dotenv
+
 
 def rows_to_table(rows, colnames=None):
     """
@@ -20,7 +22,10 @@ def rows_to_table(rows, colnames=None):
 
     return Table(rows=rows, names=colnames)
 
-def get_database_connection(test: bool, database_config_path: str = "automation/config.env"):
+
+def get_database_connection(
+    test: bool, database_config_path: str = "automation/config.env"
+):
     """
     Initiate a database connection.
     Args:
@@ -29,7 +34,10 @@ def get_database_connection(test: bool, database_config_path: str = "automation/
     conn_params = get_database_parameters(test, database_config_path)
     return psycopg2.connect(**conn_params)
 
-def get_database_parameters(test=False, database_config_path: str = "automation/config.env"):
+
+def get_database_parameters(
+    test=False, database_config_path: str = "automation/config.env"
+):
     """
     Get database parameters from env file (test.env for test, config.env otherwise)
     """
@@ -51,11 +59,15 @@ def get_database_parameters(test=False, database_config_path: str = "automation/
         print(f"Attempting to load database config from {database_config_path}")
 
         if "test" in database_config_path.lower():
-            raise ValueError("Database config path should not point to a test environment when test=False")
+            raise ValueError(
+                "Database config path should not point to a test environment when test=False"
+            )
 
         if not os.path.exists(database_config_path):
-            raise FileNotFoundError(f"Database config file not found at {database_config_path}. Current working directory: {os.getcwd()}")
-        
+            raise FileNotFoundError(
+                f"Database config file not found at {database_config_path}. Current working directory: {os.getcwd()}"
+            )
+
         # Get database connection details from config.env file
         load_dotenv(dotenv_path=database_config_path)
         return {
@@ -65,6 +77,7 @@ def get_database_parameters(test=False, database_config_path: str = "automation/
             'host': os.getenv('POSSUM_DATABASE_HOST'),
             'port': os.getenv('POSSUM_DATABASE_PORT')
     }
+
 
 def execute_update_query(query, conn, params=None, verbose=False):
     """
@@ -95,7 +108,10 @@ def execute_update_query(query, conn, params=None, verbose=False):
         raise
     return rows_affected
 
-def execute_query(query, database_connection, params=None, verbose=False, return_colnames=False):
+
+def execute_query(
+    query, database_connection, params=None, verbose=False, return_colnames=False
+):
     """
     Execute a SQL query and return the results.
 
@@ -133,6 +149,7 @@ def execute_query(query, database_connection, params=None, verbose=False, return
         return results, colnames
     return results
 
+
 def update_3d_pipeline_table(tile_number, band_number, status, column_name, conn):
     """
     Update the 'tile_state_band{band_number}' table with given column name.
@@ -159,16 +176,26 @@ def update_3d_pipeline_table(tile_number, band_number, status, column_name, conn
     """
     # validate params
     validate_band_number(band_number)
-    if column_name not in ("3d_pipeline","3d_pipeline_val","3d_pipeline_ingest","3d_val_link"):
-        raise ValueError(f"Updating {column_name} in possum.tile_state_band{band_number} is not allowed!")
+    if column_name not in (
+        "3d_pipeline",
+        "3d_pipeline_val",
+        "3d_pipeline_ingest",
+        "3d_val_link",
+    ):
+        raise ValueError(
+            f"Updating {column_name} in possum.tile_state_band{band_number} is not allowed!"
+        )
 
-    print(f"Updating POSSUM tile database table for band{band_number} with {column_name} to {status}")
+    print(
+        f"Updating POSSUM tile database table for band{band_number} with {column_name} to {status}"
+    )
     query = f"""
         UPDATE possum.tile_state_band{band_number}
         SET "{column_name}" = %s -- status
         WHERE tile = %s; -- tile_number
     """
     return execute_update_query(query, conn, (status, tile_number))
+
 
 def update_1d_pipeline_table(field_name, band_number, status, column_name, conn):
     """
@@ -183,9 +210,13 @@ def update_1d_pipeline_table(field_name, band_number, status, column_name, conn)
 
     """
     validate_band_number(band_number)
-    if column_name.lower() not in("1d_pipeline_validation", "single_sb_1d_pipeline"):
-        raise ValueError(f"Not allowed to update {column_name} in observation_state_band{band_number}!")
-    print(f"Updating POSSUM observation_state_band{band_number} table with {column_name} status")
+    if column_name.lower() not in ("1d_pipeline_validation", "single_sb_1d_pipeline"):
+        raise ValueError(
+            f"Not allowed to update {column_name} in observation_state_band{band_number}!"
+        )
+    print(
+        f"Updating POSSUM observation_state_band{band_number} table with {column_name} status"
+    )
     query = f"""
         INSERT INTO possum.observation_state_band{band_number}
         (name, "{column_name}")
@@ -195,13 +226,16 @@ def update_1d_pipeline_table(field_name, band_number, status, column_name, conn)
     """
     return execute_update_query(query, conn, (field_name, status, status))
 
+
 def find_boundary_issues(sbid, observation, band_number, conn):
     """
     Check if there are any entries in partial_tile_1d_pipeline for the given sbid and observation
     where type indicates it crosses a projection boundary.
     This is to identify potential issues with tiles that cross projection boundaries.
     """
-    print(f"Checking for projection boundary issues for SBID: {sbid}, Observation: {observation}")
+    print(
+        f"Checking for projection boundary issues for SBID: {sbid}, Observation: {observation}"
+    )
     query = f"""
         SELECT EXISTS (
             SELECT 1
@@ -217,6 +251,7 @@ def find_boundary_issues(sbid, observation, band_number, conn):
         print("No boundary issues found.")
     return issues_found
 
+
 def validate_band_number(band_number):
     """
     Making sure band number is valid
@@ -224,13 +259,14 @@ def validate_band_number(band_number):
     if str(band_number) not in ["1", "2"]:
         raise ValueError("band_number must be either 1 or 2")
 
+
 def get_tiles_for_pipeline_run(conn, band_number):
     """
     Get a list of tile numbers that should be ready to be processed by the 3D pipeline
 
     In the database, this is when:
     tile_state_band.cube_state = 'COMPLETED' and tile.3d_pipeline_val = [null]
-    
+
     In POSSUM pipeline status sheet, this is the equivalent of:
     'aus_src' column is not empty and '3d_pipeline' column is empty for the given band number.
 
@@ -241,7 +277,9 @@ def get_tiles_for_pipeline_run(conn, band_number):
     list: A list of tile numbers that satisfy the conditions.
     """
     validate_band_number(band_number)
-    print(f"Fetching tiles ready for 3D pipeline run for band {band_number} from the database.")
+    print(
+        f"Fetching tiles ready for 3D pipeline run for band {band_number} from the database."
+    )
     query = f"""
         SELECT tile FROM possum.tile_state_band{band_number}
         WHERE UPPER(cube_state) = 'COMPLETED'
@@ -249,6 +287,7 @@ def get_tiles_for_pipeline_run(conn, band_number):
         AND ("3d_pipeline_val" IS NULL OR TRIM("3d_pipeline_val") = '')
     """
     return execute_query(query, conn)
+
 
 def get_tiles_for_ingest(band_number, conn):
     """
@@ -263,7 +302,9 @@ def get_tiles_for_ingest(band_number, conn):
     list: A list of tile numbers that satisfy the conditions.
     """
     validate_band_number(band_number)
-    print(f"Fetching tiles ready for 3D pipeline run for band {band_number} from the database.")
+    print(
+        f"Fetching tiles ready for 3D pipeline run for band {band_number} from the database."
+    )
     query = f"""
         SELECT DISTINCT tile
         FROM possum.tile_state_band{band_number} tile_3d
@@ -276,7 +317,10 @@ def get_tiles_for_ingest(band_number, conn):
     # flatten tile ids into an array
     return [row[0] for row in results]
 
-def update_partial_tile_1d_pipeline_status(field_name, tile_numbers, band_number, status, conn):
+
+def update_partial_tile_1d_pipeline_status(
+    field_name, tile_numbers, band_number, status, conn
+):
     """
     Update 1d_pipeline in partial_tile_1d_pipeline_band{band_number} table for a set of tiles.
     This replaces the 1d_pipeline column in the POSSUM pipeline validation Google sheet:
@@ -288,7 +332,9 @@ def update_partial_tile_1d_pipeline_status(field_name, tile_numbers, band_number
     band_number: '1' or '2'
     status (str): The new validation status to set.
     """
-    print(f"Updating POSSUM partial_tile_1d_pipeline_band{band_number}.1d_pipeline in the database")
+    print(
+        f"Updating POSSUM partial_tile_1d_pipeline_band{band_number}.1d_pipeline in the database"
+    )
     t1, t2, t3, t4 = tile_numbers
     query = f"""
         UPDATE possum.partial_tile_1d_pipeline_band{band_number}
@@ -298,7 +344,7 @@ def update_partial_tile_1d_pipeline_status(field_name, tile_numbers, band_number
     args = (status, field_name)
     # Check for NULLS in tile numbers and make sure the query says IS NULL and not = NULL so it works
     for i, tile in enumerate([t1, t2, t3, t4], start=1):
-        if tile is None or tile.strip() == '':  # If tile is None, use IS NULL
+        if tile is None or tile.strip() == "":  # If tile is None, use IS NULL
             # put condition on newline
             query += f"\n AND tile{i} IS NULL"
         else:  # Otherwise, use equality
@@ -308,13 +354,24 @@ def update_partial_tile_1d_pipeline_status(field_name, tile_numbers, band_number
 
     row_num = execute_update_query(query, conn, args)
     if row_num == 1:
-        print(f"Updated row with tiles {tile_numbers} status to {status} in '1d_pipeline' column.")
+        print(
+            f"Updated row with tiles {tile_numbers} status to {status} in '1d_pipeline' column."
+        )
     if row_num == 0:
-        print(f"No matching row found to update for field {field_name} with tiles {tile_numbers}.")
-        raise ValueError(f"Field {field_name} with tiles {tile_numbers} not found in the database d.")
+        print(
+            f"No matching row found to update for field {field_name} with tiles {tile_numbers}."
+        )
+        raise ValueError(
+            f"Field {field_name} with tiles {tile_numbers} not found in the database d."
+        )
     if row_num > 1:
-        print(f"Warning: Multiple ({row_num}) rows updated for field {field_name} with tiles {tile_numbers}.")
-        raise ValueError(f"Multiple ({row_num}) rows updated for field {field_name} with tiles {tile_numbers}.")
+        print(
+            f"Warning: Multiple ({row_num}) rows updated for field {field_name} with tiles {tile_numbers}."
+        )
+        raise ValueError(
+            f"Multiple ({row_num}) rows updated for field {field_name} with tiles {tile_numbers}."
+        )
+
 
 def get_partial_tiles_for_1d_pipeline_run(band_number, conn):
     """
@@ -346,6 +403,7 @@ def get_partial_tiles_for_1d_pipeline_run(band_number, conn):
     # added order by id to have consistent ordering for tests
     return execute_query(query, conn)
 
+
 def get_observations_with_complete_partial_tiles(band_number, conn):
     """
     For each observation, check if all '1d_pipeline' is "Completed" and '1d_pipeline_validation' is empty
@@ -372,6 +430,7 @@ def get_observations_with_complete_partial_tiles(band_number, conn):
         GROUP BY pt.observation, ob1.sbid, ob."1d_pipeline_validation", pt."1d_pipeline";
     """
     return execute_query(sql, conn)
+
 
 def get_observations_non_edge_rows(band_number, conn):
     """
@@ -421,7 +480,9 @@ def get_observations_non_edge_rows(band_number, conn):
     """
     return execute_query(sql, conn)
 
+
 #### TEST METHODS ###
+
 
 def get_3d_tile_data(tile_id, band_number, conn):
     """
@@ -440,6 +501,7 @@ def get_3d_tile_data(tile_id, band_number, conn):
                 from possum.tile_state_band{band_number} WHERE tile = %s"""
         return execute_query(sql, conn, (tile_id,))
 
+
 def get_1d_pipeline_validation_status(field_name, band_number, conn):
     """
     Handy method to get 1d_pipeline_validation status (useful for tests):
@@ -449,6 +511,7 @@ def get_1d_pipeline_validation_status(field_name, band_number, conn):
         WHERE name = %s;
         """
     return execute_query(sql, conn, (field_name,))
+
 
 def get_single_sb_1d_pipeline_status(field_name, band_number, conn):
     """
@@ -460,6 +523,7 @@ def get_single_sb_1d_pipeline_status(field_name, band_number, conn):
         """
     return execute_query(sql, conn, (field_name,))
 
+
 def get_1d_pipeline_status(field_name, tilenumbers, band_number, conn):
     """
     Handy method to get 1d_pipeline status (useful for tests):
@@ -470,12 +534,13 @@ def get_1d_pipeline_status(field_name, tilenumbers, band_number, conn):
         """
     # Check for NULLS in tile numbers and make sure the query says IS NULL and not = NULL so it works
     for i, tile in enumerate(tilenumbers, start=1):
-        if tile is None or tile.strip() == '':  # If tile is None, use IS NULL
+        if tile is None or tile.strip() == "":  # If tile is None, use IS NULL
             sql += f" AND tile{i} IS NULL"
         else:  # Otherwise, use equality
             sql += f" AND tile{i} = '{tile}'"
 
     return execute_query(sql, conn, (field_name,))
+
 
 def get_fields_ready_single_SB_pipeline(band_number, conn) -> Table:
     """
@@ -491,6 +556,7 @@ def get_fields_ready_single_SB_pipeline(band_number, conn) -> Table:
     """
     rows, colnames = execute_query(sql, conn, return_colnames=True)
     return rows_to_table(rows, colnames=colnames)
+
 
 def get_full_table_single_SB_pipeline(band_number, conn, as_table=True) -> list | Table:
     """

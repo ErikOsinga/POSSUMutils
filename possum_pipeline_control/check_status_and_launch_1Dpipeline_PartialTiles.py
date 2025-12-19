@@ -35,6 +35,7 @@ Cameron is in charge of generating the source lists per partial tile and separat
 @author: Erik Osinga
 """
 
+
 def get_results_per_field_sbid_skip_edges(band_number, conn, verbose=False):
     """
     Group the tile_table by 'field_name' and 'sbid' and check the validation condition
@@ -65,11 +66,14 @@ def get_results_per_field_sbid_skip_edges(band_number, conn, verbose=False):
         results[(row[0], util.get_sbid_num(row[1]))] = row[2]
         if verbose:
             status = "all conditions met" if row[2] is True else "conditions not met"
-            print(f"Field '{row[0]}', SBID '{row[1]}': after filtering edges, conditions are {status}.")
+            print(
+                f"Field '{row[0]}', SBID '{row[1]}': after filtering edges, conditions are {status}."
+            )
 
     return results
 
-def get_results_per_field_sbid(conn, band_number='1', verbose=False):
+
+def get_results_per_field_sbid(conn, band_number="1", verbose=False):
     """
     Group observation by field name and sbid
 
@@ -89,6 +93,7 @@ def get_results_per_field_sbid(conn, band_number='1', verbose=False):
                   and 1d_pipeline='{status}'.""")
     return field_sbid_dict
 
+
 def remove_prefix(field_name):
     """
     Remove the prefix "EMU_" or "WALLABY_" from the field name.
@@ -100,7 +105,8 @@ def remove_prefix(field_name):
     print(s)  # Output will be '2108-09A'
     """
     # The regex looks for either "EMU_" or "WALLABY_" at the beginning of the string
-    return re.sub(r'^(EMU_|WALLABY_)', '', field_name)
+    return re.sub(r"^(EMU_|WALLABY_)", "", field_name)
+
 
 def get_tiles_for_pipeline_run(db_conn, band_number):
     """
@@ -118,30 +124,46 @@ def get_tiles_for_pipeline_run(db_conn, band_number):
     # Find the tiles that satisfy the conditions
     # (i.e. has an SBID and not yet a '1d_pipeline' status)
     rows = db.get_partial_tiles_for_1d_pipeline_run(band_number, db_conn)
-    fields_to_run, SBids_to_run = [],[]
-    tile1_to_run, tile2_to_run, tile3_to_run, tile4_to_run = [],[],[],[]
+    fields_to_run, SBids_to_run = [], []
+    tile1_to_run, tile2_to_run, tile3_to_run, tile4_to_run = [], [], [], []
     if rows:
         for row in rows:
-            fields_to_run.append(row[0]) # keep field prefix, e.g. EMU_1227-69
+            fields_to_run.append(row[0])  # keep field prefix, e.g. EMU_1227-69
             SBids_to_run.append(util.get_sbid_num(row[1]))
-            tile1_to_run.append(str(row[2]) if row[2] else '')
-            tile2_to_run.append(str(row[3]) if row[3] else '')
-            tile3_to_run.append(str(row[4]) if row[4] else '')
-            tile4_to_run.append(str(row[5]) if row[5] else '')
+            tile1_to_run.append(str(row[2]) if row[2] else "")
+            tile2_to_run.append(str(row[3]) if row[3] else "")
+            tile3_to_run.append(str(row[4]) if row[4] else "")
+            tile4_to_run.append(str(row[5]) if row[5] else "")
 
     # Also find fields that have all partial tiles completed, but validation plot not yet made
     results_grouped = get_results_per_field_sbid(db_conn, band_number)
     # return only a list of (fieldnames,sbid) pairs for which we can start a validation job
-    can_make_validation = [key for (key,value) in results_grouped.items() if value]
+    can_make_validation = [key for (key, value) in results_grouped.items() if value]
 
     # Also find fields that have all partial tiles completed except edge cases, and validation plot not yet made
-    results_grouped_plus_edges = get_results_per_field_sbid_skip_edges(band_number, db_conn)
-    can_make_val_if_skip_edges = [ key for (key,value) in results_grouped_plus_edges.items() if value]
+    results_grouped_plus_edges = get_results_per_field_sbid_skip_edges(
+        band_number, db_conn
+    )
+    can_make_val_if_skip_edges = [
+        key for (key, value) in results_grouped_plus_edges.items() if value
+    ]
     # remove the ones from the edges list if already in the full list
     # so this list contains only the projection boundary cases
-    can_make_val_if_skip_edges = set(can_make_val_if_skip_edges) - set(can_make_validation)
+    can_make_val_if_skip_edges = set(can_make_val_if_skip_edges) - set(
+        can_make_validation
+    )
 
-    return fields_to_run, tile1_to_run, tile2_to_run, tile3_to_run, tile4_to_run, SBids_to_run, can_make_validation, can_make_val_if_skip_edges
+    return (
+        fields_to_run,
+        tile1_to_run,
+        tile2_to_run,
+        tile3_to_run,
+        tile4_to_run,
+        SBids_to_run,
+        can_make_validation,
+        can_make_val_if_skip_edges,
+    )
+
 
 def get_canfar_sourcelists(band_number, local_file="./sourcelist_canfar.txt"):
     client = Client()
@@ -174,7 +196,10 @@ def get_canfar_sourcelists(band_number, local_file="./sourcelist_canfar.txt"):
     elif band_number == 2:
         # TODO
         raise NotImplementedError("TODO")
-        canfar_sourcelists = client.listdir("vos://cadc.nrc.ca~arc/projects/CIRADA/polarimetry/ASKAP/Tiles/1367MHz/",force=True)
+        canfar_sourcelists = client.listdir(
+            "vos://cadc.nrc.ca~arc/projects/CIRADA/polarimetry/ASKAP/Tiles/1367MHz/",
+            force=True,
+        )
     else:
         raise ValueError(f"Band number {band_number} not defined")
 
@@ -183,6 +208,7 @@ def get_canfar_sourcelists(band_number, local_file="./sourcelist_canfar.txt"):
         f.write("\n".join(canfar_sourcelists))
 
     return canfar_sourcelists
+
 
 def field_from_sourcelist_string(srclist_str):
     """
@@ -196,7 +222,9 @@ def field_from_sourcelist_string(srclist_str):
 
     1441+04B
     """
-    field_ID = srclist_str.split(".")[2]  # Extract the field ID from the sourcelist string
+    field_ID = srclist_str.split(".")[
+        2
+    ]  # Extract the field ID from the sourcelist string
     # Remove the prefix "EMU_" or "WALLABY_"
     field_ID = remove_prefix(field_ID)
 
@@ -210,6 +238,7 @@ def field_from_sourcelist_string(srclist_str):
 
     return field_ID
 
+
 def launch_pipeline(field_ID, tilenumbers, SBid, band):
     """
     Launch the appropriate 1D pipeline script based on the band
@@ -221,15 +250,32 @@ def launch_pipeline(field_ID, tilenumbers, SBid, band):
 
     """
     if band == "943MHz":
-        command = ["python", "-m", "possum_pipeline_control.launch_1Dpipeline_PartialTiles_band1", str(field_ID), str(tilenumbers), str(SBid)]
+        command = [
+            "python",
+            "-m",
+            "possum_pipeline_control.launch_1Dpipeline_PartialTiles_band1",
+            str(field_ID),
+            str(tilenumbers),
+            str(SBid),
+        ]
     elif band == "1367MHz":
-        command = ["python", "-m", "possum_pipeline_control.launch_1Dpipeline_PartialTiles_band2", str(field_ID), str(tilenumbers), str(SBid)]
-        raise NotImplementedError("TODO: Temporarily disabled launching band 2 because need to write that run script")
+        command = [
+            "python",
+            "-m",
+            "possum_pipeline_control.launch_1Dpipeline_PartialTiles_band2",
+            str(field_ID),
+            str(tilenumbers),
+            str(SBid),
+        ]
+        raise NotImplementedError(
+            "TODO: Temporarily disabled launching band 2 because need to write that run script"
+        )
     else:
         raise ValueError(f"Unknown band: {band}")
 
     print(f"Running command: {' '.join(command)}")
     subprocess.run(command, check=True)
+
 
 def launch_pipeline_summary(field_ID, SBid, band):
     """
@@ -241,18 +287,37 @@ def launch_pipeline_summary(field_ID, SBid, band):
 
     """
     if band == "943MHz":
-        command = ["python", "-m", "possum_pipeline_control.launch_1Dpipeline_PartialTiles_band1_pre_or_post", str(field_ID), str(SBid), "post"]
+        command = [
+            "python",
+            "-m",
+            "possum_pipeline_control.launch_1Dpipeline_PartialTiles_band1_pre_or_post",
+            str(field_ID),
+            str(SBid),
+            "post",
+        ]
     elif band == "1367MHz":
-        command = ["python", "-m", "possum_pipeline_control.launch_1Dpipeline_PartialTiles_band2_pre_or_post", str(field_ID), str(SBid), "post"]
+        command = [
+            "python",
+            "-m",
+            "possum_pipeline_control.launch_1Dpipeline_PartialTiles_band2_pre_or_post",
+            str(field_ID),
+            str(SBid),
+            "post",
+        ]
         command = ""
-        raise NotImplementedError("TODO: Temporarily disabled launching band 2 because need to write that run script")
+        raise NotImplementedError(
+            "TODO: Temporarily disabled launching band 2 because need to write that run script"
+        )
     else:
         raise ValueError(f"Unknown band: {band}")
 
     print(f"Running command: {' '.join(command)}")
     subprocess.run(command, check=True)
 
-def update_validation_status(field_name, sbid, band_number, status, database_config_path="automation/config.env"):
+
+def update_validation_status(
+    field_name, sbid, band_number, status, database_config_path="automation/config.env"
+):
     """
     Update the status of the specified partial tile or all rows for a given field_name and sbid.
     A Partial Tile is uniquely defined by field_ID + sbid + tile_number.
@@ -263,13 +328,19 @@ def update_validation_status(field_name, sbid, band_number, status, database_con
         status (str): The status to set in the specified column.
     """
     print("Updating partial tile status in the POSSUM pipeline validation sheet.")
-    conn = db.get_database_connection(test=False, database_config_path=database_config_path)
-    row_num = db.update_1d_pipeline_table(field_name, band_number, "Running", "1d_pipeline_validation", conn)
+    conn = db.get_database_connection(
+        test=False, database_config_path=database_config_path
+    )
+    row_num = db.update_1d_pipeline_table(
+        field_name, band_number, "Running", "1d_pipeline_validation", conn
+    )
     conn.close()
 
     if row_num > 0:
-        print(f"Updated all {row_num} rows for field {field_name} and SBID {sbid} "
-              f"to status '{status}' in observation_state_band{band_number}.1d_pipeline_validation' column.")
+        print(
+            f"Updated all {row_num} rows for field {field_name} and SBID {sbid} "
+            f"to status '{status}' in observation_state_band{band_number}.1d_pipeline_validation' column."
+        )
     else:
         print(f"No rows found for field {field_name} and SBID {sbid}.")
     return row_num
@@ -283,7 +354,14 @@ def check_predl_job_running_with_sbid(SBnumber: str) -> bool:
     df_sessions = get_open_sessions()
     # corresponds to jobname as set in launch_1Dpipeline_PartialTiles_band1_pre_or_post.py
     jobname = f"pre-dl-{SBnumber}"
-    if df_sessions[df_sessions['status'] == 'Running']['name'].str.contains(jobname).any() or df_sessions[df_sessions['status'] == 'Pending']['name'].str.contains(jobname).any():
+    if (
+        df_sessions[df_sessions["status"] == "Running"]["name"]
+        .str.contains(jobname)
+        .any()
+        or df_sessions[df_sessions["status"] == "Pending"]["name"]
+        .str.contains(jobname)
+        .any()
+    ):
         return True
     else:
         return False
@@ -295,14 +373,26 @@ def launch_band1_1Dpipeline(database_config_path: str = "automation/config.env")
     """
     band = "943MHz"
 
-    
     # Get a list of tile numbers that should be ready to be processed by the 1D pipeline according to Erik's sheet.
     # i.e.  'SBID' column is not empty, 'number_sources' is not empty, and '1d_pipeline' column is empty
 
     # connect to the database
-    conn = db.get_database_connection(test=False, database_config_path=database_config_path)
-    field_IDs, tile1, tile2, tile3, tile4, SBids, fields_to_validate, field_to_validate_boundaryissues = get_tiles_for_pipeline_run(conn, band_number=1)
-    assert len(tile1) == len(tile2) == len(tile3) == len(tile4), "Need to have 4 tile columns in google sheet. Even if row can be empty."
+    conn = db.get_database_connection(
+        test=False, database_config_path=database_config_path
+    )
+    (
+        field_IDs,
+        tile1,
+        tile2,
+        tile3,
+        tile4,
+        SBids,
+        fields_to_validate,
+        field_to_validate_boundaryissues,
+    ) = get_tiles_for_pipeline_run(conn, band_number=1)
+    assert len(tile1) == len(tile2) == len(tile3) == len(tile4), (
+        "Need to have 4 tile columns in google sheet. Even if row can be empty."
+    )
     # close the connection
     conn.close()
     # list of full sourcelist filenames
@@ -312,57 +402,92 @@ def launch_band1_1Dpipeline(database_config_path: str = "automation/config.env")
     #                       'selavy-image.i.EMU_1227-69.SB61103.cont.taylor.0.restored.conv.components.15sig.xml',
     #                       ]
     # list of only the field IDs e.g. "1428-12"
-    sourcelist_fieldIDs_no_prefix = [field_from_sourcelist_string(srl) for srl in canfar_sourcelists]
+    sourcelist_fieldIDs_no_prefix = [
+        field_from_sourcelist_string(srl) for srl in canfar_sourcelists
+    ]
 
-    assert len(field_IDs) == len(tile1) == len(SBids) # need fieldID, up to 4 tileIDs and SBID to define what to run
+    assert (
+        len(field_IDs) == len(tile1) == len(SBids)
+    )  # need fieldID, up to 4 tileIDs and SBID to define what to run
 
     band_number = util.get_band_number(band)
     # First launch ALL 1D pipeline summary plot jobs if any fields are fully finished
     if len(fields_to_validate) > 0:
-        print(f"Found {len(fields_to_validate)} fields that are fully finshed: {fields_to_validate}\n")
+        print(
+            f"Found {len(fields_to_validate)} fields that are fully finshed: {fields_to_validate}\n"
+        )
 
-        for (field, sbid) in fields_to_validate:
-            print(f"Launching job to create summary plot for field {field} with sbid {sbid}")
+        for field, sbid in fields_to_validate:
+            print(
+                f"Launching job to create summary plot for field {field} with sbid {sbid}"
+            )
 
             field_id = remove_prefix(field)
 
             launch_pipeline_summary(field_id, sbid, band)
 
             # Update the status of the '1d_pipeline_validation' column to "Running" regardless of tile number
-            update_validation_status(field, sbid, band_number, "Running", database_config_path=database_config_path)
+            update_validation_status(
+                field,
+                sbid,
+                band_number,
+                "Running",
+                database_config_path=database_config_path,
+            )
 
     # Also the ones that can be done if we skip the projection boundary issues
     if len(field_to_validate_boundaryissues) > 0:
-        print(f"Found {len(field_to_validate_boundaryissues)} fields that are partially finished (except projection boundaries): {field_to_validate_boundaryissues}\n")
+        print(
+            f"Found {len(field_to_validate_boundaryissues)} fields that are partially finished (except projection boundaries): {field_to_validate_boundaryissues}\n"
+        )
 
-        for (field, sbid) in field_to_validate_boundaryissues:
-            print(f"Launching job to create summary plot for field {field} with sbid {sbid} (skipping edges)")
+        for field, sbid in field_to_validate_boundaryissues:
+            print(
+                f"Launching job to create summary plot for field {field} with sbid {sbid} (skipping edges)"
+            )
 
             field_no_prefix = remove_prefix(field)
 
             launch_pipeline_summary(field_no_prefix, sbid, band)
 
             # Update the status of the '1d_pipeline_validation' column to "Running" regardless of tile number
-            update_validation_status(field, sbid, band_number, "Running", database_config_path=database_config_path)
-
+            update_validation_status(
+                field,
+                sbid,
+                band_number,
+                "Running",
+                database_config_path=database_config_path,
+            )
 
     # Now launch individual 1D pipeline jobs for Partial Tiles
     if len(field_IDs) > 0:
-        print(f"Found {len(field_IDs)} partial tile runs in Band 1 ready to be processed with 1D pipeline")
-        print(f"On CANFAR, found {len(sourcelist_fieldIDs_no_prefix)} sourcelists for Band 1")
+        print(
+            f"Found {len(field_IDs)} partial tile runs in Band 1 ready to be processed with 1D pipeline"
+        )
+        print(
+            f"On CANFAR, found {len(sourcelist_fieldIDs_no_prefix)} sourcelists for Band 1"
+        )
 
         field_IDs_no_prefix = [remove_prefix(fid) for fid in field_IDs]
 
         # if len(field_IDs) > len(sourcelist_fieldIDs):
-        tiles_ready_but_not_canfar = set(field_IDs_no_prefix) - set(sourcelist_fieldIDs_no_prefix)
-        print(f"Field IDs ready according to the sheet but sourcelist not on CANFAR: {tiles_ready_but_not_canfar}")
+        tiles_ready_but_not_canfar = set(field_IDs_no_prefix) - set(
+            sourcelist_fieldIDs_no_prefix
+        )
+        print(
+            f"Field IDs ready according to the sheet but sourcelist not on CANFAR: {tiles_ready_but_not_canfar}"
+        )
         # else:
-        tiles_canfar_not_ready = set(sourcelist_fieldIDs_no_prefix) - set(field_IDs_no_prefix)  # noqa: F841
+        tiles_canfar_not_ready = set(sourcelist_fieldIDs_no_prefix) - set(  # noqa: F841
+            field_IDs_no_prefix
+        )  # noqa: F841
         # print(f"Field ID sourcelists on CANFAR but not ready to run: {tiles_canfar_not_ready}")
 
         fields_on_both = set(field_IDs_no_prefix) & set(sourcelist_fieldIDs_no_prefix)
         # print(f"Fields ready on both CADC and CANFAR: {tiles_on_both}")
-        print(f"Number of fields ready according to the sheet and available on CANFAR: {len(fields_on_both)}")
+        print(
+            f"Number of fields ready according to the sheet and available on CANFAR: {len(fields_on_both)}"
+        )
 
         if fields_on_both:
             # Launch the first field_ID that has a sourcelist (assumes this script will be called many times)
@@ -373,29 +498,43 @@ def launch_band1_1Dpipeline(database_config_path: str = "automation/config.env")
                 t2 = str(tile2[i])
                 t3 = str(tile3[i])
                 t4 = str(tile4[i])
-                tilenumbers = [t1, t2, t3, t4] # up to four tilenumbers, or less with '' (empty strings)
+                tilenumbers = [
+                    t1,
+                    t2,
+                    t3,
+                    t4,
+                ]  # up to four tilenumbers, or less with '' (empty strings)
                 SBid = SBids[i]
                 if field_ID_no_prefix not in fields_on_both:
-                    print(f"Skipping {field_ID} with tilenumbers {tilenumbers} as it doesnt have a sourcelist on CANFAR")
+                    print(
+                        f"Skipping {field_ID} with tilenumbers {tilenumbers} as it doesnt have a sourcelist on CANFAR"
+                    )
                     continue
                 else:
-
                     # Can launch this job, if there isn't a pre-dl job running for this SBID
                     # (we dont want to overload CANFAR with too many download jobs)
                     predl_job_running = check_predl_job_running_with_sbid(SBid)
 
                     if predl_job_running:
-                        print(f"A pre-dl job is already running for SBID {SBid}. Skipping launching this job for field {field_ID} covering partial tiles {tilenumbers}.")
+                        print(
+                            f"A pre-dl job is already running for SBID {SBid}. Skipping launching this job for field {field_ID} covering partial tiles {tilenumbers}."
+                        )
                         continue
 
-                    print(f"\nLaunching headless job for 1D pipeline for field {field_ID} observed in SBid {SBid} covering partial tiles {tilenumbers} ")
+                    print(
+                        f"\nLaunching headless job for 1D pipeline for field {field_ID} observed in SBid {SBid} covering partial tiles {tilenumbers} "
+                    )
 
                     # Launch the pipeline
                     launch_pipeline(field_ID_no_prefix, tilenumbers, SBid, band)
 
                     # Update the status to "Running"
-                    conn = db.get_database_connection(test=False, database_config_path=database_config_path)
-                    db.update_partial_tile_1d_pipeline_status(field_ID, tilenumbers, band_number, "Running", conn)
+                    conn = db.get_database_connection(
+                        test=False, database_config_path=database_config_path
+                    )
+                    db.update_partial_tile_1d_pipeline_status(
+                        field_ID, tilenumbers, band_number, "Running", conn
+                    )
                     conn.close()
 
                     break
@@ -403,16 +542,26 @@ def launch_band1_1Dpipeline(database_config_path: str = "automation/config.env")
         else:
             print("No tiles are available on both CADC and CANFAR.")
     else:
-        print("Found no tiles ready to be processed. Either all are done, or a pre-dl job is already running.")
+        print(
+            "Found no tiles ready to be processed. Either all are done, or a pre-dl job is already running."
+        )
+
 
 if __name__ == "__main__":
     # DEPRECATED:
-    # on p1, token for accessing Erik's google sheets 
+    # on p1, token for accessing Erik's google sheets
     # consider chmod 600 <file> to prevent access
     # Google_API_token = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
 
-    parser = argparse.ArgumentParser(description="Checks POSSUM validation status ('POSSUM Pipeline validation' google sheet) if 3D pipeline outputs can be ingested.")
-    parser.add_argument("--database_config_path", type=str, default="automation/config.env", help="Path to .env file with database connection parameters.")
+    parser = argparse.ArgumentParser(
+        description="Checks POSSUM validation status ('POSSUM Pipeline validation' google sheet) if 3D pipeline outputs can be ingested."
+    )
+    parser.add_argument(
+        "--database_config_path",
+        type=str,
+        default="automation/config.env",
+        help="Path to .env file with database connection parameters.",
+    )
     args = parser.parse_args()
 
     launch_band1_1Dpipeline(args.database_config_path)

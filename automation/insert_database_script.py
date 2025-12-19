@@ -12,6 +12,7 @@ from psycopg2.extras import execute_batch
 import gspread
 import pandas as pd
 from dotenv import load_dotenv
+
 # workaround depending on where this script is called from
 try:
     from automation import database_queries as db
@@ -22,6 +23,7 @@ GC = None
 VALIDATION_SHEET = None
 STATUS_SHEET = None
 
+
 def create_partial_tile_pipeline_tables():
     """
     Create the partial_tile_1d_pipeline tables in the database if it does not exist.
@@ -29,7 +31,7 @@ def create_partial_tile_pipeline_tables():
     (similar to how update_partialtile_google_sheet does check_validation_sheet_integrity).
     """
     query_l = []
-    for band_number in (1,2):
+    for band_number in (1, 2):
         sql = f"""
             CREATE TABLE IF NOT EXISTS possum.partial_tile_1d_pipeline_band{band_number} (
                 id BIGSERIAL PRIMARY KEY,
@@ -82,11 +84,11 @@ def create_partial_tile_pipeline_tables():
         query_l.append((sql, None))
     return query_l
 
+
 def insert_partial_tile_data():
-    """Stream the Google Sheet into the database table
-    """
+    """Stream the Google Sheet into the database table"""
     ps = GC.open_by_url(VALIDATION_SHEET)
-    tile_sheet = ps.worksheet('Partial Tile Pipeline - regions - Band 1')
+    tile_sheet = ps.worksheet("Partial Tile Pipeline - regions - Band 1")
     tile_data = tile_sheet.get_all_values()
     # We only have data for band 1 for now
     band_number = 1
@@ -99,17 +101,20 @@ def insert_partial_tile_data():
         """
     sql_data = []
     for row in tile_data[1:]:  # Skip header row
-        sql_data.append((
-           row[0],  # observation
-           row[2] if row[2].isdigit() else None,  # tile_1,
-           row[3] if row[3].isdigit() else None,  # tile_2
-           row[4] if row[4].isdigit() else None,  # tile_3
-           row[5] if row[5].isdigit() else None,  # tile_4
-           row[6],  # type
-           row[7] if row[7].isdigit() else None,  # number_sources
-           row[8] if len(row) > 8 else None # 1d_pipeline
-        ))
+        sql_data.append(
+            (
+                row[0],  # observation
+                row[2] if row[2].isdigit() else None,  # tile_1,
+                row[3] if row[3].isdigit() else None,  # tile_2
+                row[4] if row[4].isdigit() else None,  # tile_3
+                row[5] if row[5].isdigit() else None,  # tile_4
+                row[6],  # type
+                row[7] if row[7].isdigit() else None,  # number_sources
+                row[8] if len(row) > 8 else None,  # 1d_pipeline
+            )
+        )
     return sql, sql_data
+
 
 def insert_row_into_partial_tile_table(row, band_number):
     """
@@ -123,21 +128,22 @@ def insert_row_into_partial_tile_table(row, band_number):
             ON CONFLICT (generated_key) DO NOTHING;
         """
     args = (
-       row[0],  # observation
-       row[2] if row[2].isdigit() else None,  # tile_1,
-       row[3] if row[3].isdigit() else None,  # tile_2
-       row[4] if row[4].isdigit() else None,  # tile_3
-       row[5] if row[5].isdigit() else None,  # tile_4
-       row[6],  # type
-       row[7] if row[7].isdigit() else None,  # number_sources
-       row[8] if len(row) > 8 else None # 1d_pipeline
+        row[0],  # observation
+        row[2] if row[2].isdigit() else None,  # tile_1,
+        row[3] if row[3].isdigit() else None,  # tile_2
+        row[4] if row[4].isdigit() else None,  # tile_3
+        row[5] if row[5].isdigit() else None,  # tile_4
+        row[6],  # type
+        row[7] if row[7].isdigit() else None,  # number_sources
+        row[8] if len(row) > 8 else None,  # 1d_pipeline
     )
     return (sql, args)
 
+
 def create_observation_state_tables():
     """Create observation_state_band1 and observation_state_band2 tables.
-       These tables hold 1d_pipeline_validation and single_SB_1D_pipeline columns
-       per observation from the Google spreadsheets.
+    These tables hold 1d_pipeline_validation and single_SB_1D_pipeline columns
+    per observation from the Google spreadsheets.
     """
     add_column_sql = """
         CREATE TABLE IF NOT EXISTS possum.observation_state_band{} (
@@ -156,7 +162,8 @@ def create_observation_state_tables():
         );
     """
     # 1 table per band since the footprints are different
-    return [(add_column_sql.format(band), None) for band in (1,2)]
+    return [(add_column_sql.format(band), None) for band in (1, 2)]
+
 
 def insert_observation_1d_data_from_spreadsheet():
     """
@@ -164,13 +171,13 @@ def insert_observation_1d_data_from_spreadsheet():
     """
     query_l = []
     data_l = []
-    #POSSUM Pipeline Validation: Partial Tile Pipeline - regions - Band 1: 1d_pipeline_validation
+    # POSSUM Pipeline Validation: Partial Tile Pipeline - regions - Band 1: 1d_pipeline_validation
     ps = GC.open_by_url(VALIDATION_SHEET)
-    band_number = '1'
-    obs_sheet = ps.worksheet(f'Partial Tile Pipeline - regions - Band {band_number}')
+    band_number = "1"
+    obs_sheet = ps.worksheet(f"Partial Tile Pipeline - regions - Band {band_number}")
     obs_data = pd.DataFrame(obs_sheet.get_all_records())
     # Drop repeated observation rows so don't have to reinsert and only take the last row
-    observation_unique = obs_data.drop_duplicates(subset='field_name', keep='last')
+    observation_unique = obs_data.drop_duplicates(subset="field_name", keep="last")
     sql = f"""
             INSERT INTO possum.observation_state_band{band_number}
             (name, "1d_pipeline_validation")
@@ -182,15 +189,17 @@ def insert_observation_1d_data_from_spreadsheet():
     query_l.append(sql)
     sql_data = []
     for row in observation_unique.values:  # Skip header row
-        sql_data.append((
-           row[0],  # field_name
-           row[9], #1d_pipeline_validation
-           row[9]  #1d_pipeline_validation if the row already exists
-        ))
+        sql_data.append(
+            (
+                row[0],  # field_name
+                row[9],  # 1d_pipeline_validation
+                row[9],  # 1d_pipeline_validation if the row already exists
+            )
+        )
     data_l.append(sql_data)
 
-    #POSSUM Status Sheet: Survey Fields - Band 1: single_SB_1D_pipeline
-    for band_number in (1,2):
+    # POSSUM Status Sheet: Survey Fields - Band 1: single_SB_1D_pipeline
+    for band_number in (1, 2):
         sql = f"""
              INSERT INTO possum.observation_state_band{band_number}
              (name, single_sb_1d_pipeline)
@@ -200,26 +209,27 @@ def insert_observation_1d_data_from_spreadsheet():
          """
         query_l.append(sql)
     ps = GC.open_by_url(STATUS_SHEET)
-    obs_sheet = ps.worksheet('Survey Fields - Band 1')
+    obs_sheet = ps.worksheet("Survey Fields - Band 1")
     obs_data = obs_sheet.get_all_values()
     sql_data = []
     for row in obs_data[1:]:  # Skip header row
-        sql_data.append((
-            row[0], row[19], row[19]
-        )) #name, single_SB_1D_pipeline, single_SB_1D_pipeline if the row already exists
+        sql_data.append(
+            (row[0], row[19], row[19])
+        )  # name, single_SB_1D_pipeline, single_SB_1D_pipeline if the row already exists
     data_l.append(sql_data)
 
-    #POSSUM Status Sheet: Survey Fields - Band 2: single_SB_1D_pipeline
-    obs_sheet = ps.worksheet('Survey Fields - Band 2')
+    # POSSUM Status Sheet: Survey Fields - Band 2: single_SB_1D_pipeline
+    obs_sheet = ps.worksheet("Survey Fields - Band 2")
     obs_data = obs_sheet.get_all_values()
     sql_data = []
     for row in obs_data[1:]:  # Skip header row
-        sql_data.append((
-            row[0], row[19], row[19]
-        )) #name, single_SB_1D_pipeline, single_SB_1D_pipeline if the row already exists
+        sql_data.append(
+            (row[0], row[19], row[19])
+        )  # name, single_SB_1D_pipeline, single_SB_1D_pipeline if the row already exists
     data_l.append(sql_data)
 
     return query_l, data_l
+
 
 def create_tile_state_tables():
     """Create tile_state_band{band_number} to hold info per tile, based on Google spreadsheet columns:
@@ -232,7 +242,7 @@ def create_tile_state_tables():
     - 3d_val_comments (comments from the validator)
     """
     query_l = []
-    for band_number in (1,2):
+    for band_number in (1, 2):
         sql = f"""
             CREATE TABLE IF NOT EXISTS possum.tile_state_band{band_number} (
                 tile BIGSERIAL PRIMARY KEY,
@@ -250,6 +260,7 @@ def create_tile_state_tables():
         query_l.append((sql, None))
     return query_l
 
+
 def insert_3d_pipeline_data_from_spreadsheet():
     """
     POSSUM Status Sheet: Survey Tiles - Band 1 (and 2): 3d_pipeline
@@ -257,8 +268,8 @@ def insert_3d_pipeline_data_from_spreadsheet():
     query_l = []
     data_l = []
     ps = GC.open_by_url(STATUS_SHEET)
-    for band_number in ('1','2'):
-        tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_number}')
+    for band_number in ("1", "2"):
+        tile_sheet = ps.worksheet(f"Survey Tiles - Band {band_number}")
         tile_data = tile_sheet.get_all_values()
         sql = f"""
                 INSERT INTO possum.tile_state_band{band_number}
@@ -269,17 +280,17 @@ def insert_3d_pipeline_data_from_spreadsheet():
             """
         query_l.append(sql)
         timestamp_data = []
-        for row in tile_data[1:]: #skip header row
+        for row in tile_data[1:]:  # skip header row
             if isinstance(row[10], datetime):
                 # the spreadsheet has mixed values (state and timestamp)
                 # we're going to separate them
                 timestamp_data.append((row[0], row[10], row[10]))
         data_l.append(timestamp_data)
 
-    #POSSUM Pipeline Validation: Survey Tiles - Band 1: 3d_pipeline_val, 3d_pipeline_ingest
+    # POSSUM Pipeline Validation: Survey Tiles - Band 1: 3d_pipeline_val, 3d_pipeline_ingest
     ps = GC.open_by_url(VALIDATION_SHEET)
-    band_number = '1' # band 2 is not available yet
-    tile_sheet = ps.worksheet(f'Survey Tiles - Band {band_number}')
+    band_number = "1"  # band 2 is not available yet
+    tile_sheet = ps.worksheet(f"Survey Tiles - Band {band_number}")
     tile_data = tile_sheet.get_all_values()
     # data without 3d_pipeline_val
     sql = f"""
@@ -308,25 +319,50 @@ def insert_3d_pipeline_data_from_spreadsheet():
     query_l.append(sql)
     no_validation_data = []
     validation_data = []
-    for row in tile_data[1:]: #skip header row
+    for row in tile_data[1:]:  # skip header row
         _3d_pipeline_val = row[7]
-        if _3d_pipeline_val is None or _3d_pipeline_val.strip() == '':
-            #Don't overwrite existing value with empty value
-            no_validation_data.append((row[0], row[8], row[9], row[10], row[11], row[8],
-                               row[9], row[10], row[11]))
+        if _3d_pipeline_val is None or _3d_pipeline_val.strip() == "":
+            # Don't overwrite existing value with empty value
+            no_validation_data.append(
+                (
+                    row[0],
+                    row[8],
+                    row[9],
+                    row[10],
+                    row[11],
+                    row[8],
+                    row[9],
+                    row[10],
+                    row[11],
+                )
+            )
         else:
-            validation_data.append((row[0], _3d_pipeline_val, row[8], row[9], row[10], row[11],
-                               _3d_pipeline_val, row[8], row[9], row[10], row[11]))
+            validation_data.append(
+                (
+                    row[0],
+                    _3d_pipeline_val,
+                    row[8],
+                    row[9],
+                    row[10],
+                    row[11],
+                    _3d_pipeline_val,
+                    row[8],
+                    row[9],
+                    row[10],
+                    row[11],
+                )
+            )
     data_l.append(no_validation_data)
     data_l.append(validation_data)
     return query_l, data_l
+
 
 def upsert_observation_state_columns():
     """
     Add state columns to observation_state_band1 and observation_state_band2 tables
     """
     query_l = []
-    for band_number in (1,2):
+    for band_number in (1, 2):
         sql = f"""
             INSERT INTO possum.observation_state_band{band_number} (
               name,
@@ -350,12 +386,13 @@ def upsert_observation_state_columns():
         query_l.append((sql, None))
     return query_l
 
+
 def upsert_tile_state_columns():
     """
     Add state columns to tile_state_band1 and tile_state_band2 tables
     """
     query_l = []
-    for band_number in (1,2):
+    for band_number in (1, 2):
         sql = f"""
             INSERT INTO possum.tile_state_band{band_number} (
               tile,
@@ -374,6 +411,7 @@ def upsert_tile_state_columns():
         query_l.append((sql, None))
     return query_l
 
+
 def delete_original_state_columns():
     """
     Delete original state columns from observation and tile tables
@@ -388,9 +426,11 @@ def delete_original_state_columns():
             DROP COLUMN IF EXISTS mfs_update,
             DROP COLUMN IF EXISTS cube_update;
         """
-    return ((sql, None))
+    return (sql, None)
+
 
 ### TEST METHODS ###
+
 
 def create_observation_test_table():
     """
@@ -403,6 +443,7 @@ def create_observation_test_table():
         );
     """
     return (sql, None)
+
 
 def create_associated_tile_test_table(conn):
     """
@@ -417,6 +458,7 @@ def create_associated_tile_test_table(conn):
     """
     db.execute_query(sql, conn, None)
 
+
 def insert_observation_row(name, sbid, conn):
     """
     Insert a row into possum.observation table for tests
@@ -427,17 +469,21 @@ def insert_observation_row(name, sbid, conn):
     """
     return db.execute_query(sql, conn, (name, sbid))
 
-def insert_observation_state_data(name, band_number, _1d_val, single_sb, cube_state, conn):
-	"""
-	Insert test data into possum.observation_state_band1 table
-	"""
-	sql = f"""
+
+def insert_observation_state_data(
+    name, band_number, _1d_val, single_sb, cube_state, conn
+):
+    """
+    Insert test data into possum.observation_state_band1 table
+    """
+    sql = f"""
 		INSERT INTO possum.observation_state_band{band_number}
 		(name, "1d_pipeline_validation", single_sb_1d_pipeline, cube_state)
 		VALUES(%s, %s, %s, %s)
 	"""
-	return db.execute_query(sql, conn, (name, _1d_val, single_sb, cube_state))
-	
+    return db.execute_query(sql, conn, (name, _1d_val, single_sb, cube_state))
+
+
 def insert_associated_tile_data(name, tile, conn):
     """
     Insert test data into possum.associated_tile table
@@ -448,7 +494,10 @@ def insert_associated_tile_data(name, tile, conn):
     """
     return db.execute_query(sql, conn, (name, tile))
 
-def insert_3d_pipeline_test_data(tile_id, _3d_pipeline, val, ingest, cube_state, mfs_state, conn):
+
+def insert_3d_pipeline_test_data(
+    tile_id, _3d_pipeline, val, ingest, cube_state, mfs_state, conn
+):
     """
     Insert test data into tile_state_band1 table
     """
@@ -457,7 +506,10 @@ def insert_3d_pipeline_test_data(tile_id, _3d_pipeline, val, ingest, cube_state,
         (tile, "3d_pipeline", "3d_pipeline_val", "3d_pipeline_ingest", "cube_state", "mfs_state")
         VALUES(%s, %s, %s, %s, %s, %s)
     """
-    return db.execute_query(sql, conn, (tile_id, _3d_pipeline, val, ingest, cube_state, mfs_state))
+    return db.execute_query(
+        sql, conn, (tile_id, _3d_pipeline, val, ingest, cube_state, mfs_state)
+    )
+
 
 def create_test_schema():
     """
@@ -466,6 +518,7 @@ def create_test_schema():
     sql = "CREATE SCHEMA IF NOT EXISTS possum;"
     return (sql, None)
 
+
 def drop_test_schema():
     """
     Drop possum schema in test DB
@@ -473,45 +526,57 @@ def drop_test_schema():
     sql = "DROP SCHEMA IF EXISTS possum CASCADE;"
     return (sql, None)
 
+
 def drop_test_tables():
     """
     Drop all tables in test DB
     """
-    tables = ['tile_state_band1', 'tile_state_band2', 'observation',
-              'observation_state_band1', 'observation_state_band2',
-              'partial_tile_1d_pipeline_band1', 'partial_tile_1d_pipeline_band2']
+    tables = [
+        "tile_state_band1",
+        "tile_state_band2",
+        "observation",
+        "observation_state_band1",
+        "observation_state_band2",
+        "partial_tile_1d_pipeline_band1",
+        "partial_tile_1d_pipeline_band2",
+    ]
     sql_list = []
     for table in tables:
         sql = f"DROP TABLE IF EXISTS possum.{table} CASCADE;"
         sql_list.append((sql, None))
     return sql_list
 
+
 if __name__ == "__main__":
-    load_dotenv(dotenv_path='./automation/config.env')
-    google_api_token = os.getenv('POSSUM_STATUS_TOKEN')
+    load_dotenv(dotenv_path="./automation/config.env")
+    google_api_token = os.getenv("POSSUM_STATUS_TOKEN")
     GC = gspread.service_account(filename=google_api_token)
-    VALIDATION_SHEET = 'https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k'
-    STATUS_SHEET = os.getenv('POSSUM_STATUS_SHEET')
+    VALIDATION_SHEET = "https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k"
+    STATUS_SHEET = os.getenv("POSSUM_STATUS_SHEET")
 
     connection = db.get_database_connection(test=False)
     queries = []
 
     if False:
-        print("This code changes the database schema and inserts data from the Google spreadsheets.")
-        print("But since we have already done that, the code is now disabled to prevent accidental re-runs.")
+        print(
+            "This code changes the database schema and inserts data from the Google spreadsheets."
+        )
+        print(
+            "But since we have already done that, the code is now disabled to prevent accidental re-runs."
+        )
         queries.extend(create_partial_tile_pipeline_tables())
         queries.extend(create_observation_state_tables())
         queries.extend(upsert_observation_state_columns())
         queries.extend(create_tile_state_tables())
         queries.extend(upsert_tile_state_columns())
         queries.append(delete_original_state_columns())
-    
+
     # using with statement to auto commit and rollback if there's exception
     with connection:
         # this is in case we do need to create the tables again
         for query in queries:
             db.execute_query(query[0], connection, query[1], True)
-        
+
         # stream data into the tables
         query, data = insert_partial_tile_data()
         execute_batch(connection.cursor(), query, data)
@@ -521,7 +586,7 @@ if __name__ == "__main__":
         query_list, data_list = insert_3d_pipeline_data_from_spreadsheet()
         for query, data in zip(query_list, data_list):
             execute_batch(connection.cursor(), query, data)
-    
+
     connection.close()
 
     print("Database update complete.")
