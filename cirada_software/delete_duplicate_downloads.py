@@ -188,7 +188,7 @@ class DedupePlanner:
 def dedupe_tiles(
     tile: str,
     root: str | Path = ".",
-    pattern: str = r"20*-0*/*/*/*_{tile}_*",
+    pattern: str = r"20*-*/*/*/*_{tile}_*",
     delete: bool = False,
     moveto: Optional[str | Path] = None,
 ) -> dict:
@@ -298,7 +298,7 @@ def main() -> None:
     )
     parser.add_argument("tile")
     parser.add_argument("--root", default=".")
-    parser.add_argument("--pattern", default=r"20*-0*/*/*/*_{tile}_*")
+    parser.add_argument("--pattern", default=r"20*-*/*/*/*_{tile}_*")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--delete", action="store_true")
     group.add_argument("--moveto", metavar="DIR")

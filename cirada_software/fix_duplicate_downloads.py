@@ -116,7 +116,7 @@ def run_deduplication(
         print(
             f"Running dedupe_tiles for tile {tile} (found {nfiles} files)."
         )
-        pattern = r"20*-0*/*/*/*_{tile}_*"
+        pattern = r"20*-*/*/*/*_{tile}_*"
         dedupe_tiles(
             tile=tile,
             root=download_dir,
