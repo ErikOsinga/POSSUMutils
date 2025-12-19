@@ -151,6 +151,14 @@ def create_symlinks():
     else:
         print("No tiles were skipped due to insufficient files.")
 
+    # Print completion message again.
+    print("Symbolic links created successfully.")
+
+    # Print summary
+    print("\nSummary:")
+    print(
+        f"Total symbolic links created: {len(created_links)}, or {len(created_links) / 4} tiles."
+    )
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
