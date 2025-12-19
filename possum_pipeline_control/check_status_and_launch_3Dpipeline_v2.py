@@ -29,6 +29,7 @@ from vos import Client
 import subprocess
 from canfar.sessions import Session
 import gspread
+import getpass
 import astropy.table as at
 import numpy as np
 from automation import database_queries as db
@@ -203,8 +204,10 @@ def check_download_running(jobname="3dtile-dl"):
 
 
 def launch_download_session(jobname="3dtile-dl"):
+    p1user = getpass.getuser()
+
     # Template bash script to run
-    args = "/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/3d_pipeline_tile_download_ingest.sh"
+    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/3d_pipeline_tile_download_ingest.sh {p1user}"
 
     print("Launching download session")
     print(f"Command: bash {args}")
@@ -238,9 +241,10 @@ def launch_create_symlinks(jobname="3dsymlinks"):
 
     This sorts the tiles into symbolic links in a much more readable format.
     """
+    p1user = getpass.getuser()
 
     # Template bash script to run
-    args = "/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/create_symlinks.sh"
+    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/create_symlinks.sh {p1user}"
 
     print("Launching symlinks session")
     print(f"Command: bash {args}")

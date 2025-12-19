@@ -1,17 +1,16 @@
 
 # download + ingest tiles to prepare for a 3D pipeline run
+# or in the future, a 1D pipeline run with full-depth tiles
 
-cd /arc/projects/CIRADA/polarimetry/ASKAP/Tiles/downloads
+echo "Preparing test pipeline run"
+p1user=$1
 
-file=./config.yml
-if [ -e "$file" ]; then
-    echo "Running possum_run_remote"
+echo "Opening SSH tunnel to prefect server host (p1) as $p1user"
+# open connection
+ssh -fNT -L 4200:localhost:4200 $p1user@206.12.93.32
+# set which port to communicate results to 
+export PREFECT_API_URL="http://localhost:4200/api"
 
-    possum_run_remote
-
-else 
-    echo "possum_run_remote config.yml file does not exist!"
-fi
-
-echo "possum_run_remote finished"
-
+# Run possum_run_remote to download and ingest tiles
+cd /arc/projects/CIRADA/polarimetry/software/POSSUMutils
+python -m possum_pipeline_control.3d_pipeline_download_ingest
