@@ -11,7 +11,6 @@ This script:
 """
 
 import argparse
-import logging
 import re
 import sys
 from pathlib import Path
@@ -19,24 +18,9 @@ from prefect import flow, task
 from cirada_software.delete_duplicate_downloads import dedupe_tiles
 
 
-LOGGER = logging.getLogger(__name__)
-
-
 def latest_file(directory: Path, pattern: str) -> Path | None:
     """
     Return the latest-modified file in 'directory' that matches 'pattern'.
-
-    Parameters
-    ----------
-    directory : Path
-        Directory to search in.
-    pattern : str
-        Glob pattern, e.g. 'symbolic_links_log_*' or '*log'.
-
-    Returns
-    -------
-    Path | None
-        Path to the most recently modified matching file, or None if no match.
     """
     directory = Path(directory)
     if not directory.is_dir():
@@ -57,24 +41,6 @@ def parse_skipped_tiles_with_excess_files(
     """
     Parse the log file for tiles that were skipped because they had
     between min_files and max_files (inclusive) instead of 4.
-
-    Expected line format:
-    'Tile 5761 skipped, band: 943MHz found 5 files instead of 4.'
-
-    Parameters
-    ----------
-    log_file : Path
-        Path to the log file.
-    min_files : int
-        Minimum number of files (inclusive) to consider "excess".
-    max_files : int
-        Maximum number of files (inclusive) to consider.
-
-    Returns
-    -------
-    dict[int, int]
-        Mapping from tile number to number of files.
-        If the same tile appears multiple times, the last occurrence wins.
     """
     pattern = re.compile(
         r"Tile\s+(\d+)\s+skipped,\s+band:\s+\S+\s+found\s+(\d+)\s+files instead of 4\.",
@@ -98,6 +64,7 @@ def parse_skipped_tiles_with_excess_files(
 
     return tiles
 
+
 @task(name="Run deduplication of tiles with excess files")
 def run_deduplication(
     download_dir: Path,
@@ -109,57 +76,45 @@ def run_deduplication(
     - Find latest log file.
     - Parse tiles with excess files.
     - Call dedupe_tiles for each tile.
-
-    Parameters
-    ----------
-    download_dir : Path
-        Root directory where tile downloads are stored.
-    log_dir : Path
-        Directory containing symbolic link logs.
-    log_glob : str
-        Glob pattern to find log files in log_dir.
     """
-    LOGGER.info("Using download directory: %s", download_dir)
-    LOGGER.info("Using log directory: %s", log_dir)
+    print(f"Using download directory: {download_dir}")
+    print(f"Using log directory: {log_dir}")
 
     if not download_dir.is_dir():
-        LOGGER.error(
-            "Download directory does not exist or is not a directory: %s", download_dir
+        print(
+            f"ERROR: Download directory does not exist or is not a directory: {download_dir}"
         )
         sys.exit(1)
 
     if not log_dir.is_dir():
-        LOGGER.error("Log directory does not exist or is not a directory: %s", log_dir)
+        print(f"ERROR: Log directory does not exist or is not a directory: {log_dir}")
         sys.exit(1)
 
     latest_log = latest_file(log_dir, log_glob)
     if latest_log is None:
-        LOGGER.error(
-            "No log files found in %s matching pattern '%s'", log_dir, log_glob
+        print(
+            f"ERROR: No log files found in {log_dir} matching pattern '{log_glob}'"
         )
         sys.exit(1)
 
-    LOGGER.info("Latest log file: %s", latest_log)
+    print(f"Latest log file: {latest_log}")
 
     tiles_with_excess = parse_skipped_tiles_with_excess_files(latest_log)
     if not tiles_with_excess:
-        LOGGER.info(
-            "No tiles with more than 4 (and up to 8) files found in %s. Nothing to do.",
-            latest_log,
+        print(
+            f"No tiles with more than 4 (and up to 8) files found in {latest_log}. "
+            "Nothing to do."
         )
         return
 
-    LOGGER.info(
-        "Found %d tile(s) with excess files: %s",
-        len(tiles_with_excess),
-        ", ".join(str(t) for t in sorted(tiles_with_excess)),
+    print(
+        f"Found {len(tiles_with_excess)} tile(s) with excess files: "
+        f"{', '.join(str(t) for t in sorted(tiles_with_excess))}"
     )
 
     for tile, nfiles in sorted(tiles_with_excess.items()):
-        LOGGER.info(
-            "Running dedupe_tiles for tile %d (found %d files).",
-            tile,
-            nfiles,
+        print(
+            f"Running dedupe_tiles for tile {tile} (found {nfiles} files)."
         )
         pattern = r"20*-0*/*/*/*_{tile}_*"
         dedupe_tiles(
@@ -195,16 +150,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
     return parser
 
+
 @flow(name="fix_duplicate_downloads", log_prints=True)
 def main() -> None:
     """
     Entry point for command line execution.
     """
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    )
-
     parser = build_arg_parser()
     args = parser.parse_args()
 
