@@ -15,7 +15,7 @@ import logging
 import re
 import sys
 from pathlib import Path
-
+from prefect import flow, task
 from cirada_software.delete_duplicate_downloads import dedupe_tiles
 
 
@@ -98,7 +98,7 @@ def parse_skipped_tiles_with_excess_files(
 
     return tiles
 
-
+@task(name="Run deduplication of tiles with excess files")
 def run_deduplication(
     download_dir: Path,
     log_dir: Path,
@@ -195,7 +195,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
     return parser
 
-
+@flow(name="fix_duplicate_downloads", log_prints=True)
 def main() -> None:
     """
     Entry point for command line execution.

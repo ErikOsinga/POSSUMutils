@@ -3,6 +3,7 @@ import argparse
 import glob
 import time
 from possum_pipeline_control.util import TemporaryWorkingDirectory
+from prefect import flow
 
 """
 Python script to run after downloading tiles with "possum_run_remote"
@@ -10,7 +11,7 @@ Looks through the timeblocked directories in the ASKAP/Tiles/downloads/ folder t
 create symbolic links in the Tiles/ directory for easy access per tile.
 """
 
-
+@flow(name="create_symlinks", log_prints=True)
 def create_symlinks():
     # Meant to be run in the following directory on CANFAR
     assert os.getcwd() == "/arc/projects/CIRADA/polarimetry/ASKAP/Tiles", (
