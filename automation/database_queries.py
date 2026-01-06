@@ -41,8 +41,20 @@ def get_database_parameters(
     """
     Get database parameters from env file (test.env for test, config.env otherwise)
     """
+    test_db_name = 'possum_test'
     if test:
-        load_dotenv(dotenv_path="automation/unit_tests/test.env")
+        load_dotenv(dotenv_path='automation/unit_tests/test.env')
+        # Check that we're not accidentally connecting to prod DB in test mode
+        if test_db_name != os.getenv('TEST_DATABASE_NAME'):
+            raise ConnectionError("""Please make sure your test database is named possum_test!
+                        This is to avoid accidentally using real prod database in tests.""")
+        return {
+            'dbname': os.getenv('TEST_DATABASE_NAME'),
+            'user': os.getenv('TEST_DATABASE_USER'),
+            'password': os.getenv('TEST_DATABASE_PASSWORD'),
+            'host': os.getenv('TEST_DATABASE_HOST'),
+            'port': os.getenv('TEST_DATABASE_PORT')
+        }
     else:
         print(f"Attempting to load database config from {database_config_path}")
 
@@ -59,14 +71,13 @@ def get_database_parameters(
         # Get database connection details from config.env file
         load_dotenv(dotenv_path=database_config_path)
 
-    return {
-        "dbname": os.getenv("DATABASE_NAME"),
-        "user": os.getenv("DATABASE_USER"),
-        "password": os.getenv("DATABASE_PASSWORD"),
-        "host": os.getenv("DATABASE_HOST"),
-        "port": os.getenv("DATABASE_PORT"),
-    }
-
+        return {
+            "dbname": os.getenv("DATABASE_NAME"),
+            "user": os.getenv("DATABASE_USER"),
+            "password": os.getenv("DATABASE_PASSWORD"),
+            "host": os.getenv("DATABASE_HOST"),
+            "port": os.getenv("DATABASE_PORT"),
+        }
 
 def execute_update_query(query, conn, params=None, verbose=False):
     """
