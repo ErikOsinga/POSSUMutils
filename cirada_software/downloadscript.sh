@@ -7,8 +7,10 @@ echo "This file is DEPRECATED"
 # echo "Opening SSH tunnel to prefect server host (p1)"
 # # open connection
 # ssh -fNT -L 4200:localhost:4200 erik@206.12.93.32
-# # set which port to communicate results to 
-# export PREFECT_API_URL="http://localhost:4200/api"
+# set PREFECT URL
+# set -a
+# source automation/config.env
+# set +a
 
 # #RMtools not used but cant hurt to add it to path
 # echo "TEMPORARILY: adding RMtools[dev] to pythonpath until new release (>v1.4.6)"

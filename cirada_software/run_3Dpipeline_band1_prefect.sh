@@ -13,8 +13,10 @@ p1user=$3
 echo "Opening SSH tunnel to prefect server host (p1) as user $p1user"
 # open connection
 ssh -fNT -L 4200:localhost:4200 $p1user@206.12.93.32
-# set which port to communicate results to 
-export PREFECT_API_URL="http://localhost:4200/api"
+# set PREFECT URL
+set -a
+source automation/config.env
+set +a
 
 echo "TEMPORARILY: adding RMtools[dev] to pythonpath until new release (>v1.4.6)"
 export PYTHONPATH="/arc/projects/CIRADA/polarimetry/software/RMtoolsdev/:$PYTHONPATH"

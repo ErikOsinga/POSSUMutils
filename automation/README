@@ -2,4 +2,4 @@
 2. Enter ausSRC database details in the .env file. 
 3. Enter Google spreadsheet token
 4. Update Google spreadsheet file locations (only if the files are different, e.g. for testing)
-
+5. Update PREFECT_API_URL and PREFECT_API_AUTH_STRING with ausSRC details (ask an ausSRC personnel!)
