@@ -1,12 +1,12 @@
 The tests use the database connection details used in test.env file. Please create the test.env file with the following keys:
 
-DATABASE_HOST=
-DATABASE_PORT=
-DATABASE_NAME=
-DATABASE_USER=
-DATABASE_PASSWORD=
+TEST_DATABASE_HOST=
+TEST_DATABASE_PORT=
+TEST_DATABASE_NAME=
+TEST_DATABASE_USER=
+TEST_DATABASE_PASSWORD=
 
-!!IMPORTANT: Please DO NOT use production database for tests, as it will be emptied afterwards!!
+!!IMPORTANT: The database has to be named possum_test to reduce the possibility of using the wrong database for tests, as they will be emptied at the end of the tests!!
 
 You need to provide an empty database for the tests to run. It is easy to do this with psql. 
 The tests will create possum schema if it's not already there, and it will be dropped with the contents afterwards.
