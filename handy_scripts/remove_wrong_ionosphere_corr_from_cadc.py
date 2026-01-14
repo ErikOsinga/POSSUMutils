@@ -265,7 +265,9 @@ def check_and_remove_from_CADC(
     obs_dt = pd.to_datetime(obs_table["lastModified"].filled(pd.NA), utc=True)
 
     obs_mask = pd.Series([True] * len(obs_table))
-    obs_mask &= pd.Series([str(f) == str(target_freq) for f in obs_table["freq"]])
+    if band is not None:
+        obs_mask &= pd.Series([str(f) == str(target_freq) for f in obs_table["freq"]])
+    
     if tilenumber is not None:
         obs_mask &= pd.Series(
             [str(t) == str(tilenumber) for t in obs_table["tile_number"]]
