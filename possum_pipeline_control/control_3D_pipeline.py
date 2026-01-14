@@ -1,6 +1,138 @@
+import os
 import subprocess
 import time
+from datetime import date
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+from dotenv import load_dotenv
+
+from automation import database_queries as db
 from print_all_open_sessions import get_open_sessions
+
+
+def create_3d_progress_plot():
+    """Create a progress plot for the 3D pipeline."""
+
+    load_dotenv(dotenv_path="./automation/config.env")
+    conn = db.get_database_connection(test=False)
+    rows = db.get_3d_tile_data(tile_id=None, band_number=1, conn=conn)
+    # tile, "3d_pipeline_val", "3d_val_link", "3d_pipeline_ingest", "3d_pipeline", "cube_state"
+    tile3d_table = db.rows_to_table(
+        rows,
+        colnames=[
+            "tile",
+            "3d_pipeline_val",
+            "3d_val_link",
+            "3d_pipeline_ingest",
+            "3d_pipeline",
+            "cube_state",
+        ],
+        dtype=[int, str, str, str, str, str],
+    )
+
+    # Count the number of tiles in each state. Remember the states can be the following:
+    # valid_states_val = ["WaitingForValidation", "Failed", "Good", "Running", "None"]
+    # valid_states_ingest = ["Ingested", "IngestRunning", "IngestFailed", "None"]
+    # valid_states_final = any timestamp, or None
+
+    # Create cumulative counts for each state in "3d_pipeline_val"
+    # Explicit, enforced order for visual consistency
+    val_order = [
+        "Good",
+        "Failed",
+        "Running",
+        "WaitingForValidation",
+        "None",
+    ]
+
+    ingest_order = [
+        "Ingested",
+        "IngestRunning",
+        "IngestFailed",
+        "None",
+    ]
+
+    final_order = [
+        "Completed",
+        "Not completed",
+    ]
+
+    counts_val = {
+        state: np.sum(tile3d_table["3d_pipeline_val"] == state) for state in val_order
+    }
+
+    counts_ingest = {
+        state: np.sum(tile3d_table["3d_pipeline_ingest"] == state)
+        for state in ingest_order
+    }
+
+    counts_final = {
+        "Completed": np.sum(tile3d_table["3d_pipeline"] != "None"),
+        "Not completed": np.sum(tile3d_table["3d_pipeline"] == "None"),
+    }
+
+    # Now plot the results as a histogram with numbers above the bars
+    fig, axes = plt.subplots(3, 1, figsize=(10, 15))
+
+    # --- Validation ---
+    axes[0].bar(val_order, [counts_val[s] for s in val_order], color="skyblue")
+    axes[0].set_title("3D Pipeline Validation Status")
+    axes[0].set_ylabel("Number of Tiles")
+    for i, state in enumerate(val_order):
+        count = counts_val[state]
+        axes[0].text(i, count + 1, str(count), ha="center")
+
+    # --- Ingest ---
+    axes[1].bar(
+        ingest_order, [counts_ingest[s] for s in ingest_order], color="lightgreen"
+    )
+    axes[1].set_title("3D Pipeline Ingest Status")
+    axes[1].set_ylabel("Number of Tiles")
+    for i, state in enumerate(ingest_order):
+        count = counts_ingest[state]
+        axes[1].text(i, count + 1, str(count), ha="center")
+
+    # --- Final ---
+    axes[2].bar(final_order, [counts_final[s] for s in final_order], color="salmon")
+    axes[2].set_title("3D Pipeline Final Completion Status")
+    axes[2].set_ylabel("Number of Tiles")
+    for i, state in enumerate(final_order):
+        count = counts_final[state]
+        axes[2].text(i, count + 1, str(count), ha="center")
+
+    for ax in axes:
+        ax.set_yscale("log")
+
+    today_str = date.today().isoformat()
+
+    fig.suptitle(
+        f"3D Pipeline Progress Overview - {today_str}",
+        fontsize=16,
+    )
+
+    plt.tight_layout()
+    plt.savefig("./plots/3D_pipeline_progress_cumulative.png")
+    plt.close()
+
+
+def check_progress_plot():
+    """Check and make a progress plot for 3D pipeline, if it has not been updated in a day."""
+
+    # If the plot hasnt been updated in a day, re-run the plot
+    local_file = Path("./plots/3D_pipeline_progress_cumulative.png")
+    Path("./plots/").mkdir(exist_ok=True)
+
+    if not local_file.exists():
+        print("Creating 3D pipeline progress plot")
+        # create progress plot for 3D pipeline
+        create_3d_progress_plot()
+    else:
+        file_mod_time = os.path.getmtime(local_file)
+        if (time.time() - file_mod_time) > 86400:  # 86400 seconds = 1 day
+            print("Updating 1D pipeline progress plot")
+            create_3d_progress_plot()
 
 
 def run_script_intermittently(
@@ -76,6 +208,9 @@ def run_script_intermittently(
         run_count += 1
         if max_runs is not None and run_count >= max_runs:
             break
+
+        # Check and update the 3D pipeline progress plot
+        check_progress_plot()
 
         print(f"Sleeping for {interval} seconds...")
         time.sleep(interval)
