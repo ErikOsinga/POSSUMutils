@@ -401,7 +401,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--plugin",
         dest="plugin",
-        default="./remove_artifact.py",
+        default="/arc/projects/CIRADA/polarimetry/software/POSSUMutils/handy_scripts/remove_artifact.py",
         help="Plugin path for caom2-repo visit.",
     )
     parser.add_argument(
