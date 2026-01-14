@@ -124,7 +124,7 @@ def _write_todo_file(observation_ids: list[str], todo_path: Path) -> None:
 
 def check_and_remove_from_CADC(
     tilenumber: str | None,
-    band: str = "943MHz",
+    band: None | str = "943MHz",
     cadc_cert_file: str = "/arc/home/ErikOsinga/.ssl/cadcproxy.pem",
     cutoff_date: str = "2025-01-01",
     dry_run: bool = True,
@@ -174,10 +174,13 @@ def check_and_remove_from_CADC(
     art_table.add_column(tile_numbers, name="tile_number")
     art_table.add_column(freqs, name="freq")
 
-    target_freq = band.replace("MHz", "")
-
     base_mask = pd.Series([True] * len(art_table))
-    base_mask &= pd.Series([str(f) == str(target_freq) for f in art_table["freq"]])
+    if band is None:
+        target_freq = None
+    else:
+        target_freq = band.replace("MHz", "")
+
+        base_mask &= pd.Series([str(f) == str(target_freq) for f in art_table["freq"]])
 
     if tilenumber is not None:
         base_mask &= pd.Series(
@@ -193,7 +196,7 @@ def check_and_remove_from_CADC(
 
     cutoff = pd.Timestamp(cutoff_date, tz="UTC")
     old_mask = dt < cutoff
-    subtable = filtered_art[old_mask.values]
+    subtable = filtered_art[old_mask]
     subdf = subtable.to_pandas()
 
     print(
@@ -303,7 +306,8 @@ def _parse_args() -> argparse.Namespace:
         help="Tile number to restrict to (default: no restriction).",
     )
     parser.add_argument(
-        "--band", dest="band", default="943MHz", help="Band string like 943MHz."
+        "--band", dest="band", default=None,#"943MHz", 
+        help="Band string like 943MHz. Or None for no restriction."
     )
     parser.add_argument(
         "--cert",
