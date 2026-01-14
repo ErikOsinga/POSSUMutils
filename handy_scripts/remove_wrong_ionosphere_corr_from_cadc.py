@@ -40,11 +40,17 @@ This script has been ran on 2025-01-14 to delete wrong data from CADC. Results a
 import argparse
 import os
 import subprocess
+from datetime import datetime
+from io import StringIO
 from pathlib import Path
+from sys import argv
 
 import astroquery.cadc as cadc
 import matplotlib.pyplot as plt
 import pandas as pd
+from astropy.table import Table
+from cadctap import CadcTapClient
+from cadcutils.net import Subject
 
 
 def _ensure_parent_dir(path: Path) -> None:
@@ -160,6 +166,48 @@ def _write_todo_file(observation_ids: list[str], todo_path: Path) -> None:
         for obs_id in unique_ids:
             f.write(f"{obs_id}\n")
 
+def _run_query(
+    query_string,
+    client,
+    collection,
+    timeout=60,
+) -> Table:
+    # timeout is in minutes
+    print('Starting query for POSSUM data records. This may take a while...')
+    buffer = StringIO()
+    client.query(
+        query_string,
+        output_file=buffer,
+        data_only=True,
+        response_format='tsv',
+        timeout=timeout,
+    )
+    temp = Table.read(buffer.getvalue().split('\n'), format='ascii.tab')
+    print('Query finished')
+    temp.to_pandas().to_csv(f'./{collection}_all_file_uris.txt', index=False, header=False)
+    return temp
+
+def query_possum_files():
+    """Query all POSSUM files (data records) from CADC.
+    
+    return as an astropy Table
+    """
+    collection = "POSSUM"
+    resource_id = "ivo://cadc.nrc.ca/global/luskan"
+    certificate = Path("~/.ssl/cadcproxy.pem").expanduser()
+    assert certificate.exists(), f"Certificate file not found: {certificate.resolve()}. Please run cadc-get-cert"
+    
+    subject = Subject(certificate=str(certificate))
+
+    qs = f"""
+    SELECT A.uri, A.lastModified
+    FROM inventory.Artifact AS A
+    WHERE A.uri LIKE '%:{collection}/%'
+    """
+    client = CadcTapClient(subject, resource_id=resource_id)
+    result_table = _run_query(qs, client, collection)
+    return result_table
+
 
 def check_and_remove_from_CADC(
     tilenumber: str | None,
@@ -184,66 +232,48 @@ def check_and_remove_from_CADC(
     """
     session = _make_cadc_session(cadc_cert_file)
 
-    # ---- Query 1: Artifact URIs (for cadcremove) ----
-    q_art = session.create_async(
-        """
-        SELECT
-            O.observationID,
-            P.productID,
-            O.lastModified,
-            P.planeURI,
-            A.uri AS artifactURI
-        FROM caom2.Observation AS O
-        JOIN caom2.Plane AS P
-            ON O.obsID = P.obsID
-        JOIN caom2.Artifact AS A
-            ON P.planeID = A.planeID
-        WHERE
-            O.collection = 'POSSUM'
-            AND O.observationID NOT LIKE '%pilot1'
-        """
-    )
-    q_art.run().wait()
-    q_art.raise_if_error()
-    art_table = q_art.fetch_result().to_table()
+    # ---- Query 1: Artifact URIs for data records / files (for cadcremove) ----
+    art_table = query_possum_files()
 
-    # Add some derived columns for debugging/filtering
-    tile_numbers = [x.split("_")[-2] for x in art_table["observationID"]]
-    freqs = [x.split("MHz")[0] for x in art_table["observationID"]]
-    art_table.add_column(tile_numbers, name="tile_number")
-    art_table.add_column(freqs, name="freq")
+    # # Add some derived columns for debugging/filtering
+    # tile_numbers = [x.split("_")[-2] for x in art_table["observationID"]]
+    # freqs = [x.split("MHz")[0] for x in art_table["observationID"]]
+    # art_table.add_column(tile_numbers, name="tile_number")
+    # art_table.add_column(freqs, name="freq")
 
-    base_mask = pd.Series([True] * len(art_table))
-    if band is None:
-        target_freq = None
-    else:
-        target_freq = band.replace("MHz", "")
+    # base_mask = pd.Series([True] * len(art_table))
+    # if band is None:
+    #     target_freq = None
+    # else:
+    #     target_freq = band.replace("MHz", "")
 
-        base_mask &= pd.Series([str(f) == str(target_freq) for f in art_table["freq"]])
+    #     base_mask &= pd.Series([str(f) == str(target_freq) for f in art_table["freq"]])
 
-    if tilenumber is not None:
-        base_mask &= pd.Series(
-            [str(t) == str(tilenumber) for t in art_table["tile_number"]]
-        )
+    # if tilenumber is not None:
+    #     base_mask &= pd.Series(
+    #         [str(t) == str(tilenumber) for t in art_table["tile_number"]]
+    #     )
 
-    filtered_art = art_table[base_mask.values]
+    # art_table = art_table[base_mask.values]
 
     # lastModified -> pandas datetime
-    dt = pd.to_datetime(filtered_art["lastModified"].filled(pd.NA), utc=True)
+    dt = pd.to_datetime(art_table["lastModified"], utc=True)
     days = dt.floor("D")
     _plot_counts_per_day(days, Path(plot_path))
 
     cutoff = pd.Timestamp(cutoff_date, tz="UTC")
     old_mask = dt < cutoff
-    subtable = filtered_art[old_mask]
+    subtable = art_table[old_mask]
     subdf = subtable.to_pandas()
 
     print(
-        f"Matched {len(filtered_art)} artifacts after filters (band={band}, tile={tilenumber})."
+        f"Matched {len(art_table)} artifacts after filters (band={band}, tile={tilenumber})."
     )
     print(
         f"Will {'DRY-RUN delete' if dry_run else 'delete'} {len(subdf)} artifacts lastModified before {cutoff}."
     )
+
+    art_table["artifactURI"] = art_table['uri']
 
     # cadcremove phase
     _write_log_line(
@@ -276,19 +306,23 @@ def check_and_remove_from_CADC(
             print(f"See errors in: {Path(uri_error_log_path).resolve()}")
 
     # ---- Query 2: observationID list (for caom2-repo visit) ----
-    # Using a simpler query for just (Plane + Observation).
+    # for getting the metadata
     q_obs = session.create_async(
         """
         SELECT
-            Observation.observationID,
-            Plane.productID,
-            Observation.lastModified
-        FROM caom2.Plane AS Plane
-        JOIN caom2.Observation AS Observation
-            ON Plane.obsID = Observation.obsID
+            O.observationID,
+            P.productID,
+            O.lastModified,
+            P.planeURI,
+            A.uri AS artifactURI
+        FROM caom2.Observation AS O
+        JOIN caom2.Plane AS P
+            ON O.obsID = P.obsID
+        JOIN caom2.Artifact AS A
+            ON P.planeID = A.planeID
         WHERE
-            (Observation.collection = 'POSSUM')
-            AND (observationID NOT LIKE '%pilot1')
+            O.collection = 'POSSUM'
+            AND O.observationID NOT LIKE '%pilot1'
         """
     )
     q_obs.run().wait()
@@ -304,7 +338,9 @@ def check_and_remove_from_CADC(
     obs_dt = pd.to_datetime(obs_table["lastModified"].filled(pd.NA), utc=True)
 
     obs_mask = pd.Series([True] * len(obs_table))
+    
     if band is not None:
+        target_freq = band.replace("MHz", "")
         obs_mask &= pd.Series([str(f) == str(target_freq) for f in obs_table["freq"]])
     
     if tilenumber is not None:
