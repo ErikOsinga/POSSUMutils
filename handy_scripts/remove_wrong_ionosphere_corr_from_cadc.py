@@ -1,3 +1,42 @@
+"""
+Query, audit, and optionally remove POSSUM data products from CADC.
+
+This script performs a two-stage cleanup workflow against the CIRADA
+CADC TAP service:
+
+1. Artifact removal
+   - Queries caom2.Observation, caom2.Plane, and caom2.Artifact for POSSUM.
+   - Applies optional filters on tile number, frequency band, and a
+     lastModified cutoff date.
+   - Produces a diagnostic plot of ingestion counts per day.
+   - Optionally deletes matching artifacts using the cadcremove CLI.
+   - Always logs targeted artifact URIs for traceability.
+
+2. Metadata removal
+   - Queries caom2.Observation and caom2.Plane to obtain observationIDs.
+   - Writes a todo file (one observationID per line).
+   - Optionally runs caom2-repo visit with a user-supplied plugin to
+     remove CAOM2 metadata corresponding to the deleted artifacts.
+
+Safety and usage notes:
+- By default, this script deletes products last modified before 2025-01-01.
+- By default, the script runs in dry-run mode: no deletions are executed.
+  Only logs and todo.txt are written.
+- Actual deletion requires explicitly disabling dry-run (for example,
+  via a command-line flag).
+- It is strongly recommended to inspect the generated logs and todo.txt
+  before performing irreversible operations.
+- Authentication relies on a valid CADC proxy certificate (cadcproxy.pem).
+
+Intended use:
+- Cleanup of historical POSSUM products from CADC, e.g. those with incorrect ionosphere corrections.
+
+
+This script has been ran on 2025-01-14 to delete wrong data from CADC. Results are found in
+
+/arc/projects/CIRADA/polarimetry/tests/remove_wrong_ionosphere_from_cadc/
+"""
+
 import argparse
 import os
 import subprocess
