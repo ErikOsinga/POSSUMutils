@@ -523,6 +523,8 @@ if __name__ == "__main__":
 
     # If the plot hasnt been updated in a day, re-run the plot
     local_file = "./plots/1D_pipeline_progress_cumulative.png"
+    Path('./plots/').mkdir(exist_ok=True)
+
     if not os.path.exists(local_file):
         print("Creating 1D pipeline progress plot")
         # create progress plot from Cameron's status sheet.
