@@ -94,11 +94,19 @@ class ObservationUpdater():
 
         assert isinstance(observation, Observation), (
             "observation %s is not an Observation".format(observation))
+        
         print("Observation: {}".format(observation.observation_id))
         for plane in observation.planes.values():
             delete_these = []
             for artifact in plane.artifacts.values():
-                if artifact.uri in todotxt:
+                
+                # would need to change version number if not v1
+                # artifacts are of the form 
+                # cadc:POSSUM/943MHz_20asec_2337-5552_11274_v1_multifrequencysynthesis_i_t0_prev.jpg
+                # and we need only the part before the end of _v1
+                artifact_obsID = (artifact.strip('cadc:POSSUM/').split('_v1')[0])+"_v1"
+
+                if artifact_obsID in todotxt:
                     delete_these.append(artifact.uri)
                 else:
                     print(f"Found {artifact.uri=} but not in todo.txt")
