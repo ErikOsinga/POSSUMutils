@@ -273,7 +273,7 @@ def check_and_remove_from_CADC(
         f"Will {'DRY-RUN delete' if dry_run else 'delete'} {len(subdf)} artifacts lastModified before {cutoff}."
     )
 
-    art_table["artifactURI"] = art_table['uri']
+    subdf["artifactURI"] = subdf['uri']
 
     # cadcremove phase
     _write_log_line(
