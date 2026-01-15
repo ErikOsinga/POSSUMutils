@@ -104,7 +104,7 @@ class ObservationUpdater():
                 # artifacts are of the form 
                 # cadc:POSSUM/943MHz_20asec_2337-5552_11274_v1_multifrequencysynthesis_i_t0_prev.jpg
                 # and we need only the part before the end of _v1
-                artifact_obsID = (artifact.strip('cadc:POSSUM/').split('_v1')[0])+"_v1"
+                artifact_obsID = (artifact.uri.strip('cadc:POSSUM/').split('_v1')[0])+"_v1"
 
                 if artifact_obsID in todotxt:
                     delete_these.append(artifact.uri)
