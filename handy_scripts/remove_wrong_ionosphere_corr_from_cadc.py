@@ -140,6 +140,8 @@ def remove_metadata(
             f"Dry run: wrote/using {todo_p.resolve()} but will not execute caom2-repo."
         )
         return
+    else:
+        print(f"Running caom2-repo visit to remove metadata for {todo_p.resolve()}")
 
     rc, out, err = _run_cmd(cmd)
     if rc != 0:
@@ -325,6 +327,8 @@ def check_and_remove_from_CADC(
             AND O.observationID NOT LIKE '%pilot1'
         """
     )
+    print('Starting query for POSSUM metadata records. This may take a while...')
+
     q_obs.run().wait()
     q_obs.raise_if_error()
     obs_table = q_obs.fetch_result().to_table()
