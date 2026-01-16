@@ -211,6 +211,66 @@ def query_possum_files():
     return result_table
 
 
+def remove_observation(
+    cert_file: str,
+    todo_path: str = "todo.txt",
+    collection: str = "POSSUM",
+    dry_run: bool = True,
+    log_path: str = "caom2_repo_visit.log",
+    error_log_path: str = "caom2_repo_visit_errors.log",
+) -> None:
+    """
+    Run removal of entire observations using caom2-repo delete.
+
+    example command executed when dry_run is False:
+      caom2-repo delete --cert cert_file POSSUM observationID
+
+    e.g.
+
+    caom2-repo delete --cert ~/.ssl/cadcproxy.pem POSSUM 1367MHz_20asec_0900-0112_6256_v1
+    """
+
+    todo_p = Path(todo_path)
+    if not todo_p.exists():
+        raise FileNotFoundError(f"todo file not found: {todo_p.resolve()}")
+
+    with todo_p.open("r", encoding="utf-8") as f:
+        observation_ids = [line.strip() for line in f if line.strip()]
+
+    _write_log_line(Path(log_path), f"# Start: dry_run={dry_run} todo={todo_p.resolve()}")
+
+    for obs_id in observation_ids:
+        cmd = [
+            "caom2-repo",
+            "delete",
+            "--cert",
+            cert_file,
+            collection,
+            obs_id,
+        ]
+
+        _write_log_line(Path(log_path), f"# cmd: {' '.join(cmd)}")
+
+        if dry_run:
+            continue
+
+        rc, out, err = _run_cmd(cmd)
+        if rc != 0:
+            _write_log_line(
+                Path(error_log_path),
+                f"observationID: {obs_id}\nreturncode: {rc}\nstdout:\n{out}\nstderr:\n{err}\n---",
+            )
+            print(
+                f"caom2-repo delete failed for observationID={obs_id} (rc={rc}). See {Path(error_log_path).resolve()}"
+            )
+
+        # Keep stdout for auditability
+        if out.strip():
+            _write_log_line(Path(log_path), out.strip())
+
+    print("Observation removal complete via caom2-repo delete.")
+
+
 def check_and_remove_from_CADC(
     tilenumber: str | None,
     band: None | str = "943MHz",
@@ -363,17 +423,30 @@ def check_and_remove_from_CADC(
     )
 
     # Remove metadata (or dry-run)
-    remove_metadata(
+    # remove_metadata(
+    #     cert_file=cadc_cert_file,
+    #     todo_path=todo_p.as_posix(),
+    #     plugin_path=plugin_path,
+    #     collection="POSSUM",
+    #     dry_run=dry_run,
+    #     metadata_log_path=metadata_log_path,
+    #     metadata_error_log_path=metadata_error_log_path,
+    # )
+
+
+    # Remove entire observation from CADC
+    remove_observation(
         cert_file=cadc_cert_file,
         todo_path=todo_p.as_posix(),
-        plugin_path=plugin_path,
         collection="POSSUM",
         dry_run=dry_run,
-        metadata_log_path=metadata_log_path,
-        metadata_error_log_path=metadata_error_log_path,
+        log_path=metadata_log_path.replace('visit', 'delete'),
+        error_log_path=metadata_error_log_path.replace('visit', 'delete')
     )
 
     return subdf
+
+
 
 
 def _parse_args() -> argparse.Namespace:
