@@ -3,7 +3,6 @@ tilelist="['$4','$5','$6','$7']"
 echo $tilelist
 echo "Preparing pipeline run name $1 field_ID $2 SB $3 tiles $tilelist"
 
-p1user=$8
 
 #### parse that list into the directory we want to create. e.g. ['8843','8971','',''], becomes 8843+8971
 
@@ -31,12 +30,6 @@ echo "Will create directory $workdir"
 echo "Creating config file"
 python /arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/create_config_partialtiles.py /arc/projects/CIRADA/polarimetry/software/POSSUM_Polarimetry_Pipeline/pipeline/canfar_config_templates/config_template_PartialTiles_1d_band1.ini config_943MHz_$2_$3_$tilelist_dir.ini $workdir $2 $3 "$tilelist_dir"
 # arguments: template file, output_filename, workdir, fieldstr, SB_number, tilelist_dir
-
-echo "Opening SSH tunnel to prefect server host (p1) as user $p1user"
-# open connection
-ssh -fNT -L 4200:localhost:4200 $p1user@206.12.93.32
-# set which port to communicate results to 
-export PREFECT_API_URL="http://localhost:4200/api"
 
 echo "adding RMtools[dev] to pythonpath to work with dev branch of RMtools"
 export PYTHONPATH="/arc/projects/CIRADA/polarimetry/software/RMtoolsdev/:$PYTHONPATH"

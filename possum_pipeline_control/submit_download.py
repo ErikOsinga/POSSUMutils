@@ -37,11 +37,10 @@ def launch_download():
     ram = 16  # Check allowed values at canfar.net/science-portal
 
     # Template bash/python script to run
-    cmd = "bash"
-    args = "/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/3dpipeline_downloadscript.sh"
+    args = "/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/3dpipeline_downloadscript.py"
 
     print("Launching session")
-    print(f"Command: {cmd} {args}")
+    print(f"Command: {args}")
 
     session_id = session.create(
         name=run_name.replace(
@@ -51,7 +50,7 @@ def launch_download():
         cores=cores,
         ram=ram,
         kind="headless",
-        cmd=cmd,
+        cmd="python",
         args=args,
         replicas=1,
     )

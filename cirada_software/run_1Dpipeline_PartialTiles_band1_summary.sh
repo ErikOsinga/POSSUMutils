@@ -1,8 +1,5 @@
 echo "Preparing summary pipeline run name $1 field_ID $2 SB $3"
 
-p1user=$4
-
-
 workdir=/arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/943MHz/$2/$3/
 echo "In directory $workdir"
 
@@ -12,12 +9,6 @@ echo "In directory $workdir"
 echo "Creating config file"
 python /arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/create_config_partialtiles_summary.py /arc/projects/CIRADA/polarimetry/software/POSSUM_Polarimetry_Pipeline/pipeline/canfar_config_templates/config_template_PartialTiles_1d_band1_summaryplot.ini config_943MHz_$2_$3_summary.ini $workdir $2 $3
 # arguments: template file, output_filename, workdir, fieldstr, SB_number
-
-echo "Opening SSH tunnel to prefect server host (p1) as user $p1user"
-# open connection
-ssh -fNT -L 4200:localhost:4200 $p1user@206.12.93.32
-# set which port to communicate results to 
-export PREFECT_API_URL="http://localhost:4200/api"
 
 echo "adding RMtools[dev] to pythonpath to work with dev branch of RMtools"
 export PYTHONPATH="/arc/projects/CIRADA/polarimetry/software/RMtoolsdev/:$PYTHONPATH"

@@ -204,10 +204,9 @@ def check_download_running(jobname="3dtile-dl"):
 @task(log_prints=True)
 def launch_download_session(jobname="3dtile-dl"):
     # Template bash script to run
-    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/3d_pipeline_tile_download_ingest.sh"
-
+    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/possum_pipeline_control/3d_pipeline_download_ingest.py"
     print("Launching download session")
-    print(f"Command: bash {args}")
+    print(f"Command: {args}")
 
     image = os.getenv('IMAGE')
     # download can use flexible resources
@@ -219,7 +218,7 @@ def launch_download_session(jobname="3dtile-dl"):
         cores=None,  # flexible mode
         ram=None,  # flexible mode
         kind="headless",
-        cmd="bash",
+        cmd="python",
         args=args,
         replicas=1,
         env={},
@@ -243,7 +242,7 @@ def launch_create_symlinks(jobname="3dsymlinks"):
     args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/create_symlinks.sh"
 
     print("Launching symlinks session")
-    print(f"Command: bash {args}")
+    print(f"Command: {args}")
 
     image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.16.0"
     # download can use flexible resources
