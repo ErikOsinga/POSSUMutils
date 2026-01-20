@@ -3,7 +3,6 @@ import ast
 import os 
 
 from datetime import datetime
-import getpass
 
 # from skaha.session import Session
 from canfar.sessions import Session
@@ -28,10 +27,8 @@ def launch_session(run_name, field_ID, tilenumbers, SBnumber, image, cores, ram)
     """Launch 1D pipeline Partial Tile run"""
     t1, t2, t3, t4 = tilenumbers
 
-    p1user = getpass.getuser()
-
     # Template bash script to run
-    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1.sh {run_name} {field_ID} {SBnumber} {t1} {t2} {t3} {t4} {p1user}"
+    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1.sh {run_name} {field_ID} {SBnumber} {t1} {t2} {t3} {t4}"
 
     print("Launching session")
     print(f"Command: bash {args}")

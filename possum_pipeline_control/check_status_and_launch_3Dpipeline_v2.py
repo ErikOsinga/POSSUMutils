@@ -22,14 +22,12 @@ into time-blocked directories.
 
 @author: Erik Osinga
 """
-
+import argparse
 import os
-from dotenv import load_dotenv
 from vos import Client
 import subprocess
 from canfar.sessions import Session
 import gspread
-import getpass
 import astropy.table as at
 import numpy as np
 from automation import database_queries as db
@@ -37,10 +35,11 @@ from possum_pipeline_control import util
 from print_all_open_sessions import get_open_sessions
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
+from prefect import task, flow
 
 session = Session()
 
-
+@task(log_prints=True)
 def get_tiles_for_pipeline_run_old(band_number, Google_API_token):
     """
     Get a list of tile numbers that should be ready to be processed by the 3D pipeline
@@ -76,7 +75,7 @@ def get_tiles_for_pipeline_run_old(band_number, Google_API_token):
 
     return tiles_to_run
 
-
+@task(log_prints=True)
 def get_canfar_tiles(band_number):
     client = Client()
     # force=True to not use cache
@@ -95,7 +94,7 @@ def get_canfar_tiles(band_number):
         raise ValueError(f"Band number {band_number} not defined")
     return canfar_tilenumbers
 
-
+@task(log_prints=True)
 def launch_pipeline(tilenumber, band):
     # Launch the appropriate 3D pipeline script based on the band
     if band == "943MHz":
@@ -122,7 +121,7 @@ def launch_pipeline(tilenumber, band):
     print(f"Running command: {' '.join(command)}")
     subprocess.run(command, check=True)
 
-
+@task(log_prints=True)
 def update_status(tile_number, band, Google_API_token, status):
     """
     Update the status of the specified tile in Cameron's Google Sheet & the AUSSRC tile_state database.
@@ -175,7 +174,7 @@ def update_status(tile_number, band, Google_API_token, status):
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 
-
+@task(log_prints=True)
 def check_download_running(jobname="3dtile-dl"):
     """
     Check whether a 3d pipeline tile download session (i.e. possum_run_remote) is running
@@ -202,12 +201,10 @@ def check_download_running(jobname="3dtile-dl"):
     # didnt find any running jobs with the jobname
     return False
 
-
+@task(log_prints=True)
 def launch_download_session(jobname="3dtile-dl"):
-    p1user = getpass.getuser()
-
     # Template bash script to run
-    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/3d_pipeline_tile_download_ingest.sh {p1user}"
+    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/3d_pipeline_tile_download_ingest.sh"
 
     print("Launching download session")
     print(f"Command: bash {args}")
@@ -233,7 +230,7 @@ def launch_download_session(jobname="3dtile-dl"):
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
     )
 
-
+@task(log_prints=True)
 def launch_create_symlinks(jobname="3dsymlinks"):
     """
     Launch session on CANFAR to create symbolic links after possum_run_remote has downloaded
@@ -241,10 +238,9 @@ def launch_create_symlinks(jobname="3dsymlinks"):
 
     This sorts the tiles into symbolic links in a much more readable format.
     """
-    p1user = getpass.getuser()
 
     # Template bash script to run
-    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/create_symlinks.sh {p1user}"
+    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/create_symlinks.sh"
 
     print("Launching symlinks session")
     print(f"Command: bash {args}")
@@ -270,13 +266,13 @@ def launch_create_symlinks(jobname="3dsymlinks"):
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
     )
 
-
+@task(log_prints=True)
 def needs_prefect_sqlite_backup(
     home_dir: str | Path,
     *,
     max_age_days: int = 14,
     backups_subdir: str = "prefect-backups",
-    suffix: str = ".db",
+    suffix: str = ".sql",
 ) -> bool:
     """
     Check for Prefect SQLite backup files in <home_dir>/<backups_subdir>/.
@@ -305,8 +301,8 @@ def needs_prefect_sqlite_backup(
     cutoff = datetime.now(tz=timezone.utc) - timedelta(days=max_age_days)
     return newest_mtime < cutoff
 
-
-def launch_band1_3Dpipeline():
+@flow(og_prints=True)
+def launch_band1_3Dpipeline(database_config_path=None):
     """
     Check for Band 1 tiles that are ready to be processed with the 3D pipeline and launch the pipeline for the first available tile.
     3D pipeline can be launched if the tile is processed by AUSsrc (aus_src column not empty) but 3D pipeline not yet run (3d_pipeline column empty).
@@ -335,11 +331,13 @@ def launch_band1_3Dpipeline():
         bkpscript = "backup_prefect_server.sh"
         print(f"Prefect database should be backed up. Running {bkpscript}")
         cmd = ["bash", bkpscript]
-        subprocess.run(cmd, check=True)
-
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        print("Backup stdout:\n%s", result.stdout)
+        if result.stderr:
+            print("Backup stderr:\n%s", result.stderr)
     # Check database for band 1 tiles that have been processed by AUSSRC
     # but not yet processed with 3D pipeline
-    conn = db.get_database_connection(test=False)
+    conn = db.get_database_connection(test=False, database_config_path=database_config_path)
     # We are getting the tiles from the DB instead of the sheet now
     tile_numbers = db.get_tiles_for_pipeline_run(conn, band_number=1)
     # tile_numbers is a list of single-element tuples, convert to 1D list
@@ -394,7 +392,19 @@ def launch_band1_3Dpipeline():
     print("\n")
 
 
+@flow(log_prints=True)
+def main_flow():
+    parser = argparse.ArgumentParser(
+        description="Checks POSSUM validation status ('POSSUM Pipeline validation' google sheet) if 3D pipeline outputs can be ingested."
+    )
+    parser.add_argument(
+        "--database_config_path",
+        type=str,
+        help="Path to .env file with database connection parameters.",
+    )
+    args = parser.parse_args()
+    launch_band1_3Dpipeline(args.database_config_path)
+
+
 if __name__ == "__main__":
-    # load env for google spreadsheet constants
-    load_dotenv(dotenv_path="./automation/config.env")
-    launch_band1_3Dpipeline()
+    main_flow()
