@@ -1,0 +1,49 @@
+prefect-version: null
+name: null
+description: "Deploy prefect flows with the latest POSSUM code from git."
+
+build:
+ - prefect_docker.deployments.steps.build_docker_image:
+     id: build-image
+     requires: prefect-docker>=0.3.1
+     image_name: riniangreani/possumutils
+     #image_name: images.canfar.net/possumpipelineneprefect-{{env.VERSION}}
+     tag: "{{ env.TAG }}" 
+     dockerfile: auto
+
+push:
+ - prefect_docker.deployments.steps.push_docker_image:
+     requires: prefect-docker>=0.3.1
+     image_name: "{{ build-image.image_name }}"
+     tag: "{{ build-image.tag }}"
+
+pull:
+  - prefect.deployments.steps.git_clone:
+      id: clone-step
+      repository: https://github.com/riniangreani/POSSUMutils.git #TODO: update to real git
+      branch: prefect_deploy #TODO: update to main
+  - prefect.deployments.steps.pip_install_requirements:
+      requirements_file: requirements.txt
+      directory: "{{ clone-step.directory }}"
+
+deployments:
+  - name: 3d-pipeline
+    entrypoint: possum_pipeline_control/control_3D_pipeline.py:main_flow
+    env:
+      IMAGE: "{{ build-image.image_name }}:{{ build-image.tag }}" #pass it on to code at run time so we know which one to pull from Harbor for Canfar
+    work_pool:
+      name: local-pool
+      work_queue_name: default
+  - name: 1d-pipeline-partial-tiles
+    entrypoint: possum_pipeline_control/control_1D_pipeline_PartialTiles.py:main_flow
+    env:
+      IMAGE: "{{ build-image.image_name }}:{{ build-image.tag }}" 
+    work_pool:
+      name: local-pool
+      work_queue_name: default
+  - name: refresh-cadc-proxy-pem
+    entrypoint: automation/prefect/refresh_cadc_proxy_pem.py:main
+    description: 'Handy script to manually refresh cadcproxy.pem from Prefect secret if needed.'
+    work_pool:
+      name: local-pool
+      work_queue_name: default

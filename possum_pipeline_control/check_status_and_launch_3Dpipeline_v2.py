@@ -212,7 +212,7 @@ def launch_download_session(jobname="3dtile-dl"):
     print("Launching download session")
     print(f"Command: bash {args}")
 
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.16.0"
+    image = os.getenv('IMAGE')
     # download can use flexible resources
     session_id = session.create(
         name=jobname.replace(

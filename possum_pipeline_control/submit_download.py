@@ -11,6 +11,7 @@ This script is DEPRECATED. Superseded by launch_download_session() in the module
 
 """
 
+import os
 from datetime import date
 
 # from skaha.session import Session  # noqa: E402
@@ -30,7 +31,7 @@ def launch_download():
 
     # optionally :latest for always the latest version
     # TODO: there's a bug in CANFAR where the latest tag doesnt work
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
+    image = os.getenv('IMAGE')
     # good default values for download script
     cores = 2
     ram = 16  # Check allowed values at canfar.net/science-portal

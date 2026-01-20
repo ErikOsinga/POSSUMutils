@@ -1,7 +1,7 @@
 import argparse
 import getpass
+import os
 
-# from skaha.session import Session
 from canfar.sessions import Session
 
 session = Session()
@@ -52,7 +52,10 @@ if __name__ == "__main__":
 
     # optionally :latest for always the latest version
     # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.16.0"
+    version = os.getenv('VERSION')
+    tag = os.getenv('TAG')
+    image = f"riniangreani/possumutils:{version}:{tag}"
+    #image = f"images.canfar.net/cirada/possumpipelineprefect-{version}:{tag}"
     # good default values
     cores = 16
     ram = 112  # Check allowed values at canfar.net/science-portal

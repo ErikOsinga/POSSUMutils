@@ -1,5 +1,7 @@
 import argparse
 import ast
+import os 
+
 from datetime import datetime
 import getpass
 
@@ -82,8 +84,7 @@ if __name__ == "__main__":
     run_name = f"{SBnumber}-{timestr}"
 
     # optionally :latest for always the latest version. CANFAR has a bug with that though.
-    # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.16.0"  # v1.12.1 has astropy issue https://github.com/astropy/astropy/issues/17497
+    image = os.getenv('IMAGE')
     # good default values
     cores = 4
     # Allocate different RAM based on how many tiles, lets say ~ 20 GB per tile needed

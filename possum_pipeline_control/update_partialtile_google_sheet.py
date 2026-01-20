@@ -466,7 +466,7 @@ def launch_collate_job():
     print(f"Command: bash {args}")
 
     run_name = "collate"
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.16.0"  # v1.12.1 has astropy issue https://github.com/astropy/astropy/issues/17497
+    image = os.getenv('IMAGE')
     # good default values
     cores = 4
     # ram will have to grow as catalogue grows...
