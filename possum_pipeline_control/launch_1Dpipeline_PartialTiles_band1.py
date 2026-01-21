@@ -6,6 +6,7 @@ from datetime import datetime
 
 # from skaha.session import Session
 from canfar.sessions import Session
+from prefect import flow
 # from skaha.models import ContainerRegistry
 
 # Shouldnt put these on github...
@@ -23,6 +24,7 @@ def arg_as_list(s):
     return v
 
 
+@flow(log_prints=True)
 def launch_session(run_name, field_ID, tilenumbers, SBnumber, image, cores, ram):
     """Launch 1D pipeline Partial Tile run"""
     t1, t2, t3, t4 = tilenumbers

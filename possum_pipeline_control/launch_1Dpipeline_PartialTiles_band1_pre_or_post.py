@@ -5,6 +5,7 @@ from datetime import datetime
 
 # from skaha.session import Session
 from canfar.sessions import Session
+from prefect import flow
 from possum_pipeline_control.control_1D_pipeline_PartialTiles import get_open_sessions
 
 """
@@ -35,6 +36,7 @@ def arg_as_list(s):
     return v
 
 
+@flow(log_prints=True)
 def launch_session(
     run_name, field_ID, SBnumber, image, cores, ram, ptype, max_dl_jobs=2
 ):

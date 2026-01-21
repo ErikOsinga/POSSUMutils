@@ -16,6 +16,7 @@ from datetime import date
 
 # from skaha.session import Session  # noqa: E402
 from canfar.sessions import Session
+from prefect import flow
 
 session = Session()
 
@@ -23,6 +24,7 @@ today = date.today()
 print("Download script called. Today's date:", today)
 
 
+@flow(log_prints=True)
 def launch_download():
     """Launch tile download script"""
 

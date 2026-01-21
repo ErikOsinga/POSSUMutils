@@ -3,10 +3,12 @@ import os
 
 # from skaha.session import Session
 from canfar.sessions import Session
+from prefect import flow
 
 session = Session()
 
 
+@flow(log_prints=True)
 def launch_session(run_name, tilenumber, image, cores, ram):
     """Launch 3D pipeline run"""
 
