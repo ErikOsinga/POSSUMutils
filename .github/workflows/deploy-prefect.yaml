@@ -43,4 +43,4 @@ jobs:
           TAG: ${{ inputs.tag_name }}
           VERSION: ${{ inputs.python_version }}
         run: |
-          prefect deploy --all --prefect-file automation/prefect/prefect-git-clone.yaml
+          prefect deploy --all --prefect-file automation/prefect/prefect-git-clone.yaml build-image.tag=$TAG

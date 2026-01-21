@@ -8,7 +8,7 @@ build:
      requires: prefect-docker>=0.3.1
      image_name: riniangreani/possumutils
      #image_name: images.canfar.net/possumpipelineneprefect-{{ $VERSION }}
-     tag: "{{ $TAG }}" 
+     tag: "{{ $TAG }}"
      dockerfile: auto
 
 push:
@@ -34,16 +34,22 @@ deployments:
     work_pool:
       name: local-pool
       work_queue_name: default
+    job_variables:
+      image: "{{ build-image.image }}"
   - name: 1d-pipeline-partial-tiles
     entrypoint: possum_pipeline_control/control_1D_pipeline_PartialTiles.py:main_flow
     env:
-      IMAGE: "{{ build-image.image_name }}:{{ build-image.tag }}" 
+      IMAGE: "{{ build-image.image_name }}:{{ build-image.tag }}"
     work_pool:
       name: local-pool
       work_queue_name: default
+    job_variables:
+      image: "{{ build-image.image }}"
   - name: refresh-cadc-proxy-pem
     entrypoint: automation/prefect/refresh_cadc_proxy_pem.py:main
     description: 'Handy script to manually refresh cadcproxy.pem from Prefect secret if needed.'
     work_pool:
       name: local-pool
       work_queue_name: default
+    job_variables:
+      image: "{{ build-image.image }}"
