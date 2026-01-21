@@ -301,7 +301,7 @@ def needs_prefect_sqlite_backup(
     cutoff = datetime.now(tz=timezone.utc) - timedelta(days=max_age_days)
     return newest_mtime < cutoff
 
-@flow(og_prints=True)
+@flow(log_prints=True)
 def launch_band1_3Dpipeline(database_config_path=None):
     """
     Check for Band 1 tiles that are ready to be processed with the 3D pipeline and launch the pipeline for the first available tile.
