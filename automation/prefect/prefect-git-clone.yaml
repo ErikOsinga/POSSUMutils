@@ -6,7 +6,7 @@ build:
  - prefect_docker.deployments.steps.build_docker_image:
      id: build-image
      requires: prefect-docker>=0.3.1
-     image_name: riniangreani/possumutils
+     image_name: docker.io/riniangreani/possumutils
      #image_name: images.canfar.net/possumpipelineneprefect-{{ $VERSION }}
      tag: "{{ $TAG }}"
      dockerfile: auto
@@ -44,7 +44,7 @@ deployments:
       job_variables:
         env:
           IMAGE:: "{{ build-image.image_name }}:{{ build-image.tag }}"
-          
+
   - name: refresh-cadc-proxy-pem
     entrypoint: automation/prefect/refresh_cadc_proxy_pem.py:main
     description: 'Handy script to manually refresh cadcproxy.pem from Prefect secret if needed.'
