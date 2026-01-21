@@ -33,6 +33,7 @@ from datetime import datetime
 from pathlib import Path
 from automation import database_queries as db
 from prefect import task, flow
+from prefect.runtime import deployment
 
 @task(log_prints=True)
 def get_sheet_table(band):
@@ -468,7 +469,7 @@ def launch_collate_job():
     print(f"Command: bash {args}")
 
     run_name = "collate"
-    image = os.getenv('IMAGE')
+    image = deployment.parameters.get('image')
     # good default values
     cores = 4
     # ram will have to grow as catalogue grows...

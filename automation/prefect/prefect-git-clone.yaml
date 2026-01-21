@@ -29,15 +29,15 @@ pull:
 deployments:
   - name: 3d-pipeline
     entrypoint: possum_pipeline_control/control_3D_pipeline.py:main_flow
-    env:
-      IMAGE: "{{ build-image.image_name }}:{{ build-image.tag }}" #pass it on to code at run time so we know which one to pull from Harbor for Canfar
+    parameters:
+      image: "{{ build-image.image_name }}:{{ build-image.tag }}" #pass it on to code at run time so we know which one to pull from Harbor for Canfar
     work_pool:
       name: local-pool
       work_queue_name: default
   - name: 1d-pipeline-partial-tiles
     entrypoint: possum_pipeline_control/control_1D_pipeline_PartialTiles.py:main_flow
-    env:
-      IMAGE: "{{ build-image.image_name }}:{{ build-image.tag }}"
+    parameters:
+      image: "{{ build-image.image_name }}:{{ build-image.tag }}"
     work_pool:
       name: local-pool
       work_queue_name: default

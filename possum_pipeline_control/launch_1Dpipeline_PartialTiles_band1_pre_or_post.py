@@ -1,11 +1,11 @@
 import argparse
 import ast
-import os
 from datetime import datetime
 
 # from skaha.session import Session
 from canfar.sessions import Session
 from prefect import flow
+from prefect.runtime import deployment
 from possum_pipeline_control.control_1D_pipeline_PartialTiles import get_open_sessions
 
 """
@@ -119,7 +119,7 @@ if __name__ == "__main__":
     # optionally :latest for always the latest version. CANFAR has a bug with that though.
     # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
     # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.11.0" # v1.12.1 has astropy issue https://github.com/astropy/astropy/issues/17497
-    image = os.getenv('IMAGE')
+    image = deployment.parameters.get('image')
     # good default values
     cores = 4
     max_dl_jobs = 2
