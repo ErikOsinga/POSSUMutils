@@ -10,13 +10,12 @@ This script is DEPRECATED. Superseded by launch_download_session() in the module
         It submits a download job to CANFAR which will pull new files off' the pawsey storage.
 
 """
-
+import os
 from datetime import date
 
 # from skaha.session import Session  # noqa: E402
 from canfar.sessions import Session
 from prefect import flow
-from prefect.runtime import deployment
 
 session = Session()
 
@@ -33,7 +32,7 @@ def launch_download():
 
     # optionally :latest for always the latest version
     # TODO: there's a bug in CANFAR where the latest tag doesnt work
-    image = deployment.get_parameters().get('image')
+    image = os.getenv("IMAGE")
     # good default values for download script
     cores = 2
     ram = 16  # Check allowed values at canfar.net/science-portal

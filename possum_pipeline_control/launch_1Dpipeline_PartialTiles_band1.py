@@ -1,12 +1,12 @@
 import argparse
 import ast
+import os
 
 from datetime import datetime
 
 # from skaha.session import Session
 from canfar.sessions import Session
 from prefect import flow
-from prefect.runtime import deployment
 # from skaha.models import ContainerRegistry
 
 # Shouldnt put these on github...
@@ -83,7 +83,7 @@ if __name__ == "__main__":
     run_name = f"{SBnumber}-{timestr}"
 
     # optionally :latest for always the latest version. CANFAR has a bug with that though.
-    image = deployment.get_parameters().get('image')
+    image = os.getenv("IMAGE")
     # good default values
     cores = 4
     # Allocate different RAM based on how many tiles, lets say ~ 20 GB per tile needed

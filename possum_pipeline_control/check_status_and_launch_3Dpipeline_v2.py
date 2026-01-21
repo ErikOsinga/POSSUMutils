@@ -36,7 +36,6 @@ from print_all_open_sessions import get_open_sessions
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from prefect import task, flow
-from prefect.runtime import deployment
 
 session = Session()
 
@@ -209,7 +208,7 @@ def launch_download_session(jobname="3dtile-dl"):
     print("Launching download session")
     print(f"Command: {args}")
 
-    image = deployment.get_parameters().get('image')
+    image = os.getenv("IMAGE")
     # download can use flexible resources
     session_id = session.create(
         name=jobname.replace(
