@@ -18,6 +18,8 @@ push:
      tag: "{{ build-image.tag }}"
 
 pull:
+  - prefect.deployments.steps.set_working_directory:
+      directory:  '/opt/prefect'   
   - prefect.deployments.steps.git_clone:
       id: clone-step
       repository: https://github.com/riniangreani/POSSUMutils.git #TODO: update to real git
