@@ -42,6 +42,7 @@ def launch_download():
 
     print("Launching session")
     print(f"Command: {args}")
+    print(f"Image:{image}")
 
     session_id = session.create(
         name=run_name.replace(

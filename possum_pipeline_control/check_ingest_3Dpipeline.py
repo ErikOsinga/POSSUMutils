@@ -81,6 +81,7 @@ def launch_ingest(tilenumber, band):
 
     print("Launching session")
     print(f"Command: bash {args}")
+    print(f"Image: {image}")
 
     session_id = session.create(
         name=run_name.replace(

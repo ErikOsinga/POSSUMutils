@@ -209,6 +209,7 @@ def launch_download_session(jobname="3dtile-dl"):
     print(f"Command: {args}")
 
     image = os.getenv("IMAGE")
+    print(f"Image: {image}")
     # download can use flexible resources
     session_id = session.create(
         name=jobname.replace(
