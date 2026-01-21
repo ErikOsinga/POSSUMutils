@@ -7,8 +7,8 @@ build:
      id: build-image
      requires: prefect-docker>=0.3.1
      image_name: riniangreani/possumutils
-     #image_name: images.canfar.net/possumpipelineneprefect-{{ VERSION }}
-     tag: "{{ TAG }}" 
+     #image_name: images.canfar.net/possumpipelineneprefect-{{ $VERSION }}
+     tag: "{{ $TAG }}" 
      dockerfile: auto
 
 push:
