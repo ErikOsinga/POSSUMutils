@@ -1,5 +1,6 @@
+It is now optional to have your own config.env. All the secrets are stored in Prefect server.
+You can still use your own config.env as below to override the production secrets for testing purposes.
 1. Rename config.env.example to config.env.
 2. Enter ausSRC database details in the .env file. 
 3. Enter Google spreadsheet token
 4. Update Google spreadsheet file locations (only if the files are different, e.g. for testing)
-
