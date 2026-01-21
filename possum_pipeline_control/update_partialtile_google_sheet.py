@@ -469,7 +469,7 @@ def launch_collate_job():
     print(f"Command: bash {args}")
 
     run_name = "collate"
-    image = deployment.parameters.get('image')
+    image = deployment.get_parameters().get('image')
     # good default values
     cores = 4
     # ram will have to grow as catalogue grows...

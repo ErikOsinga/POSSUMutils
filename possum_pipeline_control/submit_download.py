@@ -33,7 +33,7 @@ def launch_download():
 
     # optionally :latest for always the latest version
     # TODO: there's a bug in CANFAR where the latest tag doesnt work
-    image = deployment.parameters.get('image')
+    image = deployment.get_parameters().get('image')
     # good default values for download script
     cores = 2
     ram = 16  # Check allowed values at canfar.net/science-portal

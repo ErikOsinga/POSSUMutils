@@ -83,7 +83,7 @@ if __name__ == "__main__":
     run_name = f"{SBnumber}-{timestr}"
 
     # optionally :latest for always the latest version. CANFAR has a bug with that though.
-    image = deployment.parameters.get('image')
+    image = deployment.get_parameters().get('image')
     # good default values
     cores = 4
     # Allocate different RAM based on how many tiles, lets say ~ 20 GB per tile needed
