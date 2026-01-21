@@ -124,7 +124,7 @@ def get_ready_fields(band: str) -> tuple[at.Table, at.Table]:
     return ready_table, full_table_sheet
 
 
-@flow(log_prints=True, retries=3)
+@flow(log_prints=True)
 def launch_pipeline_command(fieldname, sbid):
     """
     Launches the 1D pipeline pre-or-post script for a given field and sbid.
