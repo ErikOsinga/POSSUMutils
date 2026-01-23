@@ -6,6 +6,7 @@ from datetime import datetime
 # from skaha.session import Session
 from canfar.sessions import Session
 from prefect import flow
+from automation import canfar_wrapper
 from possum_pipeline_control.control_1D_pipeline_PartialTiles import get_open_sessions
 
 """
@@ -135,7 +136,6 @@ if __name__ == "__main__":
         run_name = f"pre-dl-{SBnumber}"  # makes it clear a 'pre' download job is running. Dont want too many of these.
 
     # Check allowed values at canfar.net/science-portal, 10, 20, 30, 40 GB should be allowed
-
-    launch_session(
+    canfar_wrapper.run_canfar_task_with_polling(launch_session,
         run_name, field_ID, SBnumber, image, cores, ram, ptype, max_dl_jobs=max_dl_jobs
     )

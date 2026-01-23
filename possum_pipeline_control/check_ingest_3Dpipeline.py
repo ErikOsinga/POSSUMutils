@@ -5,7 +5,7 @@ import os
 
 from possum_pipeline_control import util
 from canfar.sessions import Session
-from automation import database_queries as db
+from automation import database_queries as db, canfar_wrapper
 from prefect import task, flow
 from prefect.cache_policies import NO_CACHE
 
@@ -162,7 +162,7 @@ def ingest_3Dpipeline(band_number=1):
             print(f"\nLaunching headless job for 3D pipeline with tile {tilenumber}")
 
             # Launch the pipeline
-            launch_ingest(tilenumber, band)
+            canfar_wrapper.run_task_with_polling(launch_ingest, tilenumber, band)
 
             # Update the status of 3d_pipeline_ingest to "IngestRunning"
             conn = db.get_database_connection(test=False)
