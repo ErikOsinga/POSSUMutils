@@ -20,7 +20,6 @@ import os
 from dotenv import load_dotenv
 import argparse
 import gspread
-import getpass
 import numpy as np
 import subprocess
 import astropy.table as at
@@ -33,8 +32,10 @@ import time
 from datetime import datetime
 from pathlib import Path
 from automation import database_queries as db
+from prefect import task, flow
+from possum_pipeline_control import launch_1Dpipeline_PartialTiles_band1_pre_or_post
 
-
+@task(log_prints=True)
 def get_sheet_table(band):
     """
     Connects to the POSSUM Status Monitor Google Sheet and returns a sub-table
@@ -77,6 +78,7 @@ def get_sheet_table(band):
     return ready_table, tile_table
 
 
+@task(log_prints=True)
 def get_ready_fields(band: str) -> tuple[at.Table, at.Table]:
     """
     Get fields ready for single SB partial tile pipeline processing from the database.
@@ -92,8 +94,7 @@ def get_ready_fields(band: str) -> tuple[at.Table, at.Table]:
         band_number = "2"
     else:
         raise ValueError("Band must be either '943MHz' or '1367MHz'")
-
-    load_dotenv(dotenv_path="./automation/config.env")
+    
     conn = db.get_database_connection(test=False)
     ready_table = db.get_fields_ready_single_SB_pipeline(band_number, conn)
     conn.close()
@@ -124,6 +125,7 @@ def get_ready_fields(band: str) -> tuple[at.Table, at.Table]:
     return ready_table, full_table_sheet
 
 
+@flow(log_prints=True)
 def launch_pipeline_command(fieldname, sbid):
     """
     Launches the 1D pipeline pre-or-post script for a given field and sbid.
@@ -131,9 +133,7 @@ def launch_pipeline_command(fieldname, sbid):
     The command executed is:
         python -m possum_pipeline_control.launch_1Dpipeline_PartialTiles_band1_pre_or_post {fieldname} {sbid} pre
     """
-    command = f"python -m possum_pipeline_control.launch_1Dpipeline_PartialTiles_band1_pre_or_post {fieldname} {sbid} pre"
-    print(f"Executing command: {command}")
-    subprocess.run(command, shell=True, check=True)
+    launch_1Dpipeline_PartialTiles_band1_pre_or_post.main_flow(fieldname, sbid, "pre")
 
 
 def extract_date(entry):
@@ -149,6 +149,7 @@ def extract_date(entry):
         return np.nan
 
 
+@task(log_prints=True)
 def create_progress_plot(full_table):
     """to be run on p1
 
@@ -446,6 +447,7 @@ def create_progress_plot(full_table):
     plt.close()
 
 
+@task(log_prints=True)
 def launch_collate_job():
     """
     Launches the collate job for the 1D pipeline. Once per day
@@ -455,18 +457,17 @@ def launch_collate_job():
 
     session = Session()
 
-    p1user = getpass.getuser()
 
     # e.g. for band 1
     basedir = "/arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/943MHz/"
     # Template bash script to run
-    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/collate_1Dpipeline_PartialTiles.sh {basedir} {p1user}"
+    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/collate_1Dpipeline_PartialTiles.sh {basedir}"
 
     print("Launching collate job")
     print(f"Command: bash {args}")
 
     run_name = "collate"
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.16.0"  # v1.12.1 has astropy issue https://github.com/astropy/astropy/issues/17497
+    image = os.getenv("IMAGE")
     # good default values
     cores = 4
     # ram will have to grow as catalogue grows...
@@ -490,9 +491,11 @@ def launch_collate_job():
     print(
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
     )
+    return session_id[0]
+    
 
-
-if __name__ == "__main__":
+@flow(log_prints=True)
+def main_flow():
     parser = argparse.ArgumentParser(description="Update Partial Tile Google Sheet")
     parser.add_argument(
         "--band",
@@ -503,7 +506,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--database_config_path",
         type=str,
-        default="automation/config.env",
         help="Path to .env file with database connection parameters.",
     )
     args = parser.parse_args()
@@ -511,8 +513,9 @@ if __name__ == "__main__":
     band = args.band
 
     # load env for google spreadsheet constants
-    load_dotenv(dotenv_path=args.database_config_path)
-    Google_API_token = os.getenv("POSSUM_STATUS_SHEET")
+    if args.database_config_path:
+        load_dotenv(dotenv_path=args.database_config_path)
+        # Google_API_token = os.getenv("POSSUM_STATUS_SHEET")
     # consider chmod 600 <POSSUM_STATUS_TOKEN_FILE> to prevent access!!!
 
     # Get fields ready for processing according to the AUSSRC database.
@@ -556,3 +559,7 @@ if __name__ == "__main__":
         # update_status_spreadsheet(fieldname, sbid, band, Google_API_token, status_to_put, 'single_SB_1D_pipeline')
 
         break  # only do one every time the script is called
+
+
+if __name__ == "__main__":
+    main_flow()

@@ -1,10 +1,12 @@
 import argparse
 import ast
+import os
 from datetime import datetime
-import getpass
 
 # from skaha.session import Session
 from canfar.sessions import Session
+from prefect import flow
+from automation import canfar_wrapper
 from possum_pipeline_control.control_1D_pipeline_PartialTiles import get_open_sessions
 
 """
@@ -35,6 +37,7 @@ def arg_as_list(s):
     return v
 
 
+@flow(log_prints=True)
 def launch_session(
     run_name, field_ID, SBnumber, image, cores, ram, ptype, max_dl_jobs=2
 ):
@@ -42,14 +45,12 @@ def launch_session(
 
     df_sessions = get_open_sessions()
 
-    p1user = getpass.getuser()
-
     if ptype == "post":
         # Template bash script to run
-        args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1_summary.sh {run_name} {field_ID} {SBnumber} {p1user}"
+        args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1_summary.sh {run_name} {field_ID} {SBnumber}"
     elif ptype == "pre":
         # Template bash script to run
-        args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1_srl_and_googlesheet.sh {run_name} {field_ID} {SBnumber} {p1user}"
+        args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1_srl_and_googlesheet.sh {run_name} {field_ID} {SBnumber}"
 
         if len(df_sessions) == 0:
             print("No open sessions. Can launch a pre-dl job.")
@@ -88,7 +89,37 @@ def launch_session(
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
     )
 
-    return
+    return session_id[0]
+
+
+@flow(log_prints=True)
+def main_flow(field_ID, SBnumber, ptype):
+    timestr = ((datetime.now().strftime("%d/%m/%Y %H:%M:%S"))[11:]).replace(
+        ":", "-"
+    )  # ":" is not allowed character
+
+    # optionally :latest for always the latest version. CANFAR has a bug with that though.
+    # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
+    # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.11.0" # v1.12.1 has astropy issue https://github.com/astropy/astropy/issues/17497
+    image = os.getenv("IMAGE")
+    
+    # good default values
+    cores = 4
+    max_dl_jobs = 2
+
+    if ptype == "post":
+        ram = 40  # 40 GB is just about enough for summary plot without density calc
+        run_name = f"{SBnumber}-{timestr}"
+    elif ptype == "pre":
+        ram = 2  # dont need a lot of ram for catalogue writing & downloading
+        cores = 1  # neither do we need a lot of cores
+        # max 15 characters for run name. SBID+timenow: e.g. 50413-11-39-21
+        run_name = f"pre-dl-{SBnumber}"  # makes it clear a 'pre' download job is running. Dont want too many of these.
+
+    # Check allowed values at canfar.net/science-portal, 10, 20, 30, 40 GB should be allowed
+    canfar_wrapper.run_canfar_task_with_polling(launch_session,
+        run_name, field_ID, SBnumber, image, cores, ram, ptype, max_dl_jobs=max_dl_jobs
+    )
 
 
 if __name__ == "__main__":
@@ -112,29 +143,4 @@ if __name__ == "__main__":
     SBnumber = args.SBnumber
     ptype = args.type
 
-    timestr = ((datetime.now().strftime("%d/%m/%Y %H:%M:%S"))[11:]).replace(
-        ":", "-"
-    )  # ":" is not allowed character
-
-    # optionally :latest for always the latest version. CANFAR has a bug with that though.
-    # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
-    # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.11.0" # v1.12.1 has astropy issue https://github.com/astropy/astropy/issues/17497
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.16.0"
-    # good default values
-    cores = 4
-    max_dl_jobs = 2
-
-    if ptype == "post":
-        ram = 40  # 40 GB is just about enough for summary plot without density calc
-        run_name = f"{SBnumber}-{timestr}"
-    elif ptype == "pre":
-        ram = 2  # dont need a lot of ram for catalogue writing & downloading
-        cores = 1  # neither do we need a lot of cores
-        # max 15 characters for run name. SBID+timenow: e.g. 50413-11-39-21
-        run_name = f"pre-dl-{SBnumber}"  # makes it clear a 'pre' download job is running. Dont want too many of these.
-
-    # Check allowed values at canfar.net/science-portal, 10, 20, 30, 40 GB should be allowed
-
-    launch_session(
-        run_name, field_ID, SBnumber, image, cores, ram, ptype, max_dl_jobs=max_dl_jobs
-    )
+    main_flow(field_ID, SBnumber, ptype)

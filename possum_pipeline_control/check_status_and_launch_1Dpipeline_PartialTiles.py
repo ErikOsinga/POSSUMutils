@@ -5,8 +5,10 @@ import subprocess
 import time
 import re
 from automation import database_queries as db
-from possum_pipeline_control import util
+from possum_pipeline_control import util, launch_1Dpipeline_PartialTiles_band1, launch_1Dpipeline_PartialTiles_band1_pre_or_post
 from possum_pipeline_control.control_1D_pipeline_PartialTiles import get_open_sessions
+from prefect import task, flow
+from prefect.cache_policies import NO_CACHE
 
 """
 Should be executed on p1 in this script's directory (called from control_1D_pipeline_PartialTiles.py):
@@ -35,7 +37,7 @@ Cameron is in charge of generating the source lists per partial tile and separat
 @author: Erik Osinga
 """
 
-
+@task(log_prints=True, cache_policy=NO_CACHE)
 def get_results_per_field_sbid_skip_edges(band_number, conn, verbose=False):
     """
     Group the tile_table by 'field_name' and 'sbid' and check the validation condition
@@ -73,6 +75,7 @@ def get_results_per_field_sbid_skip_edges(band_number, conn, verbose=False):
     return results
 
 
+@task(log_prints=True, cache_policy=NO_CACHE)
 def get_results_per_field_sbid(conn, band_number="1", verbose=False):
     """
     Group observation by field name and sbid
@@ -108,6 +111,7 @@ def remove_prefix(field_name):
     return re.sub(r"^(EMU_|WALLABY_)", "", field_name)
 
 
+@task(log_prints=True, cache_policy=NO_CACHE)
 def get_tiles_for_pipeline_run(db_conn, band_number):
     """
     Get a list of tile numbers that should be ready to be processed by the 1D pipeline
@@ -165,6 +169,7 @@ def get_tiles_for_pipeline_run(db_conn, band_number):
     )
 
 
+@task(log_prints=True)
 def get_canfar_sourcelists(band_number, local_file="./sourcelist_canfar.txt"):
     client = Client()
     # force=True to not use cache
@@ -250,33 +255,16 @@ def launch_pipeline(field_ID, tilenumbers, SBid, band):
 
     """
     if band == "943MHz":
-        command = [
-            "python",
-            "-m",
-            "possum_pipeline_control.launch_1Dpipeline_PartialTiles_band1",
-            str(field_ID),
-            str(tilenumbers),
-            str(SBid),
-        ]
+        launch_1Dpipeline_PartialTiles_band1.main_flow(field_ID, tilenumbers, SBid)
     elif band == "1367MHz":
-        command = [
-            "python",
-            "-m",
-            "possum_pipeline_control.launch_1Dpipeline_PartialTiles_band2",
-            str(field_ID),
-            str(tilenumbers),
-            str(SBid),
-        ]
         raise NotImplementedError(
             "TODO: Temporarily disabled launching band 2 because need to write that run script"
         )
     else:
         raise ValueError(f"Unknown band: {band}")
 
-    print(f"Running command: {' '.join(command)}")
-    subprocess.run(command, check=True)
 
-
+@task(log_prints=True)
 def launch_pipeline_summary(field_ID, SBid, band):
     """
     Launch the appropriate 1D pipeline summary script based on the band
@@ -287,36 +275,18 @@ def launch_pipeline_summary(field_ID, SBid, band):
 
     """
     if band == "943MHz":
-        command = [
-            "python",
-            "-m",
-            "possum_pipeline_control.launch_1Dpipeline_PartialTiles_band1_pre_or_post",
-            str(field_ID),
-            str(SBid),
-            "post",
-        ]
-    elif band == "1367MHz":
-        command = [
-            "python",
-            "-m",
-            "possum_pipeline_control.launch_1Dpipeline_PartialTiles_band2_pre_or_post",
-            str(field_ID),
-            str(SBid),
-            "post",
-        ]
-        command = ""
+        launch_1Dpipeline_PartialTiles_band1_pre_or_post.main_flow(field_ID, SBid, "post")
+    elif band == "1367MHz":        
         raise NotImplementedError(
             "TODO: Temporarily disabled launching band 2 because need to write that run script"
         )
     else:
         raise ValueError(f"Unknown band: {band}")
 
-    print(f"Running command: {' '.join(command)}")
-    subprocess.run(command, check=True)
 
-
+@task(log_prints=True)
 def update_validation_status(
-    field_name, sbid, band_number, status, database_config_path="automation/config.env"
+    field_name, sbid, band_number, status, database_config_path
 ):
     """
     Update the status of the specified partial tile or all rows for a given field_name and sbid.
@@ -346,12 +316,15 @@ def update_validation_status(
     return row_num
 
 
+@task(log_prints=True)
 def check_predl_job_running_with_sbid(SBnumber: str) -> bool:
     """
     Check if a pre-dl job is already running on CANFAR for the given SBnumber.
     Returns True if a job is running or pending, False otherwise.
     """
     df_sessions = get_open_sessions()
+    if len(df_sessions) == 0:
+        return False
     # corresponds to jobname as set in launch_1Dpipeline_PartialTiles_band1_pre_or_post.py
     jobname = f"pre-dl-{SBnumber}"
     if (
@@ -366,8 +339,8 @@ def check_predl_job_running_with_sbid(SBnumber: str) -> bool:
     else:
         return False
 
-
-def launch_band1_1Dpipeline(database_config_path: str = "automation/config.env"):
+@flow(log_prints=True)
+def launch_band1_1Dpipeline(database_config_path=None):
     """
     Launch a headless job to CANFAR for a 1D pipeline Partial Tile
     """
@@ -547,7 +520,8 @@ def launch_band1_1Dpipeline(database_config_path: str = "automation/config.env")
         )
 
 
-if __name__ == "__main__":
+@flow(log_prints=True)
+def main_flow():
     # DEPRECATED:
     # on p1, token for accessing Erik's google sheets
     # consider chmod 600 <file> to prevent access
@@ -559,9 +533,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--database_config_path",
         type=str,
-        default="automation/config.env",
         help="Path to .env file with database connection parameters.",
     )
     args = parser.parse_args()
 
     launch_band1_1Dpipeline(args.database_config_path)
+    
+
+if __name__ == "__main__":
+    main_flow()

@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import gspread
 import astropy.table as at
 import numpy as np
+from prefect import task
 from automation import database_queries as db
 from possum_pipeline_control import util
 
@@ -23,6 +24,7 @@ To remove the 3d_pipeline status of 5808
 """
 
 
+@task(log_prints=True)
 def update_status(tile_number, band, Google_API_token, status):
     """
     Update the status of the specified tile in the Google Sheet.
