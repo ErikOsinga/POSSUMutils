@@ -492,6 +492,7 @@ def launch_collate_job():
     print(
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
     )
+    return session_id
     
 
 @flow(log_prints=True)

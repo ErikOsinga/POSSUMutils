@@ -101,7 +101,7 @@ def launch_ingest(tilenumber, band):
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
     )
 
-    return
+    return session_id
 
 @task(log_prints=True, cache_policy=NO_CACHE)
 def update_status(tile_number, band, status, conn):

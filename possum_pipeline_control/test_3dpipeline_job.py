@@ -61,7 +61,7 @@ def launch_test_session(jobname="testjob"):
     )
     print("Also check the prefect dashboard at localhost:4200")
 
-    return
+    return session_id
 
 
 if __name__ == "__main__":
