@@ -360,6 +360,8 @@ def check_predl_job_running_with_sbid(SBnumber: str) -> bool:
     Returns True if a job is running or pending, False otherwise.
     """
     df_sessions = get_open_sessions()
+    if len(df_sessions) == 0:
+        return False
     # corresponds to jobname as set in launch_1Dpipeline_PartialTiles_band1_pre_or_post.py
     jobname = f"pre-dl-{SBnumber}"
     if (
