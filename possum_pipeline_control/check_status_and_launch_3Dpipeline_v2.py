@@ -186,7 +186,57 @@ def check_download_running(jobname="3dtile-dl"):
     # didnt find any running jobs with the jobname
     return False
 
-@task(log_prints=True)
+
+def read_last_download_launch_time(state_file: Path) -> datetime | None:
+    """
+    Read the last download launch time from a state file.
+
+    Returns a timezone-aware UTC datetime, or None if the file is missing/unreadable.
+    """
+    try:
+        text = state_file.read_text(encoding="utf-8").strip()
+        if not text:
+            return None
+        dt = datetime.fromisoformat(text)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    except (FileNotFoundError, ValueError, OSError):
+        return None
+
+
+def write_last_download_launch_time(state_file: Path, when: datetime) -> None:
+    """
+    Persist the last download launch time as an ISO-8601 string (UTC).
+    """
+    state_file.parent.mkdir(parents=True, exist_ok=True)
+    when_utc = when.astimezone(timezone.utc)
+    state_file.write_text(when_utc.isoformat(), encoding="utf-8")
+
+
+def should_launch_download_session(
+    *,
+    download_running: bool,
+    state_file: Path,
+    min_age: timedelta = timedelta(days=1),
+    now: datetime | None = None,
+) -> bool:
+    """
+    Launch only if:
+      - no download is currently running, AND
+      - last launch time is missing OR older than min_age.
+    """
+    if download_running:
+        return False
+
+    now_utc = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    last_launch = read_last_download_launch_time(state_file)
+    if last_launch is None:
+        return True
+
+    return (now_utc - last_launch) >= min_age
+
+
 def launch_download_session(jobname="3dtile-dl"):
     # Template bash script to run
     args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/possum_pipeline_control/3d_pipeline_download_ingest.py"
@@ -303,15 +353,37 @@ def launch_band1_3Dpipeline(database_config_path=None):
     # Get information about currently open sessions
     download_running = check_download_running(dl_jobname)
 
-    if not download_running:
-        print("A download job (possum_run_remote) is not running anymore.")
-        # launch a job to download more tiles from AUSSRC and ingest them into CADC from CANFAR.
-        canfar_wrapper.run_canfar_task_with_polling(launch_download_session, dl_jobname)
+    state_file = Path.home() / ".possum" / "last_3dtile_download_launch_utc.txt"
+    now_utc = datetime.now(timezone.utc)
 
+    # Then if the download session was not running, check when we last launched one
+    if should_launch_download_session(
+        download_running=download_running,
+        state_file=state_file,
+        min_age=timedelta(days=1),
+        now=now_utc,
+    ):
+        print("No download job is running, and last launch was >= 1 day ago.")
+        launch_download_session(dl_jobname)
+        write_last_download_launch_time(state_file, now_utc)
+        
         # also launch a job to create new symlinks since the previous download job finished.
         canfar_wrapper.run_canfar_task_with_polling(launch_create_symlinks)
     else:
-        print("A download job (possum_run_remote) is already running.")
+        if download_running:
+            print("A download job (possum_run_remote) is already running.")
+        else:
+            last_launch = read_last_download_launch_time(state_file)
+            if last_launch is None:
+                print("No download job is running, and last launch time is unknown; Shouldnt happen.")
+            else:
+                age = now_utc - last_launch
+                remaining = timedelta(days=1) - age
+                print(
+                    "No download job is running, but last launch was too recent "
+                    f"({age} ago). Next allowed in ~{remaining}."
+                )
+
 
     # Check whether we've made a backup of the database less than two weeks ago
     if needs_prefect_sqlite_backup(Path.home()):

@@ -9,19 +9,19 @@ from dotenv import load_dotenv
 from prefect.blocks.system import Secret
 
 
-def rows_to_table(rows, colnames=None):
+def rows_to_table(rows, colnames=None, dtype=None):
     """
     Convert a list of row tuples and column names into an astropy Table.
     """
     if not rows:
         # Empty table, but we might still know the column names
-        return Table(names=colnames or [])
+        return Table(names=colnames or [], dtype=dtype)
 
     if colnames is None:
         ncols = len(rows[0])
         colnames = [f"col{i}" for i in range(ncols)]
 
-    return Table(rows=rows, names=colnames)
+    return Table(rows=rows, names=colnames, dtype=dtype)
 
 
 def get_database_connection(
