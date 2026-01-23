@@ -33,6 +33,7 @@ from datetime import datetime
 from pathlib import Path
 from automation import database_queries as db
 from prefect import task, flow
+from possum_pipeline_control import launch_1Dpipeline_PartialTiles_band1_pre_or_post
 
 @task(log_prints=True)
 def get_sheet_table(band):
@@ -132,9 +133,7 @@ def launch_pipeline_command(fieldname, sbid):
     The command executed is:
         python -m possum_pipeline_control.launch_1Dpipeline_PartialTiles_band1_pre_or_post {fieldname} {sbid} pre
     """
-    command = f"python -m possum_pipeline_control.launch_1Dpipeline_PartialTiles_band1_pre_or_post {fieldname} {sbid} pre"
-    print(f"Executing command: {command}")
-    subprocess.run(command, shell=True, check=True)
+    launch_1Dpipeline_PartialTiles_band1_pre_or_post.main_flow(fieldname, sbid, "pre")
 
 
 def extract_date(entry):

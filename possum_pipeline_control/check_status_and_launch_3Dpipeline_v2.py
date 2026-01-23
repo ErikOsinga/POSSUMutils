@@ -31,7 +31,7 @@ import gspread
 import astropy.table as at
 import numpy as np
 from automation import database_queries as db, canfar_wrapper
-from possum_pipeline_control import util
+from possum_pipeline_control import util, launch_3Dpipeline_band1
 from print_all_open_sessions import get_open_sessions
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
@@ -98,28 +98,13 @@ def get_canfar_tiles(band_number):
 def launch_pipeline(tilenumber, band):
     # Launch the appropriate 3D pipeline script based on the band
     if band == "943MHz":
-        command = [
-            "python",
-            "-m",
-            "possum_pipeline_control.launch_3Dpipeline_band1",
-            str(tilenumber),
-        ]
+        launch_3Dpipeline_band1.main_flow(tilenumber)
     elif band == "1367MHz":
-        command = [
-            "python",
-            "-m",
-            "possum_pipeline_control.launch_3Dpipeline_band2",
-            str(tilenumber),
-        ]
-        command = ""
         print(
             "Temporarily disabled launching band 2 because need to write that run script"
         )
     else:
         raise ValueError(f"Unknown band: {band}")
-
-    print(f"Running command: {' '.join(command)}")
-    subprocess.run(command, check=True)
 
 @task(log_prints=True)
 def update_status(tile_number, band, Google_API_token, status):

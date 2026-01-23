@@ -92,27 +92,8 @@ def launch_session(
     return session_id[0]
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Launch a 1D pipeline Partial Tiles run"
-    )
-    parser.add_argument(
-        "field_ID", type=str, help="The field ID to process, e.g. 1227-69"
-    )
-    parser.add_argument(
-        "SBnumber", type=int, help="The SB number to process, e.g. 61103"
-    )
-    parser.add_argument(
-        "type",
-        choices=["pre", "post"],
-        help="Whether to run pre-processing or post-processing step",
-    )
-
-    args = parser.parse_args()
-    field_ID = args.field_ID
-    SBnumber = args.SBnumber
-    ptype = args.type
-
+@flow(log_prints=True)
+def main_flow(field_ID, SBnumber, ptype):
     timestr = ((datetime.now().strftime("%d/%m/%Y %H:%M:%S"))[11:]).replace(
         ":", "-"
     )  # ":" is not allowed character
@@ -139,3 +120,27 @@ if __name__ == "__main__":
     canfar_wrapper.run_canfar_task_with_polling(launch_session,
         run_name, field_ID, SBnumber, image, cores, ram, ptype, max_dl_jobs=max_dl_jobs
     )
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Launch a 1D pipeline Partial Tiles run"
+    )
+    parser.add_argument(
+        "field_ID", type=str, help="The field ID to process, e.g. 1227-69"
+    )
+    parser.add_argument(
+        "SBnumber", type=int, help="The SB number to process, e.g. 61103"
+    )
+    parser.add_argument(
+        "type",
+        choices=["pre", "post"],
+        help="Whether to run pre-processing or post-processing step",
+    )
+
+    args = parser.parse_args()
+    field_ID = args.field_ID
+    SBnumber = args.SBnumber
+    ptype = args.type
+
+    main_flow(field_ID, SBnumber, ptype)

@@ -5,7 +5,7 @@ import subprocess
 import time
 import re
 from automation import database_queries as db
-from possum_pipeline_control import util
+from possum_pipeline_control import util, launch_1Dpipeline_PartialTiles_band1, launch_1Dpipeline_PartialTiles_band1_pre_or_post
 from possum_pipeline_control.control_1D_pipeline_PartialTiles import get_open_sessions
 from prefect import task, flow
 from prefect.cache_policies import NO_CACHE
@@ -255,31 +255,13 @@ def launch_pipeline(field_ID, tilenumbers, SBid, band):
 
     """
     if band == "943MHz":
-        command = [
-            "python",
-            "-m",
-            "possum_pipeline_control.launch_1Dpipeline_PartialTiles_band1",
-            str(field_ID),
-            str(tilenumbers),
-            str(SBid),
-        ]
+        launch_1Dpipeline_PartialTiles_band1.main_flow(field_ID, tilenumbers, SBid)
     elif band == "1367MHz":
-        command = [
-            "python",
-            "-m",
-            "possum_pipeline_control.launch_1Dpipeline_PartialTiles_band2",
-            str(field_ID),
-            str(tilenumbers),
-            str(SBid),
-        ]
         raise NotImplementedError(
             "TODO: Temporarily disabled launching band 2 because need to write that run script"
         )
     else:
         raise ValueError(f"Unknown band: {band}")
-
-    print(f"Running command: {' '.join(command)}")
-    subprocess.run(command, check=True)
 
 
 @task(log_prints=True)
@@ -293,32 +275,13 @@ def launch_pipeline_summary(field_ID, SBid, band):
 
     """
     if band == "943MHz":
-        command = [
-            "python",
-            "-m",
-            "possum_pipeline_control.launch_1Dpipeline_PartialTiles_band1_pre_or_post",
-            str(field_ID),
-            str(SBid),
-            "post",
-        ]
-    elif band == "1367MHz":
-        command = [
-            "python",
-            "-m",
-            "possum_pipeline_control.launch_1Dpipeline_PartialTiles_band2_pre_or_post",
-            str(field_ID),
-            str(SBid),
-            "post",
-        ]
-        command = ""
+        launch_1Dpipeline_PartialTiles_band1_pre_or_post.main_flow(field_ID, SBid, "post")
+    elif band == "1367MHz":        
         raise NotImplementedError(
             "TODO: Temporarily disabled launching band 2 because need to write that run script"
         )
     else:
         raise ValueError(f"Unknown band: {band}")
-
-    print(f"Running command: {' '.join(command)}")
-    subprocess.run(command, check=True)
 
 
 @task(log_prints=True)
