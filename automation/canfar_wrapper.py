@@ -68,7 +68,7 @@ def poll_canfar(session_id: str):
     while True:
         status = get_session_status(session_id)
         status_str = status if status is not None else 'Not Found'
-        print("Polling CANFAR session %s. Status is %s", session_id, status_str)
+        print(f"Polling CANFAR session {session_id}. Status is {status_str}")
         # Possible values:
         # "Pending", "Running", "Terminating", "Succeeded", "Completed", "Error", "Failed"
         # None if the session has been deleted

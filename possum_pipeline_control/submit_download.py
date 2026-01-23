@@ -63,7 +63,7 @@ def launch_download():
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
     )
 
-    return session_id
+    return session_id[0]
 
 
 if __name__ == "__main__":

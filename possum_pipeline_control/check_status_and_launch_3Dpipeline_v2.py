@@ -229,7 +229,7 @@ def launch_download_session(jobname="3dtile-dl"):
     print(
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
     )
-    return session_id
+    return session_id[0]
 
 @task(log_prints=True)
 def launch_create_symlinks(jobname="3dsymlinks"):
@@ -266,7 +266,7 @@ def launch_create_symlinks(jobname="3dsymlinks"):
     print(
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
     )
-    return session_id
+    return session_id[0]
 
 @task(log_prints=True)
 def needs_prefect_sqlite_backup(
