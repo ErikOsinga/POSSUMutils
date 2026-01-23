@@ -6,8 +6,7 @@ build:
  - prefect_docker.deployments.steps.build_docker_image:
      id: build-image
      requires: prefect-docker>=0.3.1
-     image_name: docker.io/riniangreani/possumutils
-     #image_name: images.canfar.net/possumpipelineneprefect-{{ $VERSION }}
+     image_name: images.canfar.net/possumpipelineneprefect-{{ $VERSION }}
      tag: "{{ $TAG }}"
      dockerfile: auto
 
@@ -20,7 +19,7 @@ push:
 pull:
   - prefect.deployments.steps.git_clone:
       id: clone-step
-      repository: https://github.com/riniangreani/POSSUMutils.git #TODO: update to real git
+      repository: hhttps://github.com/ErikOsinga/POSSUMutils.git
       branch: main
   - prefect.deployments.steps.pip_install_requirements:
       requirements_file: requirements.txt
