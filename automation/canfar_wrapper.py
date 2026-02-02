@@ -5,7 +5,7 @@ failed and the job would need to be manually rerun.
 In this module, we try to rerun the job upon failure, up to set amount of retries.
 If we've reached maximum retries and the job still fails, raise an exception to trigger a Prefect failure.
 """
-import os
+import pprint
 import time
 from prefect import task
 from prefect.variables import Variable
@@ -37,10 +37,14 @@ def run_canfar_task_with_polling(canfar_task, *args: None):
             print(f"Failed to launch CANFAR task. Exception: {e}")
 
         if session_id:
-            status = poll_canfar(session_id)     # keep polling until it stopped running        
+            # Start polling immediately, in parallel
+            # keep polling until it stopped running
+            poll_future = poll_canfar.submit(session_id)
+            status = poll_future.result()
             # print CANFAR logs before we lose them
             logs_dict = session.logs(session_id).get(session_id)
-            print("CANFAR logs from session ", session_id, "\n", logs_dict)
+            print(f"CANFAR logs from session {session_id}:")
+            pprint.pprint(logs_dict, depth=4)  
 
             # check status and handle accordingly
             if status in ("Completed", "Succeeded"):

@@ -173,6 +173,22 @@ def write_to_file(dir, file_path, secret_name):
         print(f"Error writing to file {file_path}: {e}")
         raise
 
+def print_subprocess_output(process, command):
+    """Manually check errors and raise CalledProcessError so we can stream logs from subprocess as it goes"""
+    # Stream stdout and stderr line by line
+    for stdout_line in iter(process.stdout.readline, ''):
+        print(stdout_line.rstrip())
+
+    for stderr_line in iter(process.stderr.readline, ''):
+        print(stderr_line.rstrip())
+    
+    # Wait for process to finish
+    return_code = process.wait()
+
+    # Manually handle non-zero exit codes
+    if return_code != 0:
+        raise subprocess.CalledProcessError(return_code, command)        
+
 class TemporaryWorkingDirectory:
     """Context manager to temporarily change the current working directory."""
 

@@ -40,13 +40,22 @@ def run_script_intermittently(
         if n_headless_pending < max_pending and n_headless_running < max_running:
             for script_path in script_paths:
                 print(f"Running script: {script_path}")
-                # Dynamically import the module
-                module = __import__(script_path, fromlist=["main"])
+                cmd_list = ["python", "-m", script_path]
                 # Call the main flow
                 if args.database_config_path is not None:
-                    module.main_flow(database_config_path=args.database_config_path)
-                else:
-                    module.main_flow()    
+                    cmd_list += [
+                            "--database_config_path",
+                            args.database_config_path,
+                        ]
+                process = subprocess.Popen(
+                    cmd_list,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    bufsize=1,               # line-buffered
+                    universal_newlines=True  # ensures \n splitting works across platforms
+                )
+                util.print_subprocess_output(process, cmd_list)
         else:
             if n_headless_pending >= max_pending:
                 print("Too many pending headless sessions. Skipping this run.")
@@ -74,10 +83,10 @@ def main_flow():
     util.initiate_possum_status_sheet_and_token(args.database_config_path)
     # Path to the script to be run intermittently
     script_paths = [
-        "update_partialtile_google_sheet",  # Check POSSUM Pipeline Status sheet and create queue of jobs in POSSUM Pipeline Validation sheet.
+        "possum_pipeline_control.update_partialtile_google_sheet",  # Check POSSUM Pipeline Status sheet and create queue of jobs in POSSUM Pipeline Validation sheet.
         # This is done via "check_status_and_launch_1Dpipeline_PartialTiles.py 'pre'"
         # which also downloads the tiles in a CANFAR job.
-        "check_status_and_launch_1Dpipeline_PartialTiles",  # Check POSSUM Pipeline Validation sheet and launch jobs
+        "possum_pipeline_control.check_status_and_launch_1Dpipeline_PartialTiles",  # Check POSSUM Pipeline Validation sheet and launch jobs
         # ,"check_ingest_1Dpipeline_PartialTiles.py" # TODO: Check POSSUM Pipeline Validation sheet and ingest results
         # actually, Craig will validate, and Cameron will ingest into YouCat
     ]

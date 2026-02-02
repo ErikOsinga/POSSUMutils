@@ -7,11 +7,11 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 from dotenv import load_dotenv
+from prefect import flow
 
 from automation import database_queries as db
-from print_all_open_sessions import get_open_sessions
-from prefect import flow
 from possum_pipeline_control import util
+from print_all_open_sessions import get_open_sessions
 
 def create_3d_progress_plot():
     """Create a progress plot for the 3D pipeline."""
@@ -195,10 +195,15 @@ def run_script_intermittently(
         if n_headless_pending < max_pending and n_headless_running < max_running:
             for script_path in script_paths:
                 print(f"Running script: {script_path}")
-                # Dynamically import the module
-                module = __import__(script_path, fromlist=["main"])
-                # Call the main flow
-                module.main_flow()    
+                command = ["python", "-m", script_path]
+                process = subprocess.Popen(command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    bufsize=1,               # line-buffered
+                    universal_newlines=True  # ensures \n splitting works across platforms
+                )
+                util.print_subprocess_output(process, command)
         else:
             if n_headless_pending >= max_pending:
                 print("Too many pending headless sessions. Skipping this run.")

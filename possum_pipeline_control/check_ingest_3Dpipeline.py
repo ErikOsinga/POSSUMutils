@@ -1,4 +1,3 @@
-from dotenv import load_dotenv
 from vos import Client
 import argparse
 import os
@@ -6,8 +5,6 @@ import os
 from possum_pipeline_control import util
 from canfar.sessions import Session
 from automation import database_queries as db, canfar_wrapper
-from prefect import task, flow
-from prefect.cache_policies import NO_CACHE
 
 session = Session()
 
@@ -25,8 +22,6 @@ If the "3d_pipeline_val" column is marked as "Good", we can launch an ingest job
 
 @author: Erik Osinga
 """
-
-@task(log_prints=True, cache_policy=NO_CACHE)
 def get_tiles_for_ingest(band_number, conn):
     """
     Get a list of 3D pipeline tile numbers that should be ready to be ingested.
@@ -43,7 +38,7 @@ def get_tiles_for_ingest(band_number, conn):
     # Find the tiles that satisfy the conditions
     return db.get_tiles_for_ingest(band_number, conn)
 
-@task(log_prints=True)
+
 def get_canfar_tiles(band_number):
     client = Client()
     # force=True to not use cache
@@ -62,7 +57,6 @@ def get_canfar_tiles(band_number):
         raise ValueError(f"Band number {band_number} not defined")
     return canfar_tilenumbers
 
-@task(log_prints=True)
 def launch_ingest(tilenumber, band):
     """Launch 3D pipeline ingest script"""
 
@@ -103,7 +97,6 @@ def launch_ingest(tilenumber, band):
 
     return session_id[0]
 
-@task(log_prints=True, cache_policy=NO_CACHE)
 def update_status(tile_number, band, status, conn):
     """
     Update the status of the specified tile in the database.
@@ -118,7 +111,6 @@ def update_status(tile_number, band, status, conn):
         tile_number, band_no, status, "3d_pipeline_ingest", conn
     )
 
-@flow(log_prints=True)
 def ingest_3Dpipeline(band_number=1):
     if band_number == 1:
         band = "943MHz"
@@ -177,10 +169,9 @@ def ingest_3Dpipeline(band_number=1):
         print("Found no tiles ready to be processed.")
 
     print("3D pipeline ingest check complete.")
-    print("\n")
+    print("\n")  
 
-@flow(log_prints=True)
-def main_flow():
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Checks POSSUM validation status ('POSSUM Pipeline validation' google sheet) if 3D pipeline outputs can be ingested."
     )
@@ -207,7 +198,3 @@ def main_flow():
 
     ## Assumes this script is called by run_3D_pipeline_intermittently.py
     ingest_3Dpipeline(band_number=band_number)
-
-
-if __name__ == "__main__":
-    main_flow()

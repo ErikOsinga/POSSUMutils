@@ -5,7 +5,6 @@ from datetime import datetime
 
 # from skaha.session import Session
 from canfar.sessions import Session
-from prefect import flow
 from automation import canfar_wrapper
 from possum_pipeline_control.control_1D_pipeline_PartialTiles import get_open_sessions
 
@@ -37,7 +36,6 @@ def arg_as_list(s):
     return v
 
 
-@flow(log_prints=True)
 def launch_session(
     run_name, field_ID, SBnumber, image, cores, ram, ptype, max_dl_jobs=2
 ):
@@ -89,11 +87,29 @@ def launch_session(
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
     )
 
-    return session_id[0]
+    return session_id[0] 
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Launch a 1D pipeline Partial Tiles run"
+    )
+    parser.add_argument(
+        "field_ID", type=str, help="The field ID to process, e.g. 1227-69"
+    )
+    parser.add_argument(
+        "SBnumber", type=int, help="The SB number to process, e.g. 61103"
+    )
+    parser.add_argument(
+        "type",
+        choices=["pre", "post"],
+        help="Whether to run pre-processing or post-processing step",
+    )
 
-@flow(log_prints=True)
-def main_flow(field_ID, SBnumber, ptype):
+    args = parser.parse_args()
+    field_ID = args.field_ID
+    SBnumber = args.SBnumber
+    ptype = args.type
+
     timestr = ((datetime.now().strftime("%d/%m/%Y %H:%M:%S"))[11:]).replace(
         ":", "-"
     )  # ":" is not allowed character
@@ -120,27 +136,3 @@ def main_flow(field_ID, SBnumber, ptype):
     canfar_wrapper.run_canfar_task_with_polling(launch_session,
         run_name, field_ID, SBnumber, image, cores, ram, ptype, max_dl_jobs=max_dl_jobs
     )
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Launch a 1D pipeline Partial Tiles run"
-    )
-    parser.add_argument(
-        "field_ID", type=str, help="The field ID to process, e.g. 1227-69"
-    )
-    parser.add_argument(
-        "SBnumber", type=int, help="The SB number to process, e.g. 61103"
-    )
-    parser.add_argument(
-        "type",
-        choices=["pre", "post"],
-        help="Whether to run pre-processing or post-processing step",
-    )
-
-    args = parser.parse_args()
-    field_ID = args.field_ID
-    SBnumber = args.SBnumber
-    ptype = args.type
-
-    main_flow(field_ID, SBnumber, ptype)

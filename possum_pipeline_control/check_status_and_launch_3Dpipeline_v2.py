@@ -35,11 +35,9 @@ from possum_pipeline_control import util, launch_3Dpipeline_band1
 from print_all_open_sessions import get_open_sessions
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
-from prefect import task, flow
 
 session = Session()
 
-@task(log_prints=True)
 def get_tiles_for_pipeline_run_old(band_number, Google_API_token):
     """
     Get a list of tile numbers that should be ready to be processed by the 3D pipeline
@@ -75,7 +73,6 @@ def get_tiles_for_pipeline_run_old(band_number, Google_API_token):
 
     return tiles_to_run
 
-@task(log_prints=True)
 def get_canfar_tiles(band_number):
     client = Client()
     # force=True to not use cache
@@ -94,19 +91,40 @@ def get_canfar_tiles(band_number):
         raise ValueError(f"Band number {band_number} not defined")
     return canfar_tilenumbers
 
-@task(log_prints=True)
 def launch_pipeline(tilenumber, band):
     # Launch the appropriate 3D pipeline script based on the band
     if band == "943MHz":
-        launch_3Dpipeline_band1.main_flow(tilenumber)
+        command = [
+            "python",
+            "-m",
+            "possum_pipeline_control.launch_3Dpipeline_band1",
+            str(tilenumber),
+        ]
     elif band == "1367MHz":
+        command = [
+            "python",
+            "-m",
+            "possum_pipeline_control.launch_3Dpipeline_band2",
+            str(tilenumber),
+        ]
+        command = ""
         print(
             "Temporarily disabled launching band 2 because need to write that run script"
         )
     else:
         raise ValueError(f"Unknown band: {band}")
 
-@task(log_prints=True)
+    print(f"Running command: {' '.join(command)}")
+    process = subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,               # line-buffered
+        universal_newlines=True  # ensures \n splitting works across platforms
+    )
+    util.print_subprocess_output(process, command)
+
 def update_status(tile_number, band, Google_API_token, status):
     """
     Update the status of the specified tile in Cameron's Google Sheet & the AUSSRC tile_state database.
@@ -159,7 +177,6 @@ def update_status(tile_number, band, Google_API_token, status):
     else:
         print(f"Tile {tile_number} not found in the sheet.")
 
-@task(log_prints=True)
 def check_download_running(jobname="3dtile-dl"):
     """
     Check whether a 3d pipeline tile download session (i.e. possum_run_remote) is running
@@ -266,7 +283,6 @@ def launch_download_session(jobname="3dtile-dl"):
     )
     return session_id[0]
 
-@task(log_prints=True)
 def launch_create_symlinks(jobname="3dsymlinks"):
     """
     Launch session on CANFAR to create symbolic links after possum_run_remote has downloaded
@@ -303,7 +319,6 @@ def launch_create_symlinks(jobname="3dsymlinks"):
     )
     return session_id[0]
 
-@task(log_prints=True)
 def needs_prefect_sqlite_backup(
     home_dir: str | Path,
     *,
@@ -338,7 +353,6 @@ def needs_prefect_sqlite_backup(
     cutoff = datetime.now(tz=timezone.utc) - timedelta(days=max_age_days)
     return newest_mtime < cutoff
 
-@flow(log_prints=True)
 def launch_band1_3Dpipeline(database_config_path=None):
     """
     Check for Band 1 tiles that are ready to be processed with the 3D pipeline and launch the pipeline for the first available tile.
@@ -448,11 +462,9 @@ def launch_band1_3Dpipeline(database_config_path=None):
         print("Found no tiles ready to be processed.")
 
     print("3D pipeline check and launch complete.")
-    print("\n")
+    print("\n")  
 
-
-@flow(log_prints=True)
-def main_flow():
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Checks POSSUM validation status ('POSSUM Pipeline validation' google sheet) if 3D pipeline outputs can be ingested."
     )
@@ -464,6 +476,3 @@ def main_flow():
     args = parser.parse_args()
     launch_band1_3Dpipeline(args.database_config_path)
 
-
-if __name__ == "__main__":
-    main_flow()

@@ -17,7 +17,6 @@ that will download the tiles in a CANFAR job and populate the possum.partial_til
 
 #!/usr/bin/env python
 import os
-from dotenv import load_dotenv
 import argparse
 import gspread
 import numpy as np
@@ -32,10 +31,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 from automation import database_queries as db
-from prefect import task, flow
-from possum_pipeline_control import launch_1Dpipeline_PartialTiles_band1_pre_or_post
+from possum_pipeline_control import util
 
-@task(log_prints=True)
 def get_sheet_table(band):
     """
     Connects to the POSSUM Status Monitor Google Sheet and returns a sub-table
@@ -78,7 +75,6 @@ def get_sheet_table(band):
     return ready_table, tile_table
 
 
-@task(log_prints=True)
 def get_ready_fields(band: str) -> tuple[at.Table, at.Table]:
     """
     Get fields ready for single SB partial tile pipeline processing from the database.
@@ -125,7 +121,6 @@ def get_ready_fields(band: str) -> tuple[at.Table, at.Table]:
     return ready_table, full_table_sheet
 
 
-@flow(log_prints=True)
 def launch_pipeline_command(fieldname, sbid):
     """
     Launches the 1D pipeline pre-or-post script for a given field and sbid.
@@ -133,7 +128,26 @@ def launch_pipeline_command(fieldname, sbid):
     The command executed is:
         python -m possum_pipeline_control.launch_1Dpipeline_PartialTiles_band1_pre_or_post {fieldname} {sbid} pre
     """
-    launch_1Dpipeline_PartialTiles_band1_pre_or_post.main_flow(fieldname, sbid, "pre")
+    command = f"python -m possum_pipeline_control.launch_1Dpipeline_PartialTiles_band1_pre_or_post {fieldname} {sbid} pre"
+    print(f"Executing command: {command}")
+    process = subprocess.Popen(
+        command,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,               # line-buffered
+        universal_newlines=True  # ensures \n splitting works across platforms
+    )
+    util.print_subprocess_output(process, command)
+
+def update_status_spreadsheet(fieldname, sbid, band, Google_API_token, status, column):
+    """
+    Update the status of the specified field and sbid in Cameron's Google Sheet.
+
+    Args:
+        fieldname (str): The field name to update.
+       
 
 
 def extract_date(entry):
@@ -149,7 +163,6 @@ def extract_date(entry):
         return np.nan
 
 
-@task(log_prints=True)
 def create_progress_plot(full_table):
     """to be run on p1
 
@@ -447,7 +460,6 @@ def create_progress_plot(full_table):
     plt.close()
 
 
-@task(log_prints=True)
 def launch_collate_job():
     """
     Launches the collate job for the 1D pipeline. Once per day
@@ -492,10 +504,8 @@ def launch_collate_job():
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
     )
     return session_id[0]
-    
 
-@flow(log_prints=True)
-def main_flow():
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Update Partial Tile Google Sheet")
     parser.add_argument(
         "--band",
@@ -559,7 +569,3 @@ def main_flow():
         # update_status_spreadsheet(fieldname, sbid, band, Google_API_token, status_to_put, 'single_SB_1D_pipeline')
 
         break  # only do one every time the script is called
-
-
-if __name__ == "__main__":
-    main_flow()
