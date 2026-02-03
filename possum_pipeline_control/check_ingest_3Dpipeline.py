@@ -198,3 +198,4 @@ if __name__ == "__main__":
 
     ## Assumes this script is called by run_3D_pipeline_intermittently.py
     ingest_3Dpipeline(band_number=band_number)
+    
