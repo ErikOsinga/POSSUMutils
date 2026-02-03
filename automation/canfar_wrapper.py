@@ -10,7 +10,6 @@ import time
 from prefect import task, flow
 from prefect.variables import Variable
 from canfar.sessions import Session
-from possum_pipeline_control import util
 
 #Default polling interval is 60s
 POLLING_INTERVAL = Variable.get('canfar-polling-interval-seconds', 60)
