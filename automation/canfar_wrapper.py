@@ -7,7 +7,7 @@ If we've reached maximum retries and the job still fails, raise an exception to 
 """
 import pprint
 import time
-from prefect import task
+from prefect import task, flow
 from prefect.variables import Variable
 from canfar.sessions import Session
 from possum_pipeline_control import util
@@ -18,8 +18,8 @@ POLLING_INTERVAL = Variable.get('canfar-polling-interval-seconds', 60)
 MAX_RETRY = Variable.get('canfar-num-retries', 2)
 session = Session()
 
-@task(log_prints=True)
-def run_canfar_task_with_polling(canfar_task, *args: None):
+@flow(log_prints=True)
+def run_canfar_task_with_polling(canfar_task, *args):
     """
     Run CANFAR task with session polling to check for session status.
     If the job has failed, it will retry up to the MAX_RETRY set in the config.env.
