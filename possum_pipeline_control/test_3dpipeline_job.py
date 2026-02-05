@@ -19,7 +19,6 @@ python -m possum_pipeline_control.test_3dpipeline_job
 @author: Erik Osinga
 """
 
-import getpass
 
 from dotenv import load_dotenv
 from canfar.sessions import Session
