@@ -488,7 +488,10 @@ def launch_collate_job():
         cmd="bash",
         args=args,
         replicas=1,
-        env={},
+        env={
+            "PREFECT_API_URL": os.getenv('PREFECT_API_URL'),
+            "PREFECT_API_AUTH_STRING": os.getenv('PREFECT_API_AUTH_STRING')
+        },
     )
 
     print("Check sessions at https://ws-uv.canfar.net/skaha/v1/session")
