@@ -141,14 +141,6 @@ def launch_pipeline_command(fieldname, sbid):
     )
     util.print_subprocess_output(process, command)
 
-def update_status_spreadsheet(fieldname, sbid, band, Google_API_token, status, column):
-    """
-    Update the status of the specified field and sbid in Cameron's Google Sheet.
-
-    Args:
-        fieldname (str): The field name to update.
-       
-
 
 def extract_date(entry):
     # Remove extra whitespace
