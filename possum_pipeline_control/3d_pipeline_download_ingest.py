@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 
 from prefect import flow, task
-from . import util
+from possum_pipeline_control import util
 
 
 @task(name="Change to downloads directory")
