@@ -256,7 +256,7 @@ def should_launch_download_session(
 
 def launch_download_session(jobname="3dtile-dl"):
     # Template bash script to run
-    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/possum_pipeline_control/3d_pipeline_download_ingest.py"
+    args = "/arc/projects/CIRADA/polarimetry/software/POSSUMutils/possum_pipeline_control/3d_pipeline_download_ingest.py"
     print("Launching download session")
     print(f"Command: {args}")
 
