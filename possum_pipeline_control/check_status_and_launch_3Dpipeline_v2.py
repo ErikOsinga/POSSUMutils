@@ -31,7 +31,7 @@ import gspread
 import astropy.table as at
 import numpy as np
 from automation import database_queries as db, canfar_wrapper
-from possum_pipeline_control import util, launch_3Dpipeline_band1
+from possum_pipeline_control import util
 from print_all_open_sessions import get_open_sessions
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
