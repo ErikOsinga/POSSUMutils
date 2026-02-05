@@ -7,7 +7,7 @@ from prefect import flow
 from prefect.blocks.system import Secret
 from possum_pipeline_control import util
 
-@flow(log_prints=True)
+@flow(name="refresh_cadc_proxy_pem", log_prints=True)
 def main():
     # Load the secret from prefect
     print('Loading cadc-proxy-pem secret..')
