@@ -15,7 +15,6 @@ from datetime import date
 
 # from skaha.session import Session  # noqa: E402
 from canfar.sessions import Session
-from prefect import flow
 from automation import canfar_wrapper
 
 session = Session()
@@ -24,7 +23,6 @@ today = date.today()
 print("Download script called. Today's date:", today)
 
 
-@flow(log_prints=True)
 def launch_download():
     """Launch tile download script"""
 
@@ -67,4 +65,4 @@ def launch_download():
 
 
 if __name__ == "__main__":
-    canfar_wrapper.run_canfar_task_with_polling(launch_download)
+    canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_download")(launch_download)

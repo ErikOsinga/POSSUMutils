@@ -4,9 +4,9 @@ import os
 import errno
 import json
 import shutil
+import subprocess
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
-from pathlib import Path
 from prefect import task
 from prefect.blocks.system import Secret
 

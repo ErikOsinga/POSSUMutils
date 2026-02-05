@@ -154,7 +154,7 @@ def ingest_3Dpipeline(band_number=1):
             print(f"\nLaunching headless job for 3D pipeline with tile {tilenumber}")
 
             # Launch the pipeline
-            canfar_wrapper.run_canfar_task_with_polling(launch_ingest, tilenumber, band)
+            canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_ingest")(launch_ingest, tilenumber, band)
 
             # Update the status of 3d_pipeline_ingest to "IngestRunning"
             conn = db.get_database_connection(test=False)

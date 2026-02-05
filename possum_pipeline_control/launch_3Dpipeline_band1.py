@@ -9,7 +9,6 @@ from automation import canfar_wrapper
 session = Session()
 
 
-@flow(log_prints=True)
 def launch_session(run_name, tilenumber, image, cores, ram):
     """Launch 3D pipeline run"""
 
@@ -41,7 +40,7 @@ def launch_session(run_name, tilenumber, image, cores, ram):
     return session_id[0]
 
 
-@flow(log_prints=True)
+@flow(name="launch_3D", log_prints=True)
 def main_flow(tilenumber):
     run_name = (
         f"tile{tilenumber}"  # Run name has to match the working directory on CANFAR
@@ -55,7 +54,7 @@ def main_flow(tilenumber):
     cores = 16
     ram = 112  # Check allowed values at canfar.net/science-portal
 
-    canfar_wrapper.run_canfar_task_with_polling(
+    canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_3D")(
             launch_session,
             run_name, tilenumber, image, cores, ram
     )

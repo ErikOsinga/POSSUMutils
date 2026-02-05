@@ -25,7 +25,6 @@ def arg_as_list(s):
     return v
 
 
-@flow(log_prints=True)
 def launch_session(run_name, field_ID, tilenumbers, SBnumber, image, cores, ram):
     """Launch 1D pipeline Partial Tile run"""
     t1, t2, t3, t4 = tilenumbers
@@ -58,7 +57,7 @@ def launch_session(run_name, field_ID, tilenumbers, SBnumber, image, cores, ram)
     return session_id[0]
 
 
-@flow(log_prints=True)
+@flow(name="launch_1d_partialtiles", log_prints=True)
 def main_flow(field_ID, tilenumbers, SBnumber):
     timestr = ((datetime.now().strftime("%d/%m/%Y %H:%M:%S"))[11:]).replace(
         ":", "-"
@@ -74,7 +73,7 @@ def main_flow(field_ID, tilenumbers, SBnumber):
     number_of_tiles = len([t for t in tilenumbers if t != ""])
     ram = 20 * number_of_tiles
     # Check allowed values at canfar.net/science-portal, 10, 20, 30, 40 GB should be allowed
-    canfar_wrapper.run_canfar_task_with_polling(
+    canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_1D_PartialTiles")(
             launch_session,
             run_name, field_ID, tilenumbers, SBnumber, image, cores, ram
     )

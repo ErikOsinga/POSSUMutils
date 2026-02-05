@@ -133,6 +133,6 @@ if __name__ == "__main__":
         run_name = f"pre-dl-{SBnumber}"  # makes it clear a 'pre' download job is running. Dont want too many of these.
 
     # Check allowed values at canfar.net/science-portal, 10, 20, 30, 40 GB should be allowed
-    canfar_wrapper.run_canfar_task_with_polling(launch_session,
+    canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_1D_PartialTiles_pre_post")(launch_session,
         run_name, field_ID, SBnumber, image, cores, ram, ptype, max_dl_jobs=max_dl_jobs
     )
