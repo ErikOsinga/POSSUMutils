@@ -35,7 +35,7 @@ jobs:
       - name: Install Prefect
         run: |
           python -m pip install --upgrade pip
-          pip install prefect prefect-docker>=0.3.1
+          pip install "prefect==3.4.25" "prefect-docker>=0.3.1"
       - name: Prefect Deploy
         env:
           PREFECT_API_URL: ${{ secrets.PREFECT_API_URL }}
