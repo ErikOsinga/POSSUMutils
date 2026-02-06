@@ -7,10 +7,11 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 from dotenv import load_dotenv
+from prefect import flow
 
 from automation import database_queries as db
+from possum_pipeline_control import util
 from print_all_open_sessions import get_open_sessions
-
 
 def create_3d_progress_plot():
     """Create a progress plot for the 3D pipeline."""
@@ -136,23 +137,24 @@ def check_progress_plot():
 
 
 def run_script_intermittently(
-    script_paths, interval, max_runs=None, max_pending=20, max_running=50
+    script_paths, max_pending=20, max_running=50
 ):
-    run_count = 0
 
     ### a chron job executes POSSUM_run_remote and create_symlinks.py every week on CANFAR.
     ### see p1: /home/erik/CIRADA/polarimetry/ASKAP/pipeline_runs/cronlogs/gocronjob.sh
     ### TODO: add update_CADC_tile_status.py to the cron job that runs every week
     ### such that downloaded and ingested tiles are updated in the spreadsheet.
 
-    while max_runs is None or run_count < max_runs:
-        try:
-            # Get information about currently open sessions
-            df_sessions = get_open_sessions()
-            print("Open sessions:")
-            print(df_sessions)
-            print("\n")
+    n_headless_pending = 0
+    n_headless_running = 0
+    try:
+        # Get information about currently open sessions
+        df_sessions = get_open_sessions()
+        print("Open sessions:")
+        print(df_sessions)
+        print("\n")
 
+        if len(df_sessions) > 0:
             # Count the number of headless sessions with status 'Pending'
             mask_pending = (df_sessions["type"] == "headless") & (
                 df_sessions["status"] == "Pending"
@@ -189,45 +191,43 @@ def run_script_intermittently(
                 f"Number of *3D pipeline* headless sessions with status 'Running': {n_headless_running}"
             )
 
-            # If the number of pending headless sessions is less than e.g. 10, run the script
-            if n_headless_pending < max_pending and n_headless_running < max_running:
-                for script_path in script_paths:
-                    print(f"Running script: {script_path}")
-                    subprocess.run(["python", "-m", script_path], check=True)
-            else:
-                if n_headless_pending >= max_pending:
-                    print("Too many pending headless sessions. Skipping this run.")
-                if n_headless_running >= max_running:
-                    print("Too many running headless sessions. Skipping this run.")
-
-        except subprocess.CalledProcessError as e:
-            print(f"Error occurred while running the script: {e}")
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
-
-        run_count += 1
-        if max_runs is not None and run_count >= max_runs:
-            break
-
+        # If the number of pending headless sessions is less than e.g. 10, run the script
+        if n_headless_pending < max_pending and n_headless_running < max_running:
+            for script_path in script_paths:
+                print(f"Running script: {script_path}")
+                command = ["python", "-m", script_path]
+                process = subprocess.Popen(command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    bufsize=1,               # line-buffered
+                    universal_newlines=True  # ensures \n splitting works across platforms
+                )
+                util.print_subprocess_output(process, command)
+        else:
+            if n_headless_pending >= max_pending:
+                print("Too many pending headless sessions. Skipping this run.")
+            if n_headless_running >= max_running:
+                print("Too many running headless sessions. Skipping this run.")
+                
         # Check and update the 3D pipeline progress plot
         check_progress_plot()
 
-        print(f"Sleeping for {interval} seconds...")
-        time.sleep(interval)
+    except subprocess.CalledProcessError as e:
+        print(f"Error occurred while running the script: {e}")
+        raise
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        raise
+    
 
-
-if __name__ == "__main__":
+@flow(name="control_3D_pipeline", log_prints=True)
+def main_flow():    
     # Path to the script to be run intermittently
     script_paths = [
         "possum_pipeline_control.check_status_and_launch_3Dpipeline_v2",
         "possum_pipeline_control.check_ingest_3Dpipeline",
     ]
-
-    # Interval between each run in seconds
-    interval = 600  # 10 minutes
-
-    # Maximum number of runs for this script, set to None for infinite
-    max_runs = None
 
     # Maximum number of headless jobs pendings, will not submit a session if theres more
     max_pending = 5  # 3d pipeline jobs are quite heavy, so 5 pending is enough
@@ -236,5 +236,8 @@ if __name__ == "__main__":
     max_running = 10  # only for 3D pipeline jobs
 
     run_script_intermittently(
-        script_paths, interval, max_runs, max_pending, max_running
+        script_paths, max_pending, max_running
     )
+
+if __name__ == "__main__":
+    main_flow()

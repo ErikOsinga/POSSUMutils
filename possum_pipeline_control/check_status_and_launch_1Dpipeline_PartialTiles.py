@@ -35,7 +35,6 @@ Cameron is in charge of generating the source lists per partial tile and separat
 @author: Erik Osinga
 """
 
-
 def get_results_per_field_sbid_skip_edges(band_number, conn, verbose=False):
     """
     Group the tile_table by 'field_name' and 'sbid' and check the validation condition
@@ -274,7 +273,15 @@ def launch_pipeline(field_ID, tilenumbers, SBid, band):
         raise ValueError(f"Unknown band: {band}")
 
     print(f"Running command: {' '.join(command)}")
-    subprocess.run(command, check=True)
+    process = subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,               # line-buffered
+        universal_newlines=True  # ensures \n splitting works across platforms
+    )
+    util.print_subprocess_output(process, command)
 
 
 def launch_pipeline_summary(field_ID, SBid, band):
@@ -312,11 +319,19 @@ def launch_pipeline_summary(field_ID, SBid, band):
         raise ValueError(f"Unknown band: {band}")
 
     print(f"Running command: {' '.join(command)}")
-    subprocess.run(command, check=True)
+    process = subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,               # line-buffered
+        universal_newlines=True  # ensures \n splitting works across platforms
+    )
+    util.print_subprocess_output(process, command)
 
 
 def update_validation_status(
-    field_name, sbid, band_number, status, database_config_path="automation/config.env"
+    field_name, sbid, band_number, status, database_config_path
 ):
     """
     Update the status of the specified partial tile or all rows for a given field_name and sbid.
@@ -352,6 +367,8 @@ def check_predl_job_running_with_sbid(SBnumber: str) -> bool:
     Returns True if a job is running or pending, False otherwise.
     """
     df_sessions = get_open_sessions()
+    if len(df_sessions) == 0:
+        return False
     # corresponds to jobname as set in launch_1Dpipeline_PartialTiles_band1_pre_or_post.py
     jobname = f"pre-dl-{SBnumber}"
     if (
@@ -367,7 +384,7 @@ def check_predl_job_running_with_sbid(SBnumber: str) -> bool:
         return False
 
 
-def launch_band1_1Dpipeline(database_config_path: str = "automation/config.env"):
+def launch_band1_1Dpipeline(database_config_path=None):
     """
     Launch a headless job to CANFAR for a 1D pipeline Partial Tile
     """
@@ -546,7 +563,6 @@ def launch_band1_1Dpipeline(database_config_path: str = "automation/config.env")
             "Found no tiles ready to be processed. Either all are done, or a pre-dl job is already running."
         )
 
-
 if __name__ == "__main__":
     # DEPRECATED:
     # on p1, token for accessing Erik's google sheets
@@ -559,7 +575,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--database_config_path",
         type=str,
-        default="automation/config.env",
         help="Path to .env file with database connection parameters.",
     )
     args = parser.parse_args()
