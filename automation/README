@@ -32,3 +32,6 @@ You can still use your own config.env as below to override the production secret
 2. Enter ausSRC database details in the .env file. 
 3. Enter Google spreadsheet token
 4. Update Google spreadsheet file locations (only if the files are different, e.g. for testing)
+5. If testing with Prefect, export these values directly into environment variables: PREFECT_API_URL and PREFECT_API_AUTH_STRING if authentication is needed. This will guarantee the values to be picked up before the flow starts, otherwise it may not be effective.  
+
+
