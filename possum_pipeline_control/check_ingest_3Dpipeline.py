@@ -89,7 +89,7 @@ def launch_ingest(tilenumber, band):
         args=args,
         replicas=1,
         env={
-            "PREFECT_API_URL": os.getenv('PREFECT_API_URL'),
+            "PREFECT_API_URL": os.getenv('PREFECT_SERVER_IP'),
             "PREFECT_API_AUTH_STRING": os.getenv('PREFECT_API_AUTH_STRING')
         },
     )
