@@ -2,7 +2,9 @@
 
 import pandas as pd
 from canfar.sessions import Session
+from possum_pipeline_control import util
 
+util.stage_cadc_certificate('')
 session = Session()
 
 

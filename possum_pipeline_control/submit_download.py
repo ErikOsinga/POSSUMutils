@@ -10,11 +10,12 @@ This script is DEPRECATED. Superseded by launch_download_session() in the module
         It submits a download job to CANFAR which will pull new files off' the pawsey storage.
 
 """
-
+import os
 from datetime import date
 
 # from skaha.session import Session  # noqa: E402
 from canfar.sessions import Session
+from automation import canfar_wrapper
 
 session = Session()
 
@@ -30,17 +31,17 @@ def launch_download():
 
     # optionally :latest for always the latest version
     # TODO: there's a bug in CANFAR where the latest tag doesnt work
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
+    image = os.getenv("IMAGE")
     # good default values for download script
     cores = 2
     ram = 16  # Check allowed values at canfar.net/science-portal
 
     # Template bash/python script to run
-    cmd = "bash"
-    args = "/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/3dpipeline_downloadscript.sh"
+    args = "/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/3dpipeline_downloadscript.py"
 
     print("Launching session")
-    print(f"Command: {cmd} {args}")
+    print(f"Command: {args}")
+    print(f"Image:{image}")
 
     session_id = session.create(
         name=run_name.replace(
@@ -50,9 +51,13 @@ def launch_download():
         cores=cores,
         ram=ram,
         kind="headless",
-        cmd=cmd,
+        cmd="python",
         args=args,
         replicas=1,
+        env={
+            "PREFECT_API_URL": os.getenv('PREFECT_API_URL'),
+            "PREFECT_API_AUTH_STRING": os.getenv('PREFECT_API_AUTH_STRING')
+        },
     )
 
     print("Check sessions at https://ws-uv.canfar.net/skaha/v1/session")
@@ -60,8 +65,8 @@ def launch_download():
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
     )
 
-    return
+    return session_id[0]
 
 
 if __name__ == "__main__":
-    launch_download()
+    canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_download")(launch_download)
