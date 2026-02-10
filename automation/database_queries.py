@@ -78,13 +78,13 @@ def get_database_parameters(
             db_host = Secret.load("database-host").get()
             db_port = Secret.load("database-port").get()
 
-        return {
-            "dbname": db_name,
-            "user": db_user,
-            "password": db_pass,
-            "host": db_host,
-            "port": db_port,
-        }
+    return {
+        "dbname": db_name,
+        "user": db_user,
+        "password": db_pass,
+        "host": db_host,
+        "port": db_port,
+    }
 
 def execute_update_query(query, conn, params=None, verbose=False):
     """
