@@ -4,12 +4,11 @@ import pandas as pd
 from canfar.sessions import Session
 from possum_pipeline_control import util
 
-util.stage_cadc_certificate('')
-session = Session()
-
-
 def get_open_sessions():
     """Return a table with information about currently open sessions"""
+    util.stage_cadc_certificate('')
+    session = Session()
+
     # Fetch open sessions
     open_sessions = session.fetch()
 
