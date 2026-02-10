@@ -28,6 +28,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.ticker as ticker
 import time
+from dotenv import load_dotenv
 from datetime import datetime
 from pathlib import Path
 from automation import database_queries as db
