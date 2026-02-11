@@ -30,7 +30,10 @@ def launch_session(run_name, field_ID, tilenumbers, SBnumber, image, cores, ram)
     t1, t2, t3, t4 = tilenumbers
 
     # Template bash script to run
-    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1.sh {run_name} {field_ID} {SBnumber} {t1} {t2} {t3} {t4}"
+    args = (
+        f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1.sh {run_name} {field_ID} {SBnumber} {t1} {t2} {t3} {t4} "
+        f"{os.getenv('PREFECT_SERVER_URL')} {os.getenv('PREFECT_API_AUTH_STRING')}"
+    )
 
     print("Launching session")
     print(f"Command: bash {args}")

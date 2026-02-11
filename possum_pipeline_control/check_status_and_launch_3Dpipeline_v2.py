@@ -256,7 +256,10 @@ def should_launch_download_session(
 
 def launch_download_session(jobname="3dtile-dl"):
     # Template bash script to run
-    args = "/arc/projects/CIRADA/polarimetry/software/POSSUMutils/possum_pipeline_control/3d_pipeline_download_ingest.py"
+    args = (
+        "/arc/projects/CIRADA/polarimetry/software/POSSUMutils/possum_pipeline_control/3d_pipeline_tile_download_ingest.sh "
+        f"{os.getenv('PREFECT_SERVER_URL')} {os.getenv('PREFECT_API_AUTH_STRING')}"
+    )
     print("Launching download session")
     print(f"Command: {args}")
 
@@ -271,7 +274,7 @@ def launch_download_session(jobname="3dtile-dl"):
         cores=None,  # flexible mode
         ram=None,  # flexible mode
         kind="headless",
-        cmd="python",
+        cmd="bash",
         args=args,
         replicas=1,
     )
@@ -291,7 +294,10 @@ def launch_create_symlinks(jobname="3dsymlinks"):
     """
 
     # Template bash script to run
-    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/create_symlinks.sh"
+    args = (
+        f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/create_symlinks.sh "
+        f"{os.getenv('PREFECT_SERVER_URL')} {os.getenv('PREFECT_API_AUTH_STRING')}"
+    )
 
     print("Launching symlinks session")
     print(f"Command: {args}")

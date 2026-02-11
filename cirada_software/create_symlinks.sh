@@ -1,6 +1,8 @@
 
 echo "====== Creating symlinks"
-
+echo "====== Setting PREFECT URL"
+export PREFECT_API_URL=$1
+export PREFECT_API_AUTH_STRING=$2
 
 # Move to the POSSUMutils directory
 cd /arc/projects/CIRADA/polarimetry/software/POSSUMutils
