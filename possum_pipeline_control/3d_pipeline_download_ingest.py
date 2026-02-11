@@ -3,7 +3,6 @@
 import os
 import subprocess
 
-from dotenv import load_dotenv
 from pathlib import Path
 from prefect import flow, task
 from possum_pipeline_control import util
@@ -55,5 +54,4 @@ def download_and_ingest_tiles_flow(
 
 
 if __name__ == "__main__":
-    load_dotenv(dotenv_path="./automation/config.env")
     download_and_ingest_tiles_flow()
