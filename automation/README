@@ -1,4 +1,9 @@
-It is now optional to have your own config.env. All the secrets are stored in Prefect server.
+Config.env must be populated with Prefect details for CANFAR session to connect to Prefect:
+
+PREFECT_API_URL : IP address of the Prefect server e.g. http://<IP address>:4200/api
+PREFECT_API_AUTH_STRING : auth string to let us use the Prefect server in CANFAR
+
+The rest of the values in config.env are now optional. All the secrets including database details are stored in Prefect server.
 
 1. Github Actions Secrets:
 --------------------------
@@ -32,6 +37,5 @@ You can still use your own config.env as below to override the production secret
 2. Enter ausSRC database details in the .env file. 
 3. Enter Google spreadsheet token
 4. Update Google spreadsheet file locations (only if the files are different, e.g. for testing)
-5. If testing with Prefect, export these values directly into environment variables: PREFECT_API_URL and PREFECT_API_AUTH_STRING if authentication is needed. This will guarantee the values to be picked up before the flow starts, otherwise it may not be effective.  
 
 

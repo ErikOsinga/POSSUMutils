@@ -1,4 +1,10 @@
 echo "Preparing pipeline run name $1 tile number $2"
+
+# automatically export all variables for Prefect
+set -a
+source /arc/projects/CIRADA/polarimetry/software/POSSUMutils/automation/config.env
+set +a
+
 echo "Creating config file"
 # arguments: template file, output_filename, run_name, tile_number, data_dir
 python /arc/projects/CIRADA/polarimetry/ASKAP/Pipeline_logs/config_templates/create_config.py \

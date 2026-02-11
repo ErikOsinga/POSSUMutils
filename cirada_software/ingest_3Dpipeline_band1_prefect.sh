@@ -1,5 +1,10 @@
 echo "Preparing pipeline ingest for tile number $1 band $2"
 
+# automatically export all variables for Prefect
+set -a
+source /arc/projects/CIRADA/polarimetry/software/POSSUMutils/automation/config.env
+set +a
+
 #RMtools not used but cant hurt to add it to path
 echo "TEMPORARILY: adding RMtools[dev] to pythonpath until new release (>v1.4.6)"
 export PYTHONPATH="/arc/projects/CIRADA/polarimetry/software/RMtoolsdev/:$PYTHONPATH"

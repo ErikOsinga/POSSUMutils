@@ -1,5 +1,10 @@
 echo "Preparing sourcelists and google sheet. pipeline run name $1 field_ID $2 SB $3"
 
+# automatically export all variables for Prefect
+set -a
+source /arc/projects/CIRADA/polarimetry/software/POSSUMutils/automation/config.env
+set +a
+
 workdir=/arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/create_srl_logs/
 echo "In directory $workdir"
 

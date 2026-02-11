@@ -37,7 +37,7 @@ def launch_download():
     ram = 16  # Check allowed values at canfar.net/science-portal
 
     # Template bash/python script to run
-    args = "/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/3dpipeline_downloadscript.py"
+    args = "/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/3dpipeline_downloadscript.sh"
 
     print("Launching session")
     print(f"Command: {args}")
@@ -51,13 +51,9 @@ def launch_download():
         cores=cores,
         ram=ram,
         kind="headless",
-        cmd="python",
+        cmd="bash",
         args=args,
         replicas=1,
-        env={
-            "PREFECT_API_URL": os.getenv('PREFECT_API_URL'),
-            "PREFECT_API_AUTH_STRING": os.getenv('PREFECT_API_AUTH_STRING')
-        },
     )
 
     print("Check sessions at https://ws-uv.canfar.net/skaha/v1/session")
