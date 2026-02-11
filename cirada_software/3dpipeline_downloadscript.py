@@ -20,6 +20,7 @@ WORKFLOW:
 
 import os
 import sys
+from dotenv import load_dotenv
 from prefect import flow, task
 
 # important to grab _run_remote() because run_remote() is wrapped in sys.exit()
@@ -87,4 +88,5 @@ def do_download():
 
 
 if __name__ == "__main__":
+    load_dotenv(dotenv_path="./automation/config.env")
     do_download()

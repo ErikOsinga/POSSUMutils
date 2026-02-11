@@ -3,6 +3,10 @@ tilelist="['$4','$5','$6','$7']"
 echo $tilelist
 echo "Preparing pipeline run name $1 field_ID $2 SB $3 tiles $tilelist"
 
+# automatically export all variables for Prefect
+set -a
+source /arc/projects/CIRADA/polarimetry/software/POSSUMutils/automation/config.env
+set +a
 
 #### parse that list into the directory we want to create. e.g. ['8843','8971','',''], becomes 8843+8971
 

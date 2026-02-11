@@ -1,6 +1,10 @@
 
 echo "====== Creating symlinks"
 
+# automatically export all variables for Prefect
+set -a
+source /arc/projects/CIRADA/polarimetry/software/POSSUMutils/automation/config.env
+set +a
 
 # Move to the POSSUMutils directory
 cd /arc/projects/CIRADA/polarimetry/software/POSSUMutils
