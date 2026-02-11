@@ -14,6 +14,7 @@ import argparse
 import os
 from dotenv import load_dotenv
 from prefect import flow, task
+from prefect.cache_policies import NO_CACHE
 import gspread
 import numpy as np
 import astropy.table as at
@@ -111,7 +112,7 @@ def check_report(tile_workdir):
         return False
 
 
-@task
+@task(cache_policy=NO_CACHE)
 def update_tile_database(tile_number, band_str, status, test_flag, conn):
     """
     Update the status of the specified tile in the VALIDATION database table.

@@ -1,8 +1,10 @@
 import argparse
-import getpass
+import os
 
 # from skaha.session import Session
 from canfar.sessions import Session
+from prefect import flow
+from automation import canfar_wrapper
 
 session = Session()
 
@@ -10,10 +12,8 @@ session = Session()
 def launch_session(run_name, tilenumber, image, cores, ram):
     """Launch 3D pipeline run"""
 
-    p1user = getpass.getuser()
-
     # Template bash script to run
-    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_3Dpipeline_band1_prefect.sh {run_name} {tilenumber} {p1user}"
+    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_3Dpipeline_band1_prefect.sh {run_name} {tilenumber}"
 
     print("Launching session")
     print(f"Command: bash {args}")
@@ -29,7 +29,6 @@ def launch_session(run_name, tilenumber, image, cores, ram):
         cmd="bash",
         args=args,
         replicas=1,
-        env={},
     )
 
     print("Check sessions at https://ws-uv.canfar.net/skaha/v1/session")
@@ -37,7 +36,27 @@ def launch_session(run_name, tilenumber, image, cores, ram):
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
     )
 
-    return
+    return session_id[0]
+
+
+@flow(name="launch_3D", log_prints=True)
+def main_flow(tilenumber):
+    run_name = (
+        f"tile{tilenumber}"  # Run name has to match the working directory on CANFAR
+    )
+
+    # optionally :latest for always the latest version
+    # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
+    image = os.getenv("IMAGE")
+    #image = f"images.canfar.net/cirada/possumpipelineprefect-{version}:{tag}"
+    # good default values
+    cores = 16
+    ram = 112  # Check allowed values at canfar.net/science-portal
+
+    canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_3D")(
+            launch_session,
+            run_name, tilenumber, image, cores, ram
+    )
 
 
 if __name__ == "__main__":
@@ -46,15 +65,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     tilenumber = args.tilenumber
-    run_name = (
-        f"tile{tilenumber}"  # Run name has to match the working directory on CANFAR
-    )
 
-    # optionally :latest for always the latest version
-    # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.16.0"
-    # good default values
-    cores = 16
-    ram = 112  # Check allowed values at canfar.net/science-portal
-
-    launch_session(run_name, tilenumber, image, cores, ram)
+    main_flow(tilenumber)

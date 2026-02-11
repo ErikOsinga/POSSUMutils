@@ -11,5 +11,5 @@ numpy
 astropy
 astroquery
 matplotlib
-prefect
+prefect==3.4.25
 tqdm

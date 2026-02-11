@@ -19,9 +19,12 @@ import astroquery.cadc as cadc
 import astropy.table as at
 import numpy as np
 import datetime
+
+from prefect import flow, task
 from time import sleep
 
 
+@flow(log_prints=True)
 def update_sheet_CADC_tiles(CADC_cert_file, Google_API_token):
     # Authenticate and grab tables
     session = cadc.Cadc()
@@ -36,6 +39,7 @@ def update_sheet_CADC_tiles(CADC_cert_file, Google_API_token):
     update_one_band("2", session, ps)
 
 
+@task(log_prints=True)
 def update_one_band(band_number, CADC_session, ps):
     """Check for new fully-complete"""
     query = CADC_session.create_async("""SELECT observationID,Plane.productID,Observation.lastModified FROM caom2.Plane AS Plane 

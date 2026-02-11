@@ -1,12 +1,9 @@
 echo "Preparing pipeline ingest for tile number $1 band $2"
 
-p1user=$3
-
-echo "Opening SSH tunnel to prefect server host (p1) as user $p1user"
-# open connection
-ssh -fNT -L 4200:localhost:4200 $p1user@206.12.93.32
-# set which port to communicate results to 
-export PREFECT_API_URL="http://localhost:4200/api"
+# automatically export all variables for Prefect
+set -a
+source /arc/projects/CIRADA/polarimetry/software/POSSUMutils/automation/config.env
+set +a
 
 #RMtools not used but cant hurt to add it to path
 echo "TEMPORARILY: adding RMtools[dev] to pythonpath until new release (>v1.4.6)"

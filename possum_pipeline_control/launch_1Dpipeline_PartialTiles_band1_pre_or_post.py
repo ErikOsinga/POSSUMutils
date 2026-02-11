@@ -1,10 +1,11 @@
 import argparse
 import ast
+import os
 from datetime import datetime
-import getpass
 
 # from skaha.session import Session
 from canfar.sessions import Session
+from automation import canfar_wrapper
 from possum_pipeline_control.control_1D_pipeline_PartialTiles import get_open_sessions
 
 """
@@ -42,14 +43,12 @@ def launch_session(
 
     df_sessions = get_open_sessions()
 
-    p1user = getpass.getuser()
-
     if ptype == "post":
         # Template bash script to run
-        args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1_summary.sh {run_name} {field_ID} {SBnumber} {p1user}"
+        args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1_summary.sh {run_name} {field_ID} {SBnumber}"
     elif ptype == "pre":
         # Template bash script to run
-        args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1_srl_and_googlesheet.sh {run_name} {field_ID} {SBnumber} {p1user}"
+        args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1_srl_and_googlesheet.sh {run_name} {field_ID} {SBnumber}"
 
         if len(df_sessions) == 0:
             print("No open sessions. Can launch a pre-dl job.")
@@ -80,7 +79,6 @@ def launch_session(
         cmd="bash",
         args=args,
         replicas=1,
-        env={},
     )
 
     print("Check sessions at https://ws-uv.canfar.net/skaha/v1/session")
@@ -88,8 +86,7 @@ def launch_session(
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
     )
 
-    return
-
+    return session_id[0] 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -119,7 +116,8 @@ if __name__ == "__main__":
     # optionally :latest for always the latest version. CANFAR has a bug with that though.
     # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
     # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.11.0" # v1.12.1 has astropy issue https://github.com/astropy/astropy/issues/17497
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.16.0"
+    image = os.getenv("IMAGE")
+    
     # good default values
     cores = 4
     max_dl_jobs = 2
@@ -134,7 +132,6 @@ if __name__ == "__main__":
         run_name = f"pre-dl-{SBnumber}"  # makes it clear a 'pre' download job is running. Dont want too many of these.
 
     # Check allowed values at canfar.net/science-portal, 10, 20, 30, 40 GB should be allowed
-
-    launch_session(
+    canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_1D_PartialTiles_pre_post")(launch_session,
         run_name, field_ID, SBnumber, image, cores, ram, ptype, max_dl_jobs=max_dl_jobs
     )

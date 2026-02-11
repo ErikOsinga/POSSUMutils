@@ -17,10 +17,8 @@ that will download the tiles in a CANFAR job and populate the possum.partial_til
 
 #!/usr/bin/env python
 import os
-from dotenv import load_dotenv
 import argparse
 import gspread
-import getpass
 import numpy as np
 import subprocess
 import astropy.table as at
@@ -30,10 +28,11 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.ticker as ticker
 import time
+from dotenv import load_dotenv
 from datetime import datetime
 from pathlib import Path
 from automation import database_queries as db
-
+from possum_pipeline_control import util
 
 def get_sheet_table(band):
     """
@@ -92,8 +91,7 @@ def get_ready_fields(band: str) -> tuple[at.Table, at.Table]:
         band_number = "2"
     else:
         raise ValueError("Band must be either '943MHz' or '1367MHz'")
-
-    load_dotenv(dotenv_path="./automation/config.env")
+    
     conn = db.get_database_connection(test=False)
     ready_table = db.get_fields_ready_single_SB_pipeline(band_number, conn)
     conn.close()
@@ -133,7 +131,16 @@ def launch_pipeline_command(fieldname, sbid):
     """
     command = f"python -m possum_pipeline_control.launch_1Dpipeline_PartialTiles_band1_pre_or_post {fieldname} {sbid} pre"
     print(f"Executing command: {command}")
-    subprocess.run(command, shell=True, check=True)
+    process = subprocess.Popen(
+        command,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,               # line-buffered
+        universal_newlines=True  # ensures \n splitting works across platforms
+    )
+    util.print_subprocess_output(process, command)
 
 
 def extract_date(entry):
@@ -455,18 +462,17 @@ def launch_collate_job():
 
     session = Session()
 
-    p1user = getpass.getuser()
 
     # e.g. for band 1
     basedir = "/arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/943MHz/"
     # Template bash script to run
-    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/collate_1Dpipeline_PartialTiles.sh {basedir} {p1user}"
+    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/collate_1Dpipeline_PartialTiles.sh {basedir}"
 
     print("Launching collate job")
     print(f"Command: bash {args}")
 
     run_name = "collate"
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.16.0"  # v1.12.1 has astropy issue https://github.com/astropy/astropy/issues/17497
+    image = os.getenv("IMAGE")
     # good default values
     cores = 4
     # ram will have to grow as catalogue grows...
@@ -483,14 +489,13 @@ def launch_collate_job():
         cmd="bash",
         args=args,
         replicas=1,
-        env={},
     )
 
     print("Check sessions at https://ws-uv.canfar.net/skaha/v1/session")
     print(
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
     )
-
+    return session_id[0]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Update Partial Tile Google Sheet")
@@ -503,7 +508,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--database_config_path",
         type=str,
-        default="automation/config.env",
         help="Path to .env file with database connection parameters.",
     )
     args = parser.parse_args()
@@ -511,8 +515,9 @@ if __name__ == "__main__":
     band = args.band
 
     # load env for google spreadsheet constants
-    load_dotenv(dotenv_path=args.database_config_path)
-    Google_API_token = os.getenv("POSSUM_STATUS_SHEET")
+    if args.database_config_path:
+        load_dotenv(dotenv_path=args.database_config_path)
+        # Google_API_token = os.getenv("POSSUM_STATUS_SHEET")
     # consider chmod 600 <POSSUM_STATUS_TOKEN_FILE> to prevent access!!!
 
     # Get fields ready for processing according to the AUSSRC database.

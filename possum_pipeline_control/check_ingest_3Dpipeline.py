@@ -1,12 +1,10 @@
-from dotenv import load_dotenv
 from vos import Client
 import argparse
-from possum_pipeline_control import util
-import getpass
+import os
 
-# from skaha.session import Session
+from possum_pipeline_control import util
 from canfar.sessions import Session
-from automation import database_queries as db
+from automation import database_queries as db, canfar_wrapper
 
 session = Session()
 
@@ -24,8 +22,6 @@ If the "3d_pipeline_val" column is marked as "Good", we can launch an ingest job
 
 @author: Erik Osinga
 """
-
-
 def get_tiles_for_ingest(band_number, conn):
     """
     Get a list of 3D pipeline tile numbers that should be ready to be ingested.
@@ -61,7 +57,6 @@ def get_canfar_tiles(band_number):
         raise ValueError(f"Band number {band_number} not defined")
     return canfar_tilenumbers
 
-
 def launch_ingest(tilenumber, band):
     """Launch 3D pipeline ingest script"""
 
@@ -70,18 +65,17 @@ def launch_ingest(tilenumber, band):
     run_name = f"ingest{tilenumber}"
     # optionally :latest for always the latest version (SEEMS TO BE BROKEN)
     # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:latest"
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.16.0"
+    image = os.getenv("IMAGE")
     # good default values for ingest script
     cores = 2
     ram = 32  # Check allowed values at canfar.net/science-portal
 
-    p1user = getpass.getuser()
-
     # Template bash script to run
-    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/ingest_3Dpipeline_band{band_number}_prefect.sh {tilenumber} {band} {p1user}"
+    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/ingest_3Dpipeline_band{band_number}_prefect.sh {tilenumber} {band}"
 
     print("Launching session")
     print(f"Command: bash {args}")
+    print(f"Image: {image}")
 
     session_id = session.create(
         name=run_name.replace(
@@ -101,8 +95,7 @@ def launch_ingest(tilenumber, band):
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
     )
 
-    return
-
+    return session_id[0]
 
 def update_status(tile_number, band, status, conn):
     """
@@ -117,7 +110,6 @@ def update_status(tile_number, band, status, conn):
     return db.update_3d_pipeline_table(
         tile_number, band_no, status, "3d_pipeline_ingest", conn
     )
-
 
 def ingest_3Dpipeline(band_number=1):
     if band_number == 1:
@@ -162,7 +154,7 @@ def ingest_3Dpipeline(band_number=1):
             print(f"\nLaunching headless job for 3D pipeline with tile {tilenumber}")
 
             # Launch the pipeline
-            launch_ingest(tilenumber, band)
+            canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_ingest")(launch_ingest, tilenumber, band)
 
             # Update the status of 3d_pipeline_ingest to "IngestRunning"
             conn = db.get_database_connection(test=False)
@@ -177,8 +169,7 @@ def ingest_3Dpipeline(band_number=1):
         print("Found no tiles ready to be processed.")
 
     print("3D pipeline ingest check complete.")
-    print("\n")
-
+    print("\n")  
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -192,13 +183,19 @@ if __name__ == "__main__":
         default=1,
         help="Band number to process: 1 for 943MHz or 2 for 1367MHz",
     )
+    parser.add_argument(
+        "--database_config_path",
+        type=str,
+        help="Path to .env file with database connection parameters.",
+    )
     args = parser.parse_args()
 
     # Band number 1 (943MHz) or 2 ("1367MHz")
     band_number = args.band_number
 
     # load env for google spreadsheet constants
-    load_dotenv(dotenv_path="./automation/config.env")
+    util.initiate_possum_status_sheet_and_token(args.database_config_path)
 
     ## Assumes this script is called by run_3D_pipeline_intermittently.py
     ingest_3Dpipeline(band_number=band_number)
+    

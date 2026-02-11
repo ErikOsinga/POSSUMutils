@@ -1,0 +1,47 @@
+name: Deploy Prefect flow
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Docker image tag name'
+        required: false
+        type: string
+        default: 'v1.18.0'
+      python_version:
+        description: 'The python version used for the image'
+        required: false
+        type: string
+        default: '3.12'
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Log in to Harbor
+        uses: docker/login-action@v3
+        with:
+          registry: images.canfar.net
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_PASSWORD }}  
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python_version }}
+      - name: Install Prefect
+        run: |
+          python -m pip install --upgrade pip
+          pip install "prefect[docker]==3.4.25"
+      - name: Prefect Deploy
+        env:
+          PREFECT_API_URL: ${{ secrets.PREFECT_API_URL }}
+          PREFECT_API_AUTH_STRING: ${{ secrets.PREFECT_API_AUTH_STRING }}
+          TAG: ${{ inputs.tag_name }}
+          VERSION: ${{ inputs.python_version }}
+        run: |
+          prefect deploy --all --prefect-file automation/prefect/prefect-git-clone.yaml
