@@ -54,10 +54,6 @@ def launch_download():
         cmd="python",
         args=args,
         replicas=1,
-        env={
-            "PREFECT_API_URL": os.getenv('PREFECT_SERVER_IP'),
-            "PREFECT_API_AUTH_STRING": os.getenv('PREFECT_API_AUTH_STRING')
-        },
     )
 
     print("Check sessions at https://ws-uv.canfar.net/skaha/v1/session")
