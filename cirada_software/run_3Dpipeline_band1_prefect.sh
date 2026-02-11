@@ -1,8 +1,4 @@
 echo "Preparing pipeline run name $1 tile number $2"
-echo "Setting PREFECT URL"
-export PREFECT_API_URL=$3
-export PREFECT_API_AUTH_STRING=$4
-
 echo "Creating config file"
 # arguments: template file, output_filename, run_name, tile_number, data_dir
 python /arc/projects/CIRADA/polarimetry/ASKAP/Pipeline_logs/config_templates/create_config.py \

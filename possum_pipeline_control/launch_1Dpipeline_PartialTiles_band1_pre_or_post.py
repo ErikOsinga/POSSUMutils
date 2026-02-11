@@ -45,10 +45,10 @@ def launch_session(
 
     if ptype == "post":
         # Template bash script to run
-        args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1_summary.sh {run_name} {field_ID} {SBnumber} "
+        args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1_summary.sh {run_name} {field_ID} {SBnumber}"
     elif ptype == "pre":
         # Template bash script to run
-        args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1_srl_and_googlesheet.sh {run_name} {field_ID} {SBnumber} "
+        args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_1Dpipeline_PartialTiles_band1_srl_and_googlesheet.sh {run_name} {field_ID} {SBnumber}"
 
         if len(df_sessions) == 0:
             print("No open sessions. Can launch a pre-dl job.")
@@ -64,7 +64,6 @@ def launch_session(
                     f"Greater than or equal to {max_dl_jobs} download jobs are already running. Skipping this run."
                 )
                 return
-    args += f"{os.getenv('PREFECT_SERVER_URL')} {os.getenv('PREFECT_API_AUTH_STRING')}"
 
     print("Launching session")
     print(f"Command: bash {args}")

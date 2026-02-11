@@ -13,10 +13,7 @@ def launch_session(run_name, tilenumber, image, cores, ram):
     """Launch 3D pipeline run"""
 
     # Template bash script to run
-    args = (
-        f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_3Dpipeline_band1_prefect.sh {run_name} {tilenumber} "
-        f"{os.getenv('PREFECT_SERVER_URL')} {os.getenv('PREFECT_API_AUTH_STRING')}"
-    )
+    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/run_3Dpipeline_band1_prefect.sh {run_name} {tilenumber}"
 
     print("Launching session")
     print(f"Command: bash {args}")

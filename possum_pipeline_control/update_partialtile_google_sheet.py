@@ -466,10 +466,7 @@ def launch_collate_job():
     # e.g. for band 1
     basedir = "/arc/projects/CIRADA/polarimetry/pipeline_runs/partial_tiles/943MHz/"
     # Template bash script to run
-    args = (
-        f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/collate_1Dpipeline_PartialTiles.sh {basedir} "
-        f"{os.getenv('PREFECT_SERVER_URL')} {os.getenv('PREFECT_API_AUTH_STRING')}"
-    )    
+    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/collate_1Dpipeline_PartialTiles.sh {basedir}"
 
     print("Launching collate job")
     print(f"Command: bash {args}")

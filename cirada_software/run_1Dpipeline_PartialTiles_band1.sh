@@ -31,10 +31,6 @@ echo "Creating config file"
 python /arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/create_config_partialtiles.py /arc/projects/CIRADA/polarimetry/software/POSSUM_Polarimetry_Pipeline/pipeline/canfar_config_templates/config_template_PartialTiles_1d_band1.ini config_943MHz_$2_$3_$tilelist_dir.ini $workdir $2 $3 "$tilelist_dir"
 # arguments: template file, output_filename, workdir, fieldstr, SB_number, tilelist_dir
 
-echo "Setting PREFECT URL"
-export PREFECT_API_URL=$8
-export PREFECT_API_AUTH_STRING=$9
-
 echo "adding RMtools[dev] to pythonpath to work with dev branch of RMtools"
 export PYTHONPATH="/arc/projects/CIRADA/polarimetry/software/RMtoolsdev/:$PYTHONPATH"
 
