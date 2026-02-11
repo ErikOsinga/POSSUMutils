@@ -14,19 +14,22 @@ Should be executed on CANFAR, it will be send there by test_3dpipeline_job.py, s
 @author: Erik Osinga
 """
 
-import os
 import argparse
+import os
 import subprocess
-from astropy.table import Table
-import numpy as np
-from dotenv import load_dotenv
-import gspread
 from pathlib import Path
-from automation import database_queries as db
-from prefect import flow, task
-from cirada_software.download_all_MFS_images import get_casda_username_password
-from astropy.coordinates import SkyCoord
+
 import astropy.units as u
+import gspread
+import numpy as np
+from astropy.coordinates import SkyCoord
+from astropy.table import Table
+from dotenv import load_dotenv
+from prefect import flow, task
+
+from automation import database_queries as db
+from cirada_software.download_all_MFS_images import get_casda_username_password
+from possum_pipeline_control import util
 
 # expected number of tiles in POSSUM band 1
 NTILES_BAND1_AUSSRC = 6497  # total expected number of tiles for Band 1
@@ -59,11 +62,11 @@ def check_acces_to_google_spread():
     Check whether user has access to Cameron's Status Spreadsheet.
 
     If this doesn't work, there's likely an error in the file ./automation/config.env
+    or in the Prefect secrets
     """
 
-    # read the location of the API token according to ./automation/config.env
-    # this will be  e.g. ~/.ssh/psm_gspread_token.json
-    Google_API_token = os.getenv("POSSUM_STATUS_TOKEN")
+    # read the location of the API token from the Prefect secret, and the prefect server access from ./automation/config.env
+    Google_API_token = util.initiate_possum_status_sheet_and_token()
 
     # it should exist
     assert Path(Google_API_token).exists(), f"{Google_API_token=} not found!"
