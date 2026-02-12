@@ -380,7 +380,7 @@ def launch_band1_3Dpipeline(database_config_path=None):
         write_last_download_launch_time(state_file, now_utc)
         
         # also launch a job to create new symlinks since the previous download job finished.
-        canfar_wrapper.run_canfar_task_with_polling(launch_create_symlinks)
+        canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_create_symlinks")(launch_create_symlinks)
     else:
         if download_running:
             print("A download job (possum_run_remote) is already running.")
