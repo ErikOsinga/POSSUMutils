@@ -3,6 +3,7 @@ import os
 import argparse
 from dotenv import load_dotenv
 from .log_processing_status_1D_PartialTiles_summary import update_status_spreadsheet
+from possum_pipeline_control import util
 
 """
 While downloading the tiles in a CANFAR job and populating the POSSUM Pipeline Validation sheet, log the processing status
@@ -42,7 +43,7 @@ if __name__ == "__main__":
     database_config_path = args.database_config_path
 
     load_dotenv(dotenv_path=database_config_path)
-    Google_API_token = os.getenv("POSSUM_STATUS_TOKEN")
+    Google_API_token = util.initiate_possum_status_sheet_and_token()
     if not os.path.isfile(Google_API_token):
         raise FileNotFoundError(
             f"Google API token file not found at {Google_API_token}"

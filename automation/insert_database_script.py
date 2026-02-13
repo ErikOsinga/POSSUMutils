@@ -550,6 +550,7 @@ def drop_test_tables():
 if __name__ == "__main__":
     load_dotenv(dotenv_path="./automation/config.env")
     google_api_token = os.getenv("POSSUM_STATUS_TOKEN")
+    # Google_API_token = util.initiate_possum_status_sheet_and_token()
     GC = gspread.service_account(filename=google_api_token)
     VALIDATION_SHEET = "https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k"
     STATUS_SHEET = os.getenv("POSSUM_STATUS_SHEET")

@@ -357,8 +357,9 @@ def launch_band1_3Dpipeline(database_config_path=None):
     3D pipeline can be launched if the tile is processed by AUSsrc (aus_src column not empty) but 3D pipeline not yet run (3d_pipeline column empty).
     """
     band = "943MHz"
-    # on p1
-    Google_API_token = os.getenv("POSSUM_STATUS_TOKEN")
+    # on p1/aussrc
+    Google_API_token = util.initiate_possum_status_sheet_and_token()
+
 
     dl_jobname = "3dtile-dl"
     # First check whether a download session is running (i.e. possum_run_remote)

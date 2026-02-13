@@ -241,7 +241,7 @@ def main(args):
 
     if status == "Completed":
         # Update the POSSUM Pipeline Status spreadsheet as well. A complete field has been processed!
-        Google_API_token = os.getenv("POSSUM_STATUS_TOKEN")
+        Google_API_token = util.initiate_possum_status_sheet_and_token()
         # put the status as PartialTiles - today's date (e.g. PartialTiles - 2025-03-22)
         status_to_put = f"PartialTiles - {np.datetime64('today', 'D')}"
 

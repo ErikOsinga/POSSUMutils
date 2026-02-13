@@ -324,7 +324,8 @@ def do_ingest(
     if status == "Ingested":
         # If succesful, also record the date of ingestion in POSSUM status spreadsheet
         # Update the POSSUM status monitor google sheet (see also log_processing_status.py)
-        Google_API_token = os.getenv("POSSUM_STATUS_TOKEN")
+        Google_API_token = util.initiate_possum_status_sheet_and_token()
+
         update_status_spreadsheet(tilenumber, band, Google_API_token, date)
 
     else:

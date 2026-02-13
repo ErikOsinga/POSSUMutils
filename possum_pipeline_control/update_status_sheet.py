@@ -77,8 +77,9 @@ def update_status(tile_number, band, Google_API_token, status):
 if __name__ == "__main__":
     # load env for google spreadsheet constants
     load_dotenv(dotenv_path="../automation/config.env")
-    # on p1
-    Google_API_token = os.getenv("POSSUM_STATUS_TOKEN")
+    # on p1/aussrc
+    # Google_API_token = os.getenv("POSSUM_STATUS_TOKEN")
+    Google_API_token = util.initiate_possum_status_sheet_and_token()
 
     parser = argparse.ArgumentParser(description="Update status sheet 'manually'")
     parser.add_argument("tilenumber", type=int, help="The tile number to process")

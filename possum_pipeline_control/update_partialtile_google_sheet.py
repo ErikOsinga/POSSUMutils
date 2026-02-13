@@ -49,7 +49,8 @@ def get_sheet_table(band):
         '1' if band == '943MHz', otherwise '2'.
     """
     # POSSUM Status Monitor
-    Google_API_token = os.getenv("POSSUM_STATUS_TOKEN")
+    # Google_API_token = os.getenv("POSSUM_STATUS_TOKEN")
+    Google_API_token = util.initiate_possum_status_sheet_and_token()
     # Authenticate and grab the spreadsheet
     gc = gspread.service_account(filename=Google_API_token)
     ps = gc.open_by_url(os.getenv("POSSUM_STATUS_SHEET"))
