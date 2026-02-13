@@ -46,7 +46,7 @@ def run_canfar_task_with_polling(canfar_task, *args):
             pprint.pprint(logs_dict, depth=4)  
 
             # check status and handle accordingly
-            if status in ("Completed", "Succeeded"):
+            if status in ("Completed", "Succeeded", None):
                 return
         # loop to retry upon failing
         retry_count += 1
