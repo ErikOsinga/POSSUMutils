@@ -39,8 +39,12 @@ def launch_session(run_name, tilenumber, image, cores, ram):
     return session_id[0]
 
 
-@flow(name="launch_3D", log_prints=True)
-def main_flow(tilenumber):
+def main_launch3D(tilenumber: str):
+    """
+    Launch 3D pipeline run with a specific tilenumber
+
+    This does not have to be a Prefect flow, because run_canfar_task_with_polling() is already a flow.
+    """
     run_name = (
         f"tile{tilenumber}"  # Run name has to match the working directory on CANFAR
     )
@@ -66,4 +70,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     tilenumber = args.tilenumber
 
-    main_flow(tilenumber)
+    main_launch3D(tilenumber)
