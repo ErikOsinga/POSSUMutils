@@ -291,12 +291,14 @@ def launch_create_symlinks(jobname="3dsymlinks"):
     """
 
     # Template bash script to run
-    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/create_symlinks.sh"
+    args = "/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/create_symlinks.sh"
 
     print("Launching symlinks session")
     print(f"Command: {args}")
 
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.16.0"
+    # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v2.0.2"
+    image = os.getenv("IMAGE") # set in prefect deployment configuration
+
     # download can use flexible resources
     session_id = session.create(
         name=jobname.replace(
