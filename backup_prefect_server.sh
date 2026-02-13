@@ -2,35 +2,28 @@
 ### will be saved with timestamp, as e.g. prefect-2025-12-16T142502Z.sql
 
 # --- PostgreSQL connection settings ---
-PGDATABASE="prefect"
-PGUSER="prefect"
 
-# --- Backup output to host ---
+export PGPASSWORD=prefect   # same password as your Postgres role
+PGHOST=postgres
+PGPORT=5432
+PGUSER=prefect
+PGDATABASE=prefect
 OUTDIR="$HOME/prefect-backups"
-mkdir -p "$OUTDIR"
-ts="$(date -u +%Y-%m-%dT%H%M%SZ)"
-out="$OUTDIR/prefect-$ts.sql"
-tmp="$out.tmp"
+# --- Backup output to host ---
+tmp="$1.tmp"
 
 echo "Starting PostgreSQL backup..."
 # Run pg_dump inside the container and write output to host path
-if ! docker compose exec -T "postgres" \
-    pg_dump -U "$PGUSER" "$PGDATABASE" > "$tmp"; then
+if ! pg_dump -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" "$PGDATABASE" > "$tmp"; then
     echo "ERROR: pg_dump failed"
     rm -f "$tmp"
     exit 1
 fi
 
 # Move into place only if successful
-mv "$tmp" "$out"
+mv "$tmp" "$1"
 
-echo "Backup written to: $out on the host"
-
-# --- Copy to CANFAR ---
-echo "Copying the backup to CANFAR..."
-vcp "$out" arc:projects/CIRADA/polarimetry/software/prefect-backups
-
-echo "Backup completed successfully"
+echo "Backup written to: $1 on the host"
 
 # -------------------------------
 # CLEAN UP OLD BACKUPS

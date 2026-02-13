@@ -198,7 +198,7 @@ def run_script_intermittently(
                 command = ["python", "-m", script_path]
                 process = subprocess.Popen(command,
                     stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
                     text=True,
                     bufsize=1,               # line-buffered
                     universal_newlines=True  # ensures \n splitting works across platforms

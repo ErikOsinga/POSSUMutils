@@ -178,9 +178,6 @@ def print_subprocess_output(process, command):
     # Stream stdout and stderr line by line
     for stdout_line in iter(process.stdout.readline, ''):
         print(stdout_line.rstrip())
-
-    for stderr_line in iter(process.stderr.readline, ''):
-        print(stderr_line.rstrip())
     
     # Wait for process to finish
     return_code = process.wait()

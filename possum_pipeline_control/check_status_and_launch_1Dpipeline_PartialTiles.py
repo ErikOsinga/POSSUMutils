@@ -276,7 +276,7 @@ def launch_pipeline(field_ID, tilenumbers, SBid, band):
     process = subprocess.Popen(
         command,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         text=True,
         bufsize=1,               # line-buffered
         universal_newlines=True  # ensures \n splitting works across platforms
@@ -322,7 +322,7 @@ def launch_pipeline_summary(field_ID, SBid, band):
     process = subprocess.Popen(
         command,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         text=True,
         bufsize=1,               # line-buffered
         universal_newlines=True  # ensures \n splitting works across platforms
