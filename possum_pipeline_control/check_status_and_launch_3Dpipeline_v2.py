@@ -486,7 +486,7 @@ def run_prefect_db_backup():
         )
     # --- Copy to CANFAR ---
     print("Copying the backup to CANFAR...")
-    Client.copy(db_backup, "arc:projects/CIRADA/polarimetry/software/prefect-backups")
+    Client.copy(str(db_backup), "arc:projects/CIRADA/polarimetry/software/prefect-backups")
     print("Backup completed successfully")    
 
 if __name__ == "__main__":
