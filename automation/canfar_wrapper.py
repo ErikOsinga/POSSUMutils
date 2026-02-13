@@ -42,9 +42,10 @@ def run_canfar_task_with_polling(canfar_task, *args):
             poll_future = poll_canfar.submit(session_id)
             status = poll_future.result()
             # print CANFAR logs before we lose them
-            logs_dict = session.logs(session_id).get(session_id)
+            logs_dict = session.logs(session_id).get(session_id)  # noqa: F841
             print(f"CANFAR logs from session {session_id}:")
-            pprint.pprint(logs_dict, depth=4)  
+            print("disabled printing whole logs dict in canfar_wrapper.py")
+            # pprint.pprint(logs_dict, depth=4)
 
             # check status and handle accordingly
             if status in ("Completed", "Succeeded"):
