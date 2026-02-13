@@ -55,3 +55,10 @@ deployments:
     work_pool:
       name: local-pool
       work_queue_name: default
+
+  - name: delete-state-file
+    entrypoint: automation/prefect/delete_state_file.py:main
+    description: 'Handy script to manually delete state file to allow create_symlinks to rerun.'
+    work_pool:
+      name: local-pool
+      work_queue_name: default    
