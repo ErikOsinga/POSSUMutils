@@ -135,7 +135,7 @@ def launch_pipeline_command(fieldname, sbid):
         command,
         shell=True,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         text=True,
         bufsize=1,               # line-buffered
         universal_newlines=True  # ensures \n splitting works across platforms

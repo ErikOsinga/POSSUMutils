@@ -118,7 +118,7 @@ def launch_pipeline(tilenumber, band):
     process = subprocess.Popen(
         command,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         text=True,
         bufsize=1,               # line-buffered
         universal_newlines=True  # ensures \n splitting works across platforms
@@ -317,7 +317,7 @@ def launch_create_symlinks(jobname="3dsymlinks"):
     )
     return session_id[0]
 
-def needs_prefect_sqlite_backup(
+def needs_prefect_db_backup(
     home_dir: str | Path,
     *,
     max_age_days: int = 14,
@@ -325,7 +325,7 @@ def needs_prefect_sqlite_backup(
     suffix: str = ".sql",
 ) -> bool:
     """
-    Check for Prefect SQLite backup files in <home_dir>/<backups_subdir>/.
+    Check for Prefect database backup files in <home_dir>/<backups_subdir>/.
 
     Returns True if:
       - the backups directory does not exist, or
@@ -398,14 +398,10 @@ def launch_band1_3Dpipeline(database_config_path=None):
 
 
     # Check whether we've made a backup of the database less than two weeks ago
-    if needs_prefect_sqlite_backup(Path.home()):
-        bkpscript = "backup_prefect_server.sh"
-        print(f"Prefect database should be backed up. Running {bkpscript}")
-        cmd = ["bash", bkpscript]
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-        print("Backup stdout:\n%s", result.stdout)
-        if result.stderr:
-            print("Backup stderr:\n%s", result.stderr)
+    if needs_prefect_db_backup(Path.home()):
+        run_prefect_db_backup()
+
+
     # Check database for band 1 tiles that have been processed by AUSSRC
     # but not yet processed with 3D pipeline
     conn = db.get_database_connection(test=False, database_config_path=database_config_path)
@@ -461,6 +457,37 @@ def launch_band1_3Dpipeline(database_config_path=None):
 
     print("3D pipeline check and launch complete.")
     print("\n")  
+
+def run_prefect_db_backup():
+    bkpscript = "backup_prefect_server.sh"
+    print(f"Prefect database should be backed up. Running {bkpscript}")
+
+    # create file name for backup
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%SZ")
+    OUTDIR = Path.home() / "prefect-backups"
+    OUTDIR.mkdir(parents=True, exist_ok=True)
+    db_backup = OUTDIR / f"prefect-{ts}.sql"
+    
+    cmd = ["bash", bkpscript, str(db_backup)]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.stdout:
+        for line in result.stdout.splitlines():
+            print(f"[STDOUT] {line}")
+    if result.stderr:
+        for line in result.stderr.splitlines():
+            print(f"[STDERR] {line}")
+    # Check return code manually
+    if result.returncode != 0:
+        raise subprocess.CalledProcessError(
+            result.returncode,
+            cmd,
+            output=result.stdout,
+            stderr=result.stderr
+        )
+    # --- Copy to CANFAR ---
+    print("Copying the backup to CANFAR...")
+    Client.copy(str(db_backup), "arc:projects/CIRADA/polarimetry/software/prefect-backups")
+    print("Backup completed successfully")    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
