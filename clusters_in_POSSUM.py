@@ -1,15 +1,16 @@
 # clusters_in_POSSUM.py
 
 import numpy as np
+import tqdm
+from astropy import units as u
+from astropy.cosmology import FlatLambdaCDM
 from astropy.table import Table
+from astroquery.simbad import Simbad
+
 from query_status import (
     check_coordinates_in_overlay,
     get_overlay_polygons,
 )
-import tqdm
-from astroquery.simbad import Simbad
-from astropy.cosmology import FlatLambdaCDM
-from astropy import units as u
 
 cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
 

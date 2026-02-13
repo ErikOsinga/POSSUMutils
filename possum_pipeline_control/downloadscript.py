@@ -20,10 +20,10 @@ WORKFLOW:
 
 import os
 import sys
-from prefect import flow, task
 
 # important to grab _run_remote() because run_remote() is wrapped in sys.exit()
 from possum2caom2.composable import _run_remote as possum_run_remote  # type: ignore
+from prefect import flow, task
 
 
 @task

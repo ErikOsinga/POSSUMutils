@@ -1,9 +1,11 @@
-import os
 import argparse
-from dotenv import load_dotenv
-import gspread
+import os
+
 import astropy.table as at
+import gspread
 import numpy as np
+from dotenv import load_dotenv
+
 from automation import database_queries as db
 from possum_pipeline_control import util
 

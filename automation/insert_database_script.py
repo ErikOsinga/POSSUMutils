@@ -6,12 +6,13 @@ Hopefully this will only have to be run once to set up the database tables.
 After that, the google sheet is deprecated, and we move to the database as the source of truth.
 """
 
-from datetime import datetime
 import os
-from psycopg2.extras import execute_batch
+from datetime import datetime
+
 import gspread
 import pandas as pd
 from dotenv import load_dotenv
+from psycopg2.extras import execute_batch
 
 # workaround depending on where this script is called from
 try:

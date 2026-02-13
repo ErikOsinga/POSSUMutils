@@ -2,9 +2,9 @@
 Test cirada_software: log_processing_status_1D_PartialTiles.py
 """
 
-from cirada_software import log_processing_status_1D_PartialTiles
 from automation import database_queries as db_query
 from automation.unit_tests.partial_tile_1d_base_test import PartialTile1DBaseTest
+from cirada_software import log_processing_status_1D_PartialTiles
 
 
 class LogProcessingStatus1DPartialTilesTest(PartialTile1DBaseTest):

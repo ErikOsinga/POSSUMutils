@@ -7,9 +7,10 @@ If we've reached maximum retries and the job still fails, raise an exception to 
 """
 import pprint
 import time
-from prefect import task, flow
-from prefect.variables import Variable
+
 from canfar.sessions import Session
+from prefect import flow, task
+from prefect.variables import Variable
 
 #Default polling interval is 60s
 POLLING_INTERVAL = Variable.get('canfar-polling-interval-seconds', 60)

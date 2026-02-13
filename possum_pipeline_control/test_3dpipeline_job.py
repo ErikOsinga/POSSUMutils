@@ -27,8 +27,9 @@ python -m possum_pipeline_control.test_3dpipeline_job
 """
 
 
-from dotenv import load_dotenv
 from canfar.sessions import Session
+from dotenv import load_dotenv
+
 from possum_pipeline_control.test_database_access import (
     check_acces_to_google_spread,
     check_acces_to_prod_db,

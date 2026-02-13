@@ -16,23 +16,26 @@ that will download the tiles in a CANFAR job and populate the possum.partial_til
 """
 
 #!/usr/bin/env python
-import os
 import argparse
-import gspread
-import numpy as np
-import subprocess
-import astropy.table as at
+import os
 import re
-import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import matplotlib.ticker as ticker
+import subprocess
 import time
-from dotenv import load_dotenv
 from datetime import datetime
 from pathlib import Path
+
+import astropy.table as at
+import gspread
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import numpy as np
+import pandas as pd
+from dotenv import load_dotenv
+
 from automation import database_queries as db
 from possum_pipeline_control import util
+
 
 def get_sheet_table(band):
     """

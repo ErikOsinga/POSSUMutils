@@ -38,16 +38,16 @@ Usage examples:
 """
 
 import argparse
-import sys
 import csv
 import io
 import re
+import sys
 from urllib.parse import quote
 
-import requests
-from astroquery.simbad import Simbad
-from astropy.coordinates import SkyCoord
 import astropy.units as u
+import requests
+from astropy.coordinates import SkyCoord
+from astroquery.simbad import Simbad
 
 
 def remove_prefix(field_name):

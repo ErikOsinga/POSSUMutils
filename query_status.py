@@ -16,14 +16,14 @@ Returns:
 @author: Erik Osinga
 """
 
-import requests
-from bs4 import BeautifulSoup
 import re
-from shapely.geometry import Point, Polygon
-from astroquery.simbad import Simbad
-from astropy.coordinates import SkyCoord
-import astropy.units as u
 
+import astropy.units as u
+import requests
+from astropy.coordinates import SkyCoord
+from astroquery.simbad import Simbad
+from bs4 import BeautifulSoup
+from shapely.geometry import Point, Polygon
 
 stages = {
     "released": "validated_field_overlay",

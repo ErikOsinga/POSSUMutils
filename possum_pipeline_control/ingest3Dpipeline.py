@@ -11,16 +11,17 @@ band       -- str -- either "943MHz" or "1367MHz" for band 1 or band 2 data
 """
 
 import argparse
+import datetime
 import os
+from time import sleep
+
+import astropy.table as at
+import astroquery.cadc as cadc
+import gspread
+import numpy as np
 from dotenv import load_dotenv
 from prefect import flow, task
 from prefect.cache_policies import NO_CACHE
-import gspread
-import numpy as np
-import astropy.table as at
-import astroquery.cadc as cadc
-import datetime
-from time import sleep
 
 # important to grab _run() because run() is wrapped in sys.exit()
 try:

@@ -1,8 +1,11 @@
 import argparse
 import subprocess
-from print_all_open_sessions import get_open_sessions
+
 from prefect import flow
+
 from possum_pipeline_control import util
+from print_all_open_sessions import get_open_sessions
+
 
 def run_script_intermittently(
     script_paths, max_pending=20, max_running=50, args=None

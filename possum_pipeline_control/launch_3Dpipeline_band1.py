@@ -3,7 +3,7 @@ import os
 
 # from skaha.session import Session
 from canfar.sessions import Session
-from prefect import flow
+
 from automation import canfar_wrapper
 
 session = Session()

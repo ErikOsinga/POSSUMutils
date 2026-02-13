@@ -1,12 +1,14 @@
 import argparse
+import csv
 import glob
 import os
-import csv
-from dotenv import load_dotenv
+
+import astropy.table as at
 import gspread
 import numpy as np
-import astropy.table as at
+from dotenv import load_dotenv
 from prefect import flow, task
+
 from automation import database_queries as db
 from possum_pipeline_control import util
 

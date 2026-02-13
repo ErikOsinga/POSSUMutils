@@ -24,17 +24,20 @@ into time-blocked directories.
 """
 import argparse
 import os
-from vos import Client
 import subprocess
-from canfar.sessions import Session
-import gspread
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
 import astropy.table as at
+import gspread
 import numpy as np
-from automation import database_queries as db, canfar_wrapper
+from canfar.sessions import Session
+from vos import Client
+
+from automation import canfar_wrapper
+from automation import database_queries as db
 from possum_pipeline_control import util
 from print_all_open_sessions import get_open_sessions
-from pathlib import Path
-from datetime import datetime, timedelta, timezone
 
 session = Session()
 

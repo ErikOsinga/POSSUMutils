@@ -1,17 +1,17 @@
-import os
 import argparse
+import ast
 import glob
-from dotenv import load_dotenv
+import os
+from time import sleep
+
+import astropy.table as at
 import gspread
 import numpy as np
-import astropy.table as at
-import ast
-from time import sleep
+from dotenv import load_dotenv
 from prefect import flow, task
 
 from automation import database_queries as db
 from possum_pipeline_control import util
-
 
 """
 Usage: python log_processing_status.py fieldstr sbid tilestr

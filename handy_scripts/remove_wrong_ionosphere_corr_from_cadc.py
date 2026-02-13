@@ -40,10 +40,8 @@ This script has been ran on 2025-01-14 to delete wrong data from CADC. Results a
 import argparse
 import os
 import subprocess
-from datetime import datetime
 from io import StringIO
 from pathlib import Path
-from sys import argv
 
 import astroquery.cadc as cadc
 import matplotlib.pyplot as plt

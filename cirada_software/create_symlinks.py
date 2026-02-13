@@ -1,9 +1,11 @@
-import os
 import argparse
 import glob
+import os
 import time
-from possum_pipeline_control.util import TemporaryWorkingDirectory
+
 from prefect import flow
+
+from possum_pipeline_control.util import TemporaryWorkingDirectory
 
 """
 Python script to run after downloading tiles with "possum_run_remote"

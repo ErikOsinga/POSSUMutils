@@ -73,11 +73,8 @@
 
 import logging
 
-from collections import defaultdict
-from caom2.observation import Observation
-from caom2 import ProductType
-
 import numpy as np
+from caom2.observation import Observation
 
 
 class ObservationUpdater():
@@ -93,7 +90,7 @@ class ObservationUpdater():
         todotxt = np.loadtxt("./todo.txt", dtype=str)
 
         assert isinstance(observation, Observation), (
-            "observation %s is not an Observation".format(observation))
+            "observation %s is not an Observation")
         
         print("Observation: {}".format(observation.observation_id))
         for plane in observation.planes.values():

@@ -5,16 +5,17 @@ Meant to be run manually in a CANFAR notebook sessions, since CASDA will prompt 
 """
 
 #!/usr/bin/env python
-import numpy as np
-from astroquery.utils.tap.core import Tap
-from astroquery.casda import Casda
 import argparse
 import os
-from pathlib import Path
 import re
-import gspread
+from pathlib import Path
+
 import astropy.table as at
+import gspread
+import numpy as np
 import tqdm
+from astroquery.casda import Casda
+from astroquery.utils.tap.core import Tap
 
 
 def get_all_sbids(band, Google_API_token):

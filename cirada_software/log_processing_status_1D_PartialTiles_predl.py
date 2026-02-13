@@ -1,9 +1,12 @@
 #!/usr/bin/env python
-import os
 import argparse
+import os
+
 from dotenv import load_dotenv
-from .log_processing_status_1D_PartialTiles_summary import update_status_spreadsheet
+
 from possum_pipeline_control import util
+
+from .log_processing_status_1D_PartialTiles_summary import update_status_spreadsheet
 
 """
 While downloading the tiles in a CANFAR job and populating the POSSUM Pipeline Validation sheet, log the processing status

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import datetime
 from typing import Optional
+
 import gspread
 import numpy as np
 from astropy import table as at

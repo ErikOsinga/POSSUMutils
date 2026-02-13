@@ -3,9 +3,11 @@ Test possum_pipeline_control: check_status_and_launch_3Dpipeline_v2.py
 """
 
 import csv
-from automation import database_queries as db_query, insert_database_script as db
-from automation.unit_tests._3dpipeline_base_test import _3DPipelineBaseTest
+
+from automation import database_queries as db_query
+from automation import insert_database_script as db
 from automation.unit_tests import partial_tile_1d_base_test
+from automation.unit_tests._3dpipeline_base_test import _3DPipelineBaseTest
 
 
 class CheckStatusAndLaunch3DPipelinev2Test(_3DPipelineBaseTest):

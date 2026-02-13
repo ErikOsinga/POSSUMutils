@@ -13,6 +13,7 @@ from automation import database_queries as db
 from possum_pipeline_control import util
 from print_all_open_sessions import get_open_sessions
 
+
 def create_3d_progress_plot():
     """Create a progress plot for the 3D pipeline."""
 

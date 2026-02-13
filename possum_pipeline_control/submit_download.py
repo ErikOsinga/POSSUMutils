@@ -15,6 +15,7 @@ from datetime import date
 
 # from skaha.session import Session  # noqa: E402
 from canfar.sessions import Session
+
 from automation import canfar_wrapper
 
 session = Session()
