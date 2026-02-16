@@ -16,6 +16,9 @@ EXAMPLE:
         # then submit job
         launch_session(...)
 
+    # using asyncio.run() to manage the event loop
+    asyncio.run(submit_canfar_job())
+
 Rules:
 - Only flow-runs in Prefect state RUNNING are checked.
 - Only flow-runs tagged with "canfar_session:<id>" are checked.

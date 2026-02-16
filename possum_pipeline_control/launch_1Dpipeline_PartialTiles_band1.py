@@ -1,5 +1,6 @@
 import argparse
 import ast
+import asyncio
 import os
 from datetime import datetime
 
@@ -50,7 +51,7 @@ def launch_session(run_name, field_ID, tilenumbers, SBnumber, image, cores, ram)
 
 
 @flow(name="launch_1d_partialtiles", log_prints=True)
-def main_flow(field_ID, tilenumbers, SBnumber):
+async def main_flow(field_ID, tilenumbers, SBnumber):
     timestr = ((datetime.now().strftime("%d/%m/%Y %H:%M:%S"))[11:]).replace(
         ":", "-"
     )  # ":" is not allowed character
@@ -66,12 +67,12 @@ def main_flow(field_ID, tilenumbers, SBnumber):
     ram = 20 * number_of_tiles
 
     # check if there are any stuck jobs before launching new ones
-    reconcile_summary = canfar_polling.reconcile_running_prefect_with_canfar_task()
+    reconcile_summary = await canfar_polling.reconcile_running_prefect_with_canfar_task()
 
-    # Check allowed values at canfar.net/science-portal, 10, 20, 30, 40 GB should be allowed
-    launch_session(
-            run_name, field_ID, tilenumbers, SBnumber, image, cores, ram
-    )
+    # # Check allowed values at canfar.net/science-portal, 10, 20, 30, 40 GB should be allowed
+    # launch_session(
+    #         run_name, field_ID, tilenumbers, SBnumber, image, cores, ram
+    # )
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -92,4 +93,4 @@ if __name__ == "__main__":
     tilenumbers = args.tilenumbers
     SBnumber = args.SBnumber    
     
-    main_flow(field_ID, tilenumbers, SBnumber)
+    res = asyncio.run(main_flow(field_ID, tilenumbers, SBnumber))

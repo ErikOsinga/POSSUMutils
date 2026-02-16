@@ -23,6 +23,7 @@ into time-blocked directories.
 @author: Erik Osinga
 """
 import argparse
+import asyncio
 import os
 import subprocess
 from datetime import datetime, timedelta, timezone
@@ -510,5 +511,6 @@ if __name__ == "__main__":
         help="Path to .env file with database connection parameters.",
     )
     args = parser.parse_args()
-    launch_band1_3Dpipeline(args.database_config_path)
+    
+    asyncio.run(launch_band1_3Dpipeline(args.database_config_path))
 
