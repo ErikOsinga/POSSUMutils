@@ -7,6 +7,7 @@ from canfar.sessions import Session
 from prefect import flow
 
 from automation import canfar_polling
+
 session = Session()
 
 

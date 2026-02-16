@@ -44,7 +44,6 @@ from prefect.states import Failed
 
 from print_all_open_sessions import get_open_sessions
 
-
 TAG_PREFIX = "canfar_session:"
 
 

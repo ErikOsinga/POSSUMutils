@@ -34,8 +34,8 @@ import numpy as np
 from canfar.sessions import Session
 from vos import Client
 
-from automation import database_queries as db
 from automation import canfar_polling
+from automation import database_queries as db
 from possum_pipeline_control import util
 from print_all_open_sessions import get_open_sessions
 
