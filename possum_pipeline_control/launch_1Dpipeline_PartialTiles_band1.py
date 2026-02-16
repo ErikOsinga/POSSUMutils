@@ -3,19 +3,10 @@ import ast
 import os
 from datetime import datetime
 
-# from skaha.session import Session
 from canfar.sessions import Session
 from prefect import flow
 
-from automation import canfar_wrapper
-
-# from skaha.models import ContainerRegistry
-
-# Shouldnt put these on github...
-# see https://shinybrar.github.io/skaha/
-# registry = ContainerRegistry(username="ErikOsinga", secret="CLI")
-
-# session = Session(registry=registry)
+from automation import canfar_polling
 session = Session()
 
 
@@ -72,9 +63,12 @@ def main_flow(field_ID, tilenumbers, SBnumber):
     # Allocate different RAM based on how many tiles, lets say ~ 20 GB per tile needed
     number_of_tiles = len([t for t in tilenumbers if t != ""])
     ram = 20 * number_of_tiles
+
+    # check if there are any stuck jobs before launching new ones
+    canfar_polling.reconcile_running_prefect_with_canfar_task()
+
     # Check allowed values at canfar.net/science-portal, 10, 20, 30, 40 GB should be allowed
-    canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_1D_PartialTiles")(
-            launch_session,
+    launch_session(
             run_name, field_ID, tilenumbers, SBnumber, image, cores, ram
     )
 

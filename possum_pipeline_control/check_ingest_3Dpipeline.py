@@ -4,7 +4,6 @@ import os
 from canfar.sessions import Session
 from vos import Client
 
-from automation import canfar_wrapper
 from automation import database_queries as db
 from possum_pipeline_control import util
 
@@ -156,7 +155,7 @@ def ingest_3Dpipeline(band_number=1):
             print(f"\nLaunching headless job for 3D pipeline with tile {tilenumber}")
 
             # Launch the pipeline
-            canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_ingest")(launch_ingest, tilenumber, band)
+            launch_ingest(tilenumber, band)
 
             # Update the status of 3d_pipeline_ingest to "IngestRunning"
             conn = db.get_database_connection(test=False)

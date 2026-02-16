@@ -13,10 +13,7 @@ This script is DEPRECATED. Superseded by launch_download_session() in the module
 import os
 from datetime import date
 
-# from skaha.session import Session  # noqa: E402
 from canfar.sessions import Session
-
-from automation import canfar_wrapper
 
 session = Session()
 
@@ -66,4 +63,4 @@ def launch_download():
 
 
 if __name__ == "__main__":
-    canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_download")(launch_download)
+    launch_download()

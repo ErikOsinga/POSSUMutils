@@ -34,8 +34,8 @@ import numpy as np
 from canfar.sessions import Session
 from vos import Client
 
-from automation import canfar_wrapper
 from automation import database_queries as db
+from automation import canfar_polling
 from possum_pipeline_control import util
 from print_all_open_sessions import get_open_sessions
 
@@ -386,7 +386,8 @@ def launch_band1_3Dpipeline(database_config_path=None):
         write_last_download_launch_time(state_file, now_utc)
         
         # also launch a job to create new symlinks since the previous download job finished.
-        canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_create_symlinks")(launch_create_symlinks)
+        launch_create_symlinks()
+
     else:
         if download_running:
             print("A download job (possum_run_remote) is already running.")
@@ -449,6 +450,9 @@ def launch_band1_3Dpipeline(database_config_path=None):
             # Launch the first tile number (assumes this script will be called many times)
             tilenumber = list(tiles_on_both)[0]
             print(f"\nLaunching headless job for 3D pipeline with tile {tilenumber}")
+
+            # check if there are any stuck jobs before launching new ones
+            canfar_polling.reconcile_running_prefect_with_canfar_task()
 
             # Launch the pipeline
             launch_pipeline(tilenumber, band)

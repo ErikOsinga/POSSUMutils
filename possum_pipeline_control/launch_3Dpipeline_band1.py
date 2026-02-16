@@ -1,10 +1,6 @@
 import argparse
 import os
-
-# from skaha.session import Session
 from canfar.sessions import Session
-
-from automation import canfar_wrapper
 
 session = Session()
 
@@ -57,8 +53,7 @@ def main_launch3D(tilenumber: str):
     cores = 16
     ram = 112  # Check allowed values at canfar.net/science-portal
 
-    canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_3D")(
-            launch_session,
+    launch_session(
             run_name, tilenumber, image, cores, ram
     )
 

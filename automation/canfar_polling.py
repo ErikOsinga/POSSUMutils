@@ -25,6 +25,10 @@ Rules:
   mark the flow-run FAILED.
 
   
+  TODO: 
+  - Figure out a way to restart the CANFAR job when a flow-run is marked as failed
+      this will depend on the type of CANFAR job that we were running though.
+  
 """
 
 
@@ -108,6 +112,8 @@ async def reconcile_running_prefect_with_canfar(limit: int = 200) -> ReconcileRe
     """
     Single-shot reconciliation.
     """
+    print("Starting reconciliation of Prefect RUNNING flow-runs with CANFAR sessions...")
+
     # Grab CANFAR truth
     try:
         session_df = get_open_sessions()
@@ -135,6 +141,8 @@ async def reconcile_running_prefect_with_canfar(limit: int = 200) -> ReconcileRe
             else:
                 skipped_untagged += 1
 
+        print("CANFAR API/data fetch failed. Skipping reconciliation and not failing any flow-runs for this cycle.")
+
         return ReconcileResult(
             canfar_ok=False,
             running_flow_runs=len(running_flow_runs),
@@ -161,6 +169,14 @@ async def reconcile_running_prefect_with_canfar(limit: int = 200) -> ReconcileRe
             )
             await _fail_flow_run(fr.id, reason)
             failed_marked += 1
+
+    print("Reconciliation summary:")
+    print(f"  CANFAR OK: {canfar_ok}")
+    print(f"  Running flow-runs: {len(running_flow_runs)}")
+    print(f"  Checked tagged running: {checked_tagged_running}")
+    print(f"  Failed marked: {failed_marked}")
+    print(f"  Skipped untagged: {skipped_untagged}")
+    print(f"  Missing or not running: {missing_or_not_running}")
 
     return ReconcileResult(
         canfar_ok=True,
