@@ -5,8 +5,8 @@ failed and the job would need to be manually rerun.
 In this module, we try to rerun the job upon failure, up to set amount of retries.
 If we've reached maximum retries and the job still fails, raise an exception to trigger a Prefect failure.
 """
+import asyncio
 import pprint
-import time
 from prefect import task, flow
 from prefect.variables import Variable
 from canfar.sessions import Session
@@ -18,7 +18,7 @@ MAX_RETRY = Variable.get('canfar-num-retries', 2)
 session = Session()
 
 @flow(log_prints=True)
-def run_canfar_task_with_polling(canfar_task, *args):
+async def run_canfar_task_with_polling(canfar_task, *args):
     """
     Run CANFAR task with session polling to check for session status.
     If the job has failed, it will retry up to the MAX_RETRY set in the config.env.
@@ -39,14 +39,14 @@ def run_canfar_task_with_polling(canfar_task, *args):
             # Start polling immediately, in parallel
             # keep polling until it stopped running
             poll_future = poll_canfar.submit(session_id)
-            status = poll_future.result()
+            status = await poll_future
             # print CANFAR logs before we lose them
             logs_dict = session.logs(session_id).get(session_id)
             print(f"CANFAR logs from session {session_id}:")
             pprint.pprint(logs_dict, depth=4)  
 
             # check status and handle accordingly
-            if status in ("Completed", "Succeeded", None):
+            if status in ("Completed", "Succeeded"):
                 return
         # loop to retry upon failing
         retry_count += 1
@@ -64,7 +64,7 @@ def get_session_status(session_id):
     return session_info[0].get('status')
 
 @task(log_prints=True)
-def poll_canfar(session_id: str):
+async def poll_canfar(session_id: str):
     """
     Poll CANFAR session until it finishes or crashes.
     """
@@ -79,4 +79,4 @@ def poll_canfar(session_id: str):
             return status
         # keep polling if "Pending", "Running" or "Terminating" 
         # (unclear what Terminating means so we wait until it's finished)
-        time.sleep(POLLING_INTERVAL)
+        await asyncio.sleep(POLLING_INTERVAL)
