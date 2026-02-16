@@ -12,9 +12,10 @@ Created on Wed Apr 17 14:38:47 2024
 @author: cvaneck & ErikOsinga
 """
 
-import os
-import numpy as np
 import ast
+import os
+
+import numpy as np
 
 
 def arg_as_list(s):

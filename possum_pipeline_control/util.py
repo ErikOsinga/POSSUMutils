@@ -1,11 +1,13 @@
 from __future__ import annotations
-from pathlib import Path
-import os
+
 import errno
 import json
+import os
 import shutil
 import subprocess
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
 from dotenv import load_dotenv
 from prefect import task
 from prefect.blocks.system import Secret
@@ -88,7 +90,17 @@ def stage_cadc_certificate(
     if workdir:
         dest = Path(workdir) / dest_relpath
         dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dest)
+        
+        # Only copy if destination doesn't exist or is older than max_age_days
+        should_copy = True
+        if dest.exists():
+            dest_mtime = datetime.fromtimestamp(dest.stat().st_mtime, tz=timezone.utc)
+            if datetime.now(timezone.utc) - dest_mtime <= timedelta(days=max_age_days):
+                should_copy = False
+        
+        if should_copy:
+            shutil.copy2(src, dest)
+        
         return str(dest)
     
     return dest_relpath

@@ -3,15 +3,22 @@ A test module to check whether a user has set up everything around the POSSUM pi
 
 This script:
 
+- Checks whether it can access the AUSSRC Prefect server. 
 - Checks whether it can access the POSSUM database (only reads)
 - Checks whether it can access the POSSUM Status Sheet Google Sheet (only reads)
 - launches a small test 3D pipeline headless job to CANFAR
-- Has it report back to p1's prefect server
+- Has it report back to AUSSRC prefect server
 
-Should be executed on p1
+It can be run from any machine, but you should set the environment variables for your machine
+to connect to the aussrc prefect server:
+
+export PREFECT_API_AUTH_STRING=SECRET
+export PREFECT_API_URL=SECRET
+
+Ask someone what the secret values are. 
 
 
-Assumes that it's called from the POSSUMutils root dir as
+Assumes that this script is called from the POSSUMutils root dir as
 
 python -m possum_pipeline_control.test_3dpipeline_job
 
@@ -20,8 +27,9 @@ python -m possum_pipeline_control.test_3dpipeline_job
 """
 
 
-from dotenv import load_dotenv
 from canfar.sessions import Session
+from dotenv import load_dotenv
+
 from possum_pipeline_control.test_database_access import (
     check_acces_to_google_spread,
     check_acces_to_prod_db,
@@ -33,12 +41,12 @@ session = Session()
 def launch_test_session(jobname="testjob"):
 
     # Template bash script to run
-    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/test_3dpipeline_job.sh"
+    args = "/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/test_3dpipeline_job.sh"
 
     print("Launching test 3D pipeline session")
     print(f"Command: bash {args}")
 
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.16.0"
+    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v2.0.2"
     # could also use flexible resources ?
     session_id = session.create(
         name=jobname.replace(

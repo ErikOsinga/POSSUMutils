@@ -1,10 +1,12 @@
-from vos import Client
 import argparse
 import os
 
-from possum_pipeline_control import util
 from canfar.sessions import Session
-from automation import database_queries as db, canfar_wrapper
+from vos import Client
+
+from automation import canfar_wrapper
+from automation import database_queries as db
+from possum_pipeline_control import util
 
 session = Session()
 

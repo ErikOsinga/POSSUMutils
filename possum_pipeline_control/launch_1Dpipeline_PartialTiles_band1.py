@@ -1,13 +1,14 @@
 import argparse
 import ast
 import os
-
 from datetime import datetime
 
 # from skaha.session import Session
 from canfar.sessions import Session
 from prefect import flow
+
 from automation import canfar_wrapper
+
 # from skaha.models import ContainerRegistry
 
 # Shouldnt put these on github...

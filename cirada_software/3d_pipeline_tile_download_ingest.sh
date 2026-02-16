@@ -1,7 +1,8 @@
 # download + ingest tiles to prepare for a 3D pipeline run
 # or in the future, a 1D pipeline run with full-depth tiles
 
-echo "Preparing test pipeline run"
+echo "Preparing 3D pipeline download+ingest run"
+
 # set which port to communicate results to 
 echo "Setting PREFECT URL"
 # automatically export all variables for Prefect

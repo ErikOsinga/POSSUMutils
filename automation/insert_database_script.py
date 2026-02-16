@@ -6,12 +6,13 @@ Hopefully this will only have to be run once to set up the database tables.
 After that, the google sheet is deprecated, and we move to the database as the source of truth.
 """
 
-from datetime import datetime
 import os
-from psycopg2.extras import execute_batch
+from datetime import datetime
+
 import gspread
 import pandas as pd
 from dotenv import load_dotenv
+from psycopg2.extras import execute_batch
 
 # workaround depending on where this script is called from
 try:
@@ -550,6 +551,7 @@ def drop_test_tables():
 if __name__ == "__main__":
     load_dotenv(dotenv_path="./automation/config.env")
     google_api_token = os.getenv("POSSUM_STATUS_TOKEN")
+    # Google_API_token = util.initiate_possum_status_sheet_and_token()
     GC = gspread.service_account(filename=google_api_token)
     VALIDATION_SHEET = "https://docs.google.com/spreadsheets/d/1_88omfcwplz0dTMnXpCj27x-WSZaSmR-TEsYFmBD43k"
     STATUS_SHEET = os.getenv("POSSUM_STATUS_SHEET")

@@ -11,16 +11,17 @@ band       -- str -- either "943MHz" or "1367MHz" for band 1 or band 2 data
 """
 
 import argparse
+import datetime
 import os
+from time import sleep
+
+import astropy.table as at
+import astroquery.cadc as cadc
+import gspread
+import numpy as np
 from dotenv import load_dotenv
 from prefect import flow, task
 from prefect.cache_policies import NO_CACHE
-import gspread
-import numpy as np
-import astropy.table as at
-import astroquery.cadc as cadc
-import datetime
-from time import sleep
 
 # important to grab _run() because run() is wrapped in sys.exit()
 try:
@@ -324,7 +325,8 @@ def do_ingest(
     if status == "Ingested":
         # If succesful, also record the date of ingestion in POSSUM status spreadsheet
         # Update the POSSUM status monitor google sheet (see also log_processing_status.py)
-        Google_API_token = os.getenv("POSSUM_STATUS_TOKEN")
+        Google_API_token = util.initiate_possum_status_sheet_and_token()
+
         update_status_spreadsheet(tilenumber, band, Google_API_token, date)
 
     else:

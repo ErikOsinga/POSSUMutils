@@ -13,6 +13,7 @@ from automation import database_queries as db
 from possum_pipeline_control import util
 from print_all_open_sessions import get_open_sessions
 
+
 def create_3d_progress_plot():
     """Create a progress plot for the 3D pipeline."""
 
@@ -139,11 +140,7 @@ def check_progress_plot():
 def run_script_intermittently(
     script_paths, max_pending=20, max_running=50
 ):
-
-    ### a chron job executes POSSUM_run_remote and create_symlinks.py every week on CANFAR.
-    ### see p1: /home/erik/CIRADA/polarimetry/ASKAP/pipeline_runs/cronlogs/gocronjob.sh
-    ### TODO: add update_CADC_tile_status.py to the cron job that runs every week
-    ### such that downloaded and ingested tiles are updated in the spreadsheet.
+    """simply runs some children scripts if there arent too many jobs running or pending."""
 
     n_headless_pending = 0
     n_headless_running = 0

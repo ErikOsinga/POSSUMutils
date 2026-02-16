@@ -1,9 +1,11 @@
-import os
 import argparse
-from vos import Client
+import os
+import re
 import subprocess
 import time
-import re
+
+from vos import Client
+
 from automation import database_queries as db
 from possum_pipeline_control import util
 from possum_pipeline_control.control_1D_pipeline_PartialTiles import get_open_sessions

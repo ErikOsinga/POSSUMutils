@@ -2,9 +2,10 @@
 
 import os
 import subprocess
-
 from pathlib import Path
+
 from prefect import flow, task
+
 from possum_pipeline_control import util
 
 

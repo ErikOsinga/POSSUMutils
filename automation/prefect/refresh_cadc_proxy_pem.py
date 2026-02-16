@@ -5,7 +5,9 @@ Otherwise the file is only reloaded from the secret if the file has expired (mor
 """
 from prefect import flow
 from prefect.blocks.system import Secret
+
 from possum_pipeline_control import util
+
 
 @flow(name="refresh_cadc_proxy_pem", log_prints=True)
 def main():

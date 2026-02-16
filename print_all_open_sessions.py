@@ -2,7 +2,9 @@
 
 import pandas as pd
 from canfar.sessions import Session
+
 from possum_pipeline_control import util
+
 
 def get_open_sessions():
     """Return a table with information about currently open sessions"""

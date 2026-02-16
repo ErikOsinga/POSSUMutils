@@ -1,5 +1,6 @@
-from astropy.time import Time
 import argparse
+
+from astropy.time import Time
 
 
 def convert_mjd_to_utc(mjd):

@@ -3,9 +3,10 @@ Test possum_pipeline_control: Ingest3Dpipeline.py
 """
 
 from datetime import date
-from possum_pipeline_control import ingest3Dpipeline
+
 from automation import database_queries as db_query
 from automation.unit_tests._3dpipeline_base_test import _3DPipelineBaseTest
+from possum_pipeline_control import ingest3Dpipeline
 
 
 class Ingest3DPipelineTest(_3DPipelineBaseTest):

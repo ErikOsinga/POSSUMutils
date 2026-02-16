@@ -14,14 +14,14 @@ status sheet.
 @author: cvaneck
 """
 
-import gspread
-import astroquery.cadc as cadc
-import astropy.table as at
-import numpy as np
 import datetime
-
-from prefect import flow, task
 from time import sleep
+
+import astropy.table as at
+import astroquery.cadc as cadc
+import gspread
+import numpy as np
+from prefect import flow, task
 
 
 @flow(log_prints=True)

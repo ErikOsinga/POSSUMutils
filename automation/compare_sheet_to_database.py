@@ -7,14 +7,13 @@ to the database as the source of truth.
 Make sure config.env is set.
 """
 
-import gspread
 import astropy.table as at
+import gspread
 import numpy as np
 import tqdm
 
 # assume this script is run as a module from the POSSUMutils package
 from automation import database_queries as db  # noqa: E402
-
 
 GOOGLE_API_TOKEN = "/home/erik/.ssh/neural-networks--1524580309831-c5c723e2468e.json"
 VALIDATION_SHEET_URL = (

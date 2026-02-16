@@ -1,6 +1,7 @@
 import argparse
-import glob
 import ast
+import glob
+
 from automation import database_queries as db
 from possum_pipeline_control import util
 

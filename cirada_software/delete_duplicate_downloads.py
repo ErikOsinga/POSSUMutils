@@ -14,11 +14,10 @@ from __future__ import annotations
 import argparse
 import logging
 import re
+import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Iterable, Tuple
-import shutil
-
+from typing import Dict, Iterable, List, Optional, Tuple
 
 TIMESTAMP_RE = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}_\d{2}_\d{2}(?:_\d+)?")
 

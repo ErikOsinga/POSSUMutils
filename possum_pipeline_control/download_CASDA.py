@@ -1,9 +1,9 @@
-import astroquery
-from astroquery.casda import Casda
-import numpy as np
-from astropy.io import ascii
-from astropy.coordinates import SkyCoord
 import astropy.units as u
+import astroquery
+import numpy as np
+from astropy.coordinates import SkyCoord
+from astropy.io import ascii
+from astroquery.casda import Casda
 
 # Initialize CASDA object for querying
 

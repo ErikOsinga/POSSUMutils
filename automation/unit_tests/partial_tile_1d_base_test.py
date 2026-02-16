@@ -6,8 +6,9 @@ because the setup is all the same.
 import csv
 import unittest
 from abc import ABC
-from automation import insert_database_script as db
+
 from automation import database_queries as db_query
+from automation import insert_database_script as db
 
 
 class PartialTile1DBaseTest(unittest.TestCase, ABC):

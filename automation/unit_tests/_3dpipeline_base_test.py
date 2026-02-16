@@ -3,12 +3,13 @@ Base class for setting up 3D Pipeline test cases. This is to reduce repetitions 
 because the setup is all the same.
 """
 
-from datetime import datetime
 import csv
 import unittest
 from abc import ABC
-from automation import insert_database_script as db
+from datetime import datetime
+
 from automation import database_queries as db_query
+from automation import insert_database_script as db
 
 
 class _3DPipelineBaseTest(unittest.TestCase, ABC):

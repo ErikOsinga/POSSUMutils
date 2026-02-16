@@ -2,11 +2,11 @@
 Test possum_pipeline_control: check_status_and_launch_1Dpipeline_PartialTiles.py
 """
 
+from automation import database_queries as db_query
+from automation.unit_tests.partial_tile_1d_base_test import PartialTile1DBaseTest
 from possum_pipeline_control import (
     check_status_and_launch_1Dpipeline_PartialTiles as check_status,
 )
-from automation import database_queries as db_query
-from automation.unit_tests.partial_tile_1d_base_test import PartialTile1DBaseTest
 
 
 class CheckStatusAndLaunch1DPipelinePartialTiles(PartialTile1DBaseTest):

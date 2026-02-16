@@ -2,9 +2,9 @@
 Test possum_pipeline_control: check_ingest_3Dpipeline.py
 """
 
-from possum_pipeline_control import check_ingest_3Dpipeline
 from automation import database_queries as db_query
 from automation.unit_tests._3dpipeline_base_test import _3DPipelineBaseTest
+from possum_pipeline_control import check_ingest_3Dpipeline
 
 
 class CheckIngest3dPipeline(_3DPipelineBaseTest):

@@ -1,17 +1,17 @@
-import os
 import argparse
+import ast
 import glob
-from dotenv import load_dotenv
+import os
+from time import sleep
+
+import astropy.table as at
 import gspread
 import numpy as np
-import astropy.table as at
-import ast
-from time import sleep
+from dotenv import load_dotenv
 from prefect import flow, task
 
 from automation import database_queries as db
 from possum_pipeline_control import util
-
 
 """
 Usage: python log_processing_status.py fieldstr sbid tilestr
@@ -241,7 +241,7 @@ def main(args):
 
     if status == "Completed":
         # Update the POSSUM Pipeline Status spreadsheet as well. A complete field has been processed!
-        Google_API_token = os.getenv("POSSUM_STATUS_TOKEN")
+        Google_API_token = util.initiate_possum_status_sheet_and_token()
         # put the status as PartialTiles - today's date (e.g. PartialTiles - 2025-03-22)
         status_to_put = f"PartialTiles - {np.datetime64('today', 'D')}"
 

@@ -1,12 +1,14 @@
 import argparse
+import csv
 import glob
 import os
-import csv
-from dotenv import load_dotenv
+
+import astropy.table as at
 import gspread
 import numpy as np
-import astropy.table as at
+from dotenv import load_dotenv
 from prefect import flow, task
+
 from automation import database_queries as db
 from possum_pipeline_control import util
 
@@ -248,10 +250,11 @@ def main():
     csv_file_path = "/arc/projects/CIRADA/polarimetry/pipeline_runs/pipeline_status.csv"
     update_status_csv(tilenumber, status, band, csv_file_path, all_tiles)
 
-    # Load constants for google spreadsheet
-    load_dotenv(dotenv_path="./automation/config.env")
     # Update the POSSUM status monitor google sheet
-    Google_API_token = os.getenv("POSSUM_STATUS_TOKEN")
+    # # Load constants for google spreadsheet
+    load_dotenv(dotenv_path="./automation/config.env")    
+    # # read the location of the API token from the Prefect secret, and the prefect server access from ./automation/config.env
+    Google_API_token = util.initiate_possum_status_sheet_and_token()
 
     # Make sure it's clear that the status is only fully complete if 3D pipeline outputs have been ingested
     if status == "Completed":

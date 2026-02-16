@@ -24,17 +24,20 @@ into time-blocked directories.
 """
 import argparse
 import os
-from vos import Client
 import subprocess
-from canfar.sessions import Session
-import gspread
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
 import astropy.table as at
+import gspread
 import numpy as np
-from automation import database_queries as db, canfar_wrapper
+from canfar.sessions import Session
+from vos import Client
+
+from automation import canfar_wrapper
+from automation import database_queries as db
 from possum_pipeline_control import util
 from print_all_open_sessions import get_open_sessions
-from pathlib import Path
-from datetime import datetime, timedelta, timezone
 
 session = Session()
 
@@ -256,7 +259,7 @@ def should_launch_download_session(
 
 def launch_download_session(jobname="3dtile-dl"):
     # Template bash script to run
-    args = "/arc/projects/CIRADA/polarimetry/software/POSSUMutils/possum_pipeline_control/3d_pipeline_tile_download_ingest.sh"
+    args = "/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/3d_pipeline_tile_download_ingest.sh"
     print("Launching download session")
     print(f"Command: {args}")
 
@@ -291,12 +294,14 @@ def launch_create_symlinks(jobname="3dsymlinks"):
     """
 
     # Template bash script to run
-    args = f"/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/create_symlinks.sh"
+    args = "/arc/projects/CIRADA/polarimetry/software/POSSUMutils/cirada_software/create_symlinks.sh"
 
     print("Launching symlinks session")
     print(f"Command: {args}")
 
-    image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v1.16.0"
+    # image = "images.canfar.net/cirada/possumpipelineprefect-3.12:v2.0.2"
+    image = os.getenv("IMAGE") # set in prefect deployment configuration
+
     # download can use flexible resources
     session_id = session.create(
         name=jobname.replace(
@@ -357,8 +362,9 @@ def launch_band1_3Dpipeline(database_config_path=None):
     3D pipeline can be launched if the tile is processed by AUSsrc (aus_src column not empty) but 3D pipeline not yet run (3d_pipeline column empty).
     """
     band = "943MHz"
-    # on p1
-    Google_API_token = os.getenv("POSSUM_STATUS_TOKEN")
+    # on p1/aussrc
+    Google_API_token = util.initiate_possum_status_sheet_and_token()
+
 
     dl_jobname = "3dtile-dl"
     # First check whether a download session is running (i.e. possum_run_remote)
@@ -380,7 +386,7 @@ def launch_band1_3Dpipeline(database_config_path=None):
         write_last_download_launch_time(state_file, now_utc)
         
         # also launch a job to create new symlinks since the previous download job finished.
-        canfar_wrapper.run_canfar_task_with_polling(launch_create_symlinks)
+        canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_create_symlinks")(launch_create_symlinks)
     else:
         if download_running:
             print("A download job (possum_run_remote) is already running.")

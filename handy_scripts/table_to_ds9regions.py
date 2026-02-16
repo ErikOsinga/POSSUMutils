@@ -1,8 +1,8 @@
-import numpy as np
-from astropy.table import Table
-
 # from astropy.io import fits
 import argparse
+
+import numpy as np
+from astropy.table import Table
 
 
 def write_ds9_regionfile(
