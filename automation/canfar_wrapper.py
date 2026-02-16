@@ -7,7 +7,6 @@ If we've reached maximum retries and the job still fails, raise an exception to 
 """
 import asyncio
 import pprint
-import time
 
 from canfar.sessions import Session
 from prefect import flow, task
