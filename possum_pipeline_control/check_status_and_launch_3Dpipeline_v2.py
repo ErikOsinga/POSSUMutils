@@ -23,6 +23,7 @@ into time-blocked directories.
 @author: Erik Osinga
 """
 import argparse
+import asyncio
 import os
 import subprocess
 from datetime import datetime, timedelta, timezone
@@ -94,7 +95,7 @@ def get_canfar_tiles(band_number):
         raise ValueError(f"Band number {band_number} not defined")
     return canfar_tilenumbers
 
-def launch_pipeline(tilenumber, band):
+async def launch_pipeline(tilenumber, band):
     # Launch the appropriate 3D pipeline script based on the band
     if band == "943MHz":
         command = [
@@ -118,15 +119,14 @@ def launch_pipeline(tilenumber, band):
         raise ValueError(f"Unknown band: {band}")
 
     print(f"Running command: {' '.join(command)}")
-    process = subprocess.Popen(
-        command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        bufsize=1,               # line-buffered
-        universal_newlines=True  # ensures \n splitting works across platforms
+    process = await asyncio.create_subprocess_exec(
+        *command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT
     )
-    util.print_subprocess_output(process, command)
+
+    # Start background task to stream logs
+    asyncio.create_task(util.print_subprocess_output(process, command))
 
 def update_status(tile_number, band, Google_API_token, status):
     """
@@ -356,7 +356,7 @@ def needs_prefect_db_backup(
     cutoff = datetime.now(tz=timezone.utc) - timedelta(days=max_age_days)
     return newest_mtime < cutoff
 
-def launch_band1_3Dpipeline(database_config_path=None):
+async def launch_band1_3Dpipeline(database_config_path=None):
     """
     Check for Band 1 tiles that are ready to be processed with the 3D pipeline and launch the pipeline for the first available tile.
     3D pipeline can be launched if the tile is processed by AUSsrc (aus_src column not empty) but 3D pipeline not yet run (3d_pipeline column empty).
@@ -386,7 +386,7 @@ def launch_band1_3Dpipeline(database_config_path=None):
         write_last_download_launch_time(state_file, now_utc)
         
         # also launch a job to create new symlinks since the previous download job finished.
-        canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_create_symlinks")(launch_create_symlinks)
+        await canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_create_symlinks")(launch_create_symlinks)
     else:
         if download_running:
             print("A download job (possum_run_remote) is already running.")
@@ -450,10 +450,11 @@ def launch_band1_3Dpipeline(database_config_path=None):
             tilenumber = list(tiles_on_both)[0]
             print(f"\nLaunching headless job for 3D pipeline with tile {tilenumber}")
 
-            # Launch the pipeline
-            launch_pipeline(tilenumber, band)
+            # Launch pipeline as background task
+            asyncio.create_task(launch_pipeline(tilenumber, band))
 
             # Update the status to "Running"
+            # Start synchronous update_status in background thread
             update_status(tilenumber, band, Google_API_token, "Running")
 
         else:
@@ -506,5 +507,5 @@ if __name__ == "__main__":
         help="Path to .env file with database connection parameters.",
     )
     args = parser.parse_args()
-    launch_band1_3Dpipeline(args.database_config_path)
+    asyncio.run(launch_band1_3Dpipeline(args.database_config_path))
 

@@ -1,13 +1,11 @@
 from __future__ import annotations
-
+from pathlib import Path
+import os
 import errno
 import json
-import os
 import shutil
 import subprocess
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
-
 from dotenv import load_dotenv
 from prefect import task
 from prefect.blocks.system import Secret
@@ -185,18 +183,24 @@ def write_to_file(dir, file_path, secret_name):
         print(f"Error writing to file {file_path}: {e}")
         raise
 
-def print_subprocess_output(process, command):
-    """Manually check errors and raise CalledProcessError so we can stream logs from subprocess as it goes"""
-    # Stream stdout and stderr line by line
-    for stdout_line in iter(process.stdout.readline, ''):
-        print(stdout_line.rstrip())
-    
-    # Wait for process to finish
-    return_code = process.wait()
+async def print_subprocess_output(process, command):
+    """
+    Stream subprocess stdout/stderr asynchronously and raise CalledProcessError if non-zero exit code.
+    """
+    # Ensure process.stdout exists
+    if process.stdout is None:
+        raise ValueError("Subprocess has no stdout pipe")
 
-    # Manually handle non-zero exit codes
+    while True:
+        line = await process.stdout.readline()
+        if not line:  # EOF
+            break
+        print(line.decode(errors="replace").rstrip())  # replace bad bytes if any
+
+    # Wait for process to finish
+    return_code = await process.wait()
     if return_code != 0:
-        raise subprocess.CalledProcessError(return_code, command)        
+        raise subprocess.CalledProcessError(return_code, command)   
 
 class TemporaryWorkingDirectory:
     """Context manager to temporarily change the current working directory."""

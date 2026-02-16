@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 import os
 
 from canfar.sessions import Session
@@ -113,7 +114,7 @@ def update_status(tile_number, band, status, conn):
         tile_number, band_no, status, "3d_pipeline_ingest", conn
     )
 
-def ingest_3Dpipeline(band_number=1):
+async def ingest_3Dpipeline(band_number=1):
     if band_number == 1:
         band = "943MHz"
     elif band_number == 2:
@@ -156,7 +157,7 @@ def ingest_3Dpipeline(band_number=1):
             print(f"\nLaunching headless job for 3D pipeline with tile {tilenumber}")
 
             # Launch the pipeline
-            canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_ingest")(launch_ingest, tilenumber, band)
+            await canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_ingest")(launch_ingest, tilenumber, band)            
 
             # Update the status of 3d_pipeline_ingest to "IngestRunning"
             conn = db.get_database_connection(test=False)
@@ -199,5 +200,5 @@ if __name__ == "__main__":
     util.initiate_possum_status_sheet_and_token(args.database_config_path)
 
     ## Assumes this script is called by run_3D_pipeline_intermittently.py
-    ingest_3Dpipeline(band_number=band_number)
+    asyncio.run(ingest_3Dpipeline(band_number=band_number))
     

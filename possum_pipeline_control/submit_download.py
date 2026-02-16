@@ -10,6 +10,7 @@ This script is DEPRECATED. Superseded by launch_download_session() in the module
         It submits a download job to CANFAR which will pull new files off' the pawsey storage.
 
 """
+import asyncio
 import os
 from datetime import date
 
@@ -66,4 +67,6 @@ def launch_download():
 
 
 if __name__ == "__main__":
-    canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_download")(launch_download)
+    asyncio.run(
+        canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_download")(launch_download)
+    )    

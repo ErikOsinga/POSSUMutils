@@ -1,5 +1,6 @@
 import argparse
 import ast
+import asyncio
 import os
 from datetime import datetime
 
@@ -89,6 +90,13 @@ def launch_session(
 
     return session_id[0] 
 
+
+async def run_canfar_task(run_name, field_ID, SBnumber, image, cores, ram, ptype, max_dl_jobs):       
+    # Check allowed values at canfar.net/science-portal, 10, 20, 30, 40 GB should be allowed
+    await canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_1D_PartialTiles_pre_post")(launch_session,
+        run_name, field_ID, SBnumber, image, cores, ram, ptype, max_dl_jobs=max_dl_jobs
+    )
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Launch a 1D pipeline Partial Tiles run"
@@ -132,7 +140,5 @@ if __name__ == "__main__":
         # max 15 characters for run name. SBID+timenow: e.g. 50413-11-39-21
         run_name = f"pre-dl-{SBnumber}"  # makes it clear a 'pre' download job is running. Dont want too many of these.
 
-    # Check allowed values at canfar.net/science-portal, 10, 20, 30, 40 GB should be allowed
-    canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_1D_PartialTiles_pre_post")(launch_session,
-        run_name, field_ID, SBnumber, image, cores, ram, ptype, max_dl_jobs=max_dl_jobs
-    )
+    asyncio.run(run_canfar_task(run_name, field_ID, SBnumber, image, cores, ram, ptype, max_dl_jobs))    
+

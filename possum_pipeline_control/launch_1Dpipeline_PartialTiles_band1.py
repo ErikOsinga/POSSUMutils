@@ -1,5 +1,6 @@
 import argparse
 import ast
+import asyncio
 import os
 from datetime import datetime
 
@@ -58,7 +59,7 @@ def launch_session(run_name, field_ID, tilenumbers, SBnumber, image, cores, ram)
 
 
 @flow(name="launch_1d_partialtiles", log_prints=True)
-def main_flow(field_ID, tilenumbers, SBnumber):
+async def main_flow(field_ID, tilenumbers, SBnumber):
     timestr = ((datetime.now().strftime("%d/%m/%Y %H:%M:%S"))[11:]).replace(
         ":", "-"
     )  # ":" is not allowed character
@@ -73,10 +74,10 @@ def main_flow(field_ID, tilenumbers, SBnumber):
     number_of_tiles = len([t for t in tilenumbers if t != ""])
     ram = 20 * number_of_tiles
     # Check allowed values at canfar.net/science-portal, 10, 20, 30, 40 GB should be allowed
-    canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_1D_PartialTiles")(
-            launch_session,
-            run_name, field_ID, tilenumbers, SBnumber, image, cores, ram
-    )
+    await canfar_wrapper.run_canfar_task_with_polling.with_options(name="poll_1D_PartialTiles")(
+        launch_session,
+        run_name, field_ID, tilenumbers, SBnumber, image, cores, ram
+    )    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
