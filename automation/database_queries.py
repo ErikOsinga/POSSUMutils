@@ -79,6 +79,15 @@ def get_database_parameters(
             db_host = Secret.load("database-host").get()
             db_port = Secret.load("database-port").get()
 
+    if not all([db_name, db_user, db_pass, db_host, db_port]):
+        # fall back on Prefect secrets if any of the parameters are missing
+        print("Some database parameters are missing from the config file. Loading from Prefect secrets.")
+        db_name = db_name or Secret.load("database-name").get()
+        db_user = db_user or Secret.load("database-user").get()
+        db_pass = db_pass or Secret.load("database-password").get()
+        db_host = db_host or Secret.load("database-host").get()
+        db_port = db_port or Secret.load("database-port").get()
+
     return {
         "dbname": db_name,
         "user": db_user,
