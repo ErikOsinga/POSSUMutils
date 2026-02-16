@@ -69,10 +69,10 @@ async def main_flow(field_ID, tilenumbers, SBnumber):
     # check if there are any stuck jobs before launching new ones
     reconcile_summary = await canfar_polling.reconcile_running_prefect_with_canfar_task()
 
-    # # Check allowed values at canfar.net/science-portal, 10, 20, 30, 40 GB should be allowed
-    # launch_session(
-    #         run_name, field_ID, tilenumbers, SBnumber, image, cores, ram
-    # )
+    # Check allowed values at canfar.net/science-portal, 10, 20, 30, 40 GB should be allowed
+    launch_session(
+            run_name, field_ID, tilenumbers, SBnumber, image, cores, ram
+    )
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
