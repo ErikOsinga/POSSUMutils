@@ -66,7 +66,7 @@ def main_flow(field_ID, tilenumbers, SBnumber):
     ram = 20 * number_of_tiles
 
     # check if there are any stuck jobs before launching new ones
-    canfar_polling.reconcile_running_prefect_with_canfar_task()
+    reconcile_summary = canfar_polling.reconcile_running_prefect_with_canfar_task()
 
     # Check allowed values at canfar.net/science-portal, 10, 20, 30, 40 GB should be allowed
     launch_session(
