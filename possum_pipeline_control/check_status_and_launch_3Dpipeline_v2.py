@@ -457,7 +457,7 @@ def launch_band1_3Dpipeline(database_config_path=None):
             # Launch the pipeline
             launch_pipeline(tilenumber, band)
 
-            # Update the status to "Running"
+            # Update the status to "Running" in the aussrc database and the google sheet
             update_status(tilenumber, band, Google_API_token, "Running")
 
         else:
