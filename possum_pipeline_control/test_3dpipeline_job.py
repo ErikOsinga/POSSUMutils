@@ -66,7 +66,7 @@ def launch_test_session(jobname="testjob"):
     print(
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
     )
-    print("Also check the prefect dashboard at localhost:4200")
+    print("Also check the prefect dashboard at localhost:4200 or possum-prefect.aussrc.org")
 
     return session_id[0]
 
