@@ -356,7 +356,7 @@ def needs_prefect_db_backup(
     cutoff = datetime.now(tz=timezone.utc) - timedelta(days=max_age_days)
     return newest_mtime < cutoff
 
-def launch_band1_3Dpipeline(database_config_path=None):
+async def launch_band1_3Dpipeline(database_config_path=None):
     """
     Check for Band 1 tiles that are ready to be processed with the 3D pipeline and launch the pipeline for the first available tile.
     3D pipeline can be launched if the tile is processed by AUSsrc (aus_src column not empty) but 3D pipeline not yet run (3d_pipeline column empty).
@@ -452,7 +452,7 @@ def launch_band1_3Dpipeline(database_config_path=None):
             print(f"\nLaunching headless job for 3D pipeline with tile {tilenumber}")
 
             # check if there are any stuck jobs before launching new ones
-            canfar_polling.reconcile_running_prefect_with_canfar_task()
+            reconcile_summary = await canfar_polling.reconcile_running_prefect_with_canfar_task()
 
             # Launch the pipeline
             launch_pipeline(tilenumber, band)
