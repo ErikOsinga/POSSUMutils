@@ -13,7 +13,7 @@ from possum_pipeline_control import util
 def main():
     # Load the secret from prefect
     print('Loading cadc-proxy-pem secret..')
-    secret_block = Secret.load("cadc-proxy-pem")
+    secret_block = Secret.load("cadc-proxy-pem",_sync=True)
     pem_str = secret_block.get()
     if pem_str:
         #rewrite the pem file

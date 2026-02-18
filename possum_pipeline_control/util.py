@@ -66,7 +66,7 @@ def stage_cadc_certificate(
     src = Path(os.path.expanduser(source_cert))
     if not src.exists():
         # Try the secret from prefect
-        secret_block = Secret.load("cadc-proxy-pem")
+        secret_block = Secret.load("cadc-proxy-pem", _sync=True)
         pem_str = secret_block.get()
         if pem_str:
             write_cadcproxy_pem(pem_str)
@@ -140,7 +140,7 @@ def initiate_possum_status_sheet_and_token(database_config_path=None):
         # load secrets into environment variables
         Google_API_token = write_possum_token_file()
         os.environ["POSSUM_STATUS_TOKEN"] = Google_API_token
-        possum_status_sheet = Secret.load("possum-status-sheet").get()
+        possum_status_sheet = Secret.load("possum-status-sheet", _sync=True).get()
         os.environ["POSSUM_STATUS_SHEET"] = possum_status_sheet
 
     return Google_API_token  
@@ -172,7 +172,7 @@ def write_to_file(dir, file_path, secret_name):
     # Write the content to the file
     try:
         with open(file_path, "w") as f:
-            secret_block = Secret.load(secret_name)
+            secret_block = Secret.load(secret_name, _sync=True)
             secret_str = secret_block.get()
             if secret_str:
                 if isinstance(secret_str, dict):

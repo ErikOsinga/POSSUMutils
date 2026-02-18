@@ -512,5 +512,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     
-    asyncio.run(launch_band1_3Dpipeline(args.database_config_path))
+    from prefect.utilities.asyncutils import run_coro_as_sync
+    run_coro_as_sync(launch_band1_3Dpipeline(args.database_config_path))
 
