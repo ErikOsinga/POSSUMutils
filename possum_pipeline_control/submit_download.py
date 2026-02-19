@@ -10,10 +10,12 @@ This script is DEPRECATED. Superseded by launch_download_session() in the module
         It submits a download job to CANFAR which will pull new files off' the pawsey storage.
 
 """
+import asyncio
 import os
 from datetime import date
 
 from canfar.sessions import Session
+from automation import canfar_polling
 
 session = Session()
 
@@ -54,12 +56,15 @@ def launch_download():
         replicas=1,
     )
 
+    session_id_str = session_id_str = session_id[0] if len(session_id) > 0 else None
+
     print("Check sessions at https://ws-uv.canfar.net/skaha/v1/session")
     print(
-        f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id[0]}?view=logs"
+        f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id_str}?view=logs"
     )
+    asyncio.run(canfar_polling.tail_logs(session, session_id_str))
 
-    return session_id[0]
+    return session_id_str
 
 
 if __name__ == "__main__":

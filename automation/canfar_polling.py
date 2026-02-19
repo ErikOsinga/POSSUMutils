@@ -33,10 +33,13 @@ Rules:
       this will depend on the type of CANFAR job that we were running though.
   
 """
-
+import asyncio
+import os
+import pprint
 
 from __future__ import annotations
 
+from canfar.sessions import Session
 from dataclasses import dataclass
 
 from prefect import task
@@ -46,9 +49,9 @@ from prefect.server.schemas.states import StateType
 from prefect.states import Failed
 
 from print_all_open_sessions import get_open_sessions
+from vos import Client
 
 TAG_PREFIX = "canfar_session:"
-
 
 @dataclass(frozen=True)
 class ReconcileResult:
@@ -205,4 +208,65 @@ async def reconcile_running_prefect_with_canfar_task(limit: int = 200) -> dict:
         "failed_marked": result.failed_marked,
         "skipped_untagged": result.skipped_untagged,
     }
+
+def push_logs_to_canfar(tmp_file):
+    """
+    Copy Canfar session logs to Canfar directory and remove local file
+    Args:
+        tmp_file: Local log file to copy and delete
+    """
+    client = Client()
+    vospace_path = f"/arc/projects/CIRADA/polarimetry/ASKAP/Pipeline_logs/canfar_logs/{tmp_file}"
+    try:
+        client.copy(tmp_file, vospace_path)
+        print(f"Upload Canfar log to {vospace_path} completed successfully!\n")
+    except Exception as e:
+        print(f"Failed to upload {tmp_file} to Canfar: {e}\n")
+        return
+    
+    # Clean up local file
+    os.remove(tmp_file)    
+
+
+async def tail_logs(session, session_id):
+    """
+    Tail logs for a Canfar session until it finishes.
+
+    Args:
+        session: Canfar session object
+        session_id: ID of the session to monitor
+        output_file: File to write logs to
+        interval: Polling interval in seconds
+    """
+    terminal_statuses = {"Succeeded", "Completed", "Error", "Failed", None}
+
+    tmp_file = f"{session_id}.log"
+    
+    with open(tmp_file, "w") as f:
+        while True:
+            # Get session status
+            status = await get_session_status(session, session_id)
+            
+            # Stop if session is finished or doesn't exist
+            if status in terminal_statuses:
+                # Fetch logs before exiting
+                logs_dict = session.logs(session_id).get(session_id)
+                await asyncio.to_thread(f.write, pprint.pformat(logs_dict, depth=4))
+                await asyncio.to_thread(f.flush)
+                break
+
+            # Check every 10 minutes
+            await asyncio.sleep(600)
+    # Push logs asynchronously after tailing
+    await asyncio.to_thread(push_logs_to_canfar, tmp_file)        
+
+async def get_session_status(session, session_id):
+    """
+    Get session status from CANFAR. If session is not found (e.g. if it has expired), return None.
+    """
+    session_info = await asyncio.to_thread(Session.info, session, session_id)
+    if len(session_info) == 0:
+        # session is not found
+        return None
+    return session_info[0].get('status')
 
