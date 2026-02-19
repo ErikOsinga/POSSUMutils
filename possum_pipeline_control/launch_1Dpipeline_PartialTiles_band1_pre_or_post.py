@@ -1,12 +1,9 @@
 import argparse
 import ast
-import asyncio
 import os
 from datetime import datetime
 
-# from skaha.session import Session
 from canfar.sessions import Session
-from automation import canfar_polling
 from possum_pipeline_control.control_1D_pipeline_PartialTiles import get_open_sessions
 
 """
@@ -88,7 +85,6 @@ def launch_session(
     print(
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id_str}?view=logs"
     )
-    asyncio.run(canfar_polling.tail_logs(session, session_id_str))
 
     return session_id_str
 

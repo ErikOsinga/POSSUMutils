@@ -1,11 +1,10 @@
 import argparse
-import asyncio
 import os
 
 from canfar.sessions import Session
 from vos import Client
 
-from automation import database_queries as db, canfar_polling
+from automation import database_queries as db
 from possum_pipeline_control import util
 
 session = Session()
@@ -98,7 +97,6 @@ def launch_ingest(tilenumber, band):
     print(
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id_str}?view=logs"
     )
-    asyncio.run(canfar_polling.tail_logs(session, session_id_str))
 
     return session_id_str
 

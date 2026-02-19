@@ -48,7 +48,6 @@ def launch_session(run_name, field_ID, tilenumbers, SBnumber, image, cores, ram)
     print(
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id_str}?view=logs"
     )
-    asyncio.run(canfar_polling.tail_logs(session, session_id_str))
 
     return session_id_str
 

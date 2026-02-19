@@ -1,9 +1,7 @@
 import argparse
-import asyncio
 import os
 
 from canfar.sessions import Session
-from automation import canfar_polling
 
 session = Session()
 
@@ -36,7 +34,6 @@ def launch_session(run_name, tilenumber, image, cores, ram):
     print(
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id_str}?view=logs"
     )
-    asyncio.run(canfar_polling.tail_logs(session, session_id_str))
 
     return session_id_str
 

@@ -34,7 +34,7 @@ import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 
-from automation import database_queries as db, canfar_polling
+from automation import database_queries as db
 from possum_pipeline_control import util
 
 
@@ -500,7 +500,6 @@ def launch_collate_job():
     print(
         f"Check logs at https://ws-uv.canfar.net/skaha/v1/session/{session_id_str}?view=logs"
     )
-    asyncio.run(canfar_polling.tail_logs(session, session_id_str))
 
     return session_id_str
 
