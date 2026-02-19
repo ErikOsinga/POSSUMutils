@@ -64,7 +64,7 @@ deployments:
       work_queue_name: default    
 
   - name: push-session-logs-to-canfar
-    entrypoint: automation/canfar_polling.py:get_completed_sessions_logs    
+    entrypoint: automation/canfar_polling.py:get_completed_session_logs    
     description: 'Schedule this to run after each parent flow to push Canfar session logs to Canfar directory.'
     work_pool:
       name: local-pool 

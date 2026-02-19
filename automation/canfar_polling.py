@@ -209,7 +209,7 @@ async def reconcile_running_prefect_with_canfar_task(limit: int = 200) -> dict:
     }
 
 @flow(name="Get completed sessions logs and push to Canfar directory")
-def get_completed_sessions_logs():
+def get_completed_session_logs():
     """
     Get recently completed CANFAR sessions and push their logs to Canfar directory.
     This includes Succeeded, Completed, Failed or Error sessions. 
@@ -243,8 +243,9 @@ def push_logs_to_canfar(tmp_file):
         pass  # Directory might already exist
     
     try:
-        client.copy(tmp_file, f"{vospace_path}/{tmp_file}")
-        print(f"Upload Canfar log to {vospace_path} completed successfully!\n")
+        remote_file = f"{vospace_path}/{tmp_file}"
+        client.copy(tmp_file, remote_file)
+        print(f"Upload Canfar log to {remote_file} completed successfully!\n")
     except Exception as e:
         print(f"Failed to upload {tmp_file} to Canfar: {e}\n")
         return
