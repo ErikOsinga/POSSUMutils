@@ -33,7 +33,6 @@ Rules:
       this will depend on the type of CANFAR job that we were running though.
   
 """
-import asyncio
 import os
 import pprint
 
@@ -42,7 +41,7 @@ from __future__ import annotations
 from canfar.sessions import Session
 from dataclasses import dataclass
 
-from prefect import task
+from prefect import task, flow
 from prefect.client.orchestration import get_client
 from prefect.server.schemas.filters import FlowRunFilter, FlowRunFilterState
 from prefect.server.schemas.states import StateType
@@ -209,6 +208,25 @@ async def reconcile_running_prefect_with_canfar_task(limit: int = 200) -> dict:
         "skipped_untagged": result.skipped_untagged,
     }
 
+@flow(name="Get completed sessions logs and push to Canfar directory")
+def get_completed_sessions_logs():
+    """
+    Get recently completed CANFAR sessions and push their logs to Canfar directory.
+    This includes Succeeded, Completed, Failed or Error sessions. 
+    The directory is /arc/projects/CIRADA/polarimetry/ASKAP/Pipeline_logs/canfar_logs.
+    """
+    session = Session()
+    statuses = ["Succeeded", "Completed", "Failed", "Error"]
+    # Get all session ids of completed sessions
+    all_session_ids = [
+        s["id"]
+        for status in statuses
+        for s in (session.fetch(kind="headless", status=status) or [])
+    ]
+    for session_id in all_session_ids:
+        # Get logs for each session
+        get_logs(session, session_id)
+
 def push_logs_to_canfar(tmp_file):
     """
     Copy Canfar session logs to Canfar directory and remove local file
@@ -216,9 +234,16 @@ def push_logs_to_canfar(tmp_file):
         tmp_file: Local log file to copy and delete
     """
     client = Client()
-    vospace_path = f"/arc/projects/CIRADA/polarimetry/ASKAP/Pipeline_logs/canfar_logs/{tmp_file}"
+    vospace_path = f"/arc/projects/CIRADA/polarimetry/ASKAP/Pipeline_logs/canfar_logs"
+    
+    # Ensure remote directory exists
     try:
-        client.copy(tmp_file, vospace_path)
+        client.mkdir(vospace_path)
+    except:
+        pass  # Directory might already exist
+    
+    try:
+        client.copy(tmp_file, f"{vospace_path}/{tmp_file}")
         print(f"Upload Canfar log to {vospace_path} completed successfully!\n")
     except Exception as e:
         print(f"Failed to upload {tmp_file} to Canfar: {e}\n")
@@ -227,46 +252,37 @@ def push_logs_to_canfar(tmp_file):
     # Clean up local file
     os.remove(tmp_file)    
 
-
-async def tail_logs(session, session_id):
+def log_exists_in_canfar_dir(session_id):
     """
-    Tail logs for a Canfar session until it finishes.
+    Check if log already exists in Canfar directory.
+    Args:
+        session_id: ID of the session
+    Returns:
+        True if log exists, False otherwise
+    """
+    client = Client()
+    vospace_path = f"/arc/projects/CIRADA/polarimetry/ASKAP/Pipeline_logs/canfar_logs"
+    file_name = f"{vospace_path}/{session_id}.log"
+    return client.isfile(file_name)
+
+def get_logs(session, session_id):
+    """
+    Get logs for a Canfar session.
 
     Args:
         session: Canfar session object
         session_id: ID of the session to monitor
         output_file: File to write logs to
-        interval: Polling interval in seconds
     """
-    terminal_statuses = {"Succeeded", "Completed", "Error", "Failed", None}
-
+    if log_exists_in_canfar_dir(session_id):
+        return
+    
     tmp_file = f"{session_id}.log"
     
     with open(tmp_file, "w") as f:
-        while True:
-            # Get session status
-            status = await get_session_status(session, session_id)
-            
-            # Stop if session is finished or doesn't exist
-            if status in terminal_statuses:
-                # Fetch logs before exiting
-                logs_dict = session.logs(session_id).get(session_id)
-                await asyncio.to_thread(f.write, pprint.pformat(logs_dict, depth=4))
-                await asyncio.to_thread(f.flush)
-                break
-
-            # Check every 10 minutes
-            await asyncio.sleep(600)
-    # Push logs asynchronously after tailing
-    await asyncio.to_thread(push_logs_to_canfar, tmp_file)        
-
-async def get_session_status(session, session_id):
-    """
-    Get session status from CANFAR. If session is not found (e.g. if it has expired), return None.
-    """
-    session_info = await asyncio.to_thread(Session.info, session, session_id)
-    if len(session_info) == 0:
-        # session is not found
-        return None
-    return session_info[0].get('status')
+        # Fetch logs before exiting
+        logs_dict = session.logs(session_id).get(session_id)
+        f.write(pprint.pformat(logs_dict, depth=4))
+        f.flush
+    push_logs_to_canfar(tmp_file)       
 
