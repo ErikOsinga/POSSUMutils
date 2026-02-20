@@ -33,10 +33,9 @@ Rules:
       this will depend on the type of CANFAR job that we were running though.
   
 """
+from __future__ import annotations
 import os
 import pprint
-
-from __future__ import annotations
 
 from canfar.sessions import Session
 from dataclasses import dataclass
@@ -51,6 +50,8 @@ from print_all_open_sessions import get_open_sessions
 from vos import Client
 
 TAG_PREFIX = "canfar_session:"
+VOS_LOG_FOLDER = "arc:projects/CIRADA/polarimetry/ASKAP/Pipeline_logs/canfar_logs"
+
 
 @dataclass(frozen=True)
 class ReconcileResult:
@@ -234,16 +235,15 @@ def push_logs_to_canfar(tmp_file):
         tmp_file: Local log file to copy and delete
     """
     client = Client()
-    vospace_path = f"/arc/projects/CIRADA/polarimetry/ASKAP/Pipeline_logs/canfar_logs"
     
     # Ensure remote directory exists
     try:
-        client.mkdir(vospace_path)
+        client.mkdir(VOS_LOG_FOLDER)
     except:
         pass  # Directory might already exist
     
     try:
-        remote_file = f"{vospace_path}/{tmp_file}"
+        remote_file = f"{VOS_LOG_FOLDER}/{tmp_file}"
         client.copy(tmp_file, remote_file)
         print(f"Upload Canfar log to {remote_file} completed successfully!\n")
     except Exception as e:
@@ -262,9 +262,13 @@ def log_exists_in_canfar_dir(session_id):
         True if log exists, False otherwise
     """
     client = Client()
-    vospace_path = f"/arc/projects/CIRADA/polarimetry/ASKAP/Pipeline_logs/canfar_logs"
-    file_name = f"{vospace_path}/{session_id}.log"
-    return client.isfile(file_name)
+    file_name = f"{VOS_LOG_FOLDER}/{session_id}.log"
+    try:
+        return client.isfile(file_name)
+    except:
+        # Folder doesn't exist yet
+        return False
+        
 
 def get_logs(session, session_id):
     """
